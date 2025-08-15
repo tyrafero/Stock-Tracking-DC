@@ -12,17 +12,12 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 from pathlib import Path
 import environ
-
+BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
-# reading .env file
-environ.Env.read_env()
+# Specify the path to the .env file
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env("SECRET_KEY")
 
@@ -42,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'crispy_forms',
+    'crispy_bootstrap4',
     'stock',
 ]
 
@@ -60,7 +56,7 @@ ROOT_URLCONF = 'stockmgtr.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -89,10 +85,10 @@ WSGI_APPLICATION = 'stockmgtr.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'project',
-        'USER': 'root',
-        'PASSWORD': '',
-        'HOST': 'localhost',
+        'NAME': 'username',
+        'USER': 'username',
+        'PASSWORD': 'password_here',
+        'HOST': '127.0.0.1',
         'PORT': '3306'
     }
 }
@@ -152,6 +148,13 @@ MEDIA_URL = '/stock/static/images/'
 
 EMAIL_HOST = 'smtpd'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'infectedlab@gmail.com'
+EMAIL_HOST_USER = 'lehanhunter@gmail.com'
 PASSWORD = env("PASSWORD")
 EMAIL_USE_TLS = True
+
+
+
+# login
+# LOGIN_URL = 'login'
+# LOGOUT_REDIRECT_URL = '/'
+# REGISTRATION_OPEN = True
