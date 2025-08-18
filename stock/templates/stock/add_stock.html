@@ -24,11 +24,11 @@
                                     <div class="card-head">
                                         <h5 class="card-title">{{title}}</h5>
                                     </div>
-                                    <form method="POST" action=" " enctype="multipart/form-data" id="personForm" data-cities-url="{% url 'ajax_load_cities' %}">
-                                      {% csrf_token %}
-                                      {{form|crispy}}
-                                      <input class="mt-2 btn btn-primary" type="submit" name="Add Stock">
-                                    </form>
+                                    <form method="POST" action="" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{form|crispy}}
+    <input class="mt-2 btn btn-primary" type="submit" name="receive_submit" value="Receive Items">
+</form>
                                 </div>
                             </div>
                         </div>

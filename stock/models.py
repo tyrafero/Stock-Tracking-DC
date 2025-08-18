@@ -16,6 +16,7 @@ class Category(models.Model):
     def __str__(self):
         return self.group
 
+from django.utils import timezone
 
 class Stock(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True)
@@ -31,7 +32,7 @@ class Stock(models.Model):
     re_order = models.IntegerField(default='0', blank=True, null=True)
     last_updated = models.DateTimeField(auto_now_add=False, auto_now=True)
     timestamp = models.DateTimeField(auto_now_add=True, auto_now=False)
-    date = models.DateTimeField(auto_now_add=False, auto_now=False)
+    date = models.DateTimeField(default=timezone.now)
     export_to_csv = models.BooleanField(default=False)
     image = models.ImageField(upload_to='stock/static/images', null=True, blank=True)
 

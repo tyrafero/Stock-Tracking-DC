@@ -15,10 +15,15 @@ NProgress.done();
           <li class="nav-item"><a href="/view_history" class="nav-link">View History</a></li>
           {% endif %}
           {% if request.user.is_authenticated %}
-           <li class="nav-item"><a href="/accounts/logout" class="nav-link"><button class="btn btn-primary"> {{ user }} | logout</button></a></li>
-          {% else %}
-          <li class="nav-item"><a href="/accounts/login" class="nav-link"><button class="btn btn-danger"> login</button></a></li>
-          {% endif %}
+<li class="nav-item">
+    <form method="post" action="{% url 'auth_logout' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{{ user }} | logout</button>
+    </form>
+</li>
+{% else %}
+<li class="nav-item"><a href="/accounts/login" class="nav-link"><button class="btn btn-danger"> login</button></a></li>
+{% endif %}
       </ul>
     </header>
 </div>

@@ -139,11 +139,36 @@ def add_stock(request):
     if request.method == 'POST':
         form = StockCreateForm(request.POST, request.FILES)
         if form.is_valid():
-            form.save()
+            instance = form.save()
             messages.success(request, 'Successful')
             return redirect('/view_stock')
+        else:
+            print("Form errors:", form.errors)  # Add this line
+            messages.error(request, 'Failed to add stock')  # Add error message
     context = {'add': add, 'form': form, 'title': title}
     return render(request, 'stock/add_stock.html', context)
+
+@login_required
+def add_stock(request):
+    if request.method == 'POST':
+        print("\n=== FORM DATA ===")
+        print("POST:", request.POST)
+        print("FILES:", request.FILES)
+        
+        form = StockCreateForm(request.POST, request.FILES)
+        if form.is_valid():
+            stock = form.save(commit=False)
+            stock.created_by = request.user.username
+            stock.save()
+            print("=== SAVED ===")
+            return redirect('view_stock')
+        else:
+            print("=== ERRORS ===")
+            print(form.errors)
+    else:
+        form = StockCreateForm()
+    
+    return render(request, 'stock/add_stock.html', {'form': form})
 
 
 @login_required
@@ -209,26 +234,48 @@ def issue_item(request, pk):
 
 @login_required
 def receive_item(request, pk):
+    print(f"=== RECEIVE_ITEM DEBUG ===")
+    print(f"Request method: {request.method}")
+    print(f"Request path: {request.path}")
+    print(f"PK received: {pk}")
+    
     receive = Stock.objects.get(id=pk)
     form = ReceiveForm(request.POST or None, instance=receive)
-    if form.is_valid():
-        value = form.save(commit=False)
-        value.issue_quantity = 0
-        value.quantity = value.quantity + value.receive_quantity
-        value.received_by = str(request.user)
-        value.save()
-        messages.success(request, "Received Successfully, " + str(value.quantity) + " " + str(
-            value.item_name) + "s now in Store")
-
-        return redirect('/stock_detail/' + str(value.id))
+    
+    if request.method == "POST":
+        print(f"POST data: {request.POST}")
+        print(f"Button clicked: {'receive_submit' in request.POST}")
+        print(f"Form is valid: {form.is_valid()}")
+        
+        # Check if the correct submit button was clicked
+        if 'receive_submit' not in request.POST:
+            print("ERROR: Wrong form was submitted!")
+            return redirect('receive_item', pk=pk)
+        
+        if form.is_valid():
+            value = form.save(commit=False)
+            value.issue_quantity = 0
+            value.quantity = value.quantity + value.receive_quantity
+            value.received_by = str(request.user)
+            value.edited_by = str(request.user)
+            value.save()
+            
+            messages.success(
+                request,
+                f"Received Successfully, {value.quantity} {value.item_name}s now in Store"
+            )
+            return redirect('stock_detail', pk=value.id)
+        else:
+            print(f"Form errors: {form.errors}")
+    
     context = {
-        "title": 'Receive ' + str(receive.item_name),
+        "title": f"Receive {receive.item_name}",
         "receive": receive,
         "form": form,
-        "username": 'Received by: ' + str(request.user),
+        "username": f"Received by: {request.user}",
     }
+    print(f"Rendering template with context: {list(context.keys())}")
     return render(request, "stock/add_stock.html", context)
-
 
 @login_required
 def re_order(request, pk):
@@ -376,4 +423,5 @@ def contact(request):
             return redirect('/contacts')
     context = {'people': people, 'form': form, 'title': title}
     return render(request, 'stock/contacts.html', context)
+
 

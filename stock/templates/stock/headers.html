@@ -171,10 +171,15 @@
                                             <div class="dropdown-inner">
                                                 <ul class="link-list">
                                                       {% if request.user.is_authenticated %}
-                                                    <li><a href="/accounts/logout"><em class="icon ni ni-signout"></em><span>Log out</span></a></li>
-                                                    {% else %}
-                                                    <li><a href="/accounts/login"><em class="icon ni ni-signout"></em><span>Log In</span></a></li>
-                                                     {% endif %}
+<li class="nav-item">
+    <form method="post" action="{% url 'auth_logout' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{{ user }} | logout</button>
+    </form>
+</li>
+{% else %}
+<li class="nav-item"><a href="/accounts/login" class="nav-link"><button class="btn btn-danger"> login</button></a></li>
+{% endif %}
                                                 </ul>
                                             </div>
                                         </div>

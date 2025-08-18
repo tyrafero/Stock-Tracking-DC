@@ -49,6 +49,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.common.BrokenLinkEmailsMiddleware',
 ]
 
 ROOT_URLCONF = 'stockmgtr.urls'
@@ -146,15 +147,16 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/stock/static/images/'
 
-EMAIL_HOST = 'smtpd'
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_HOST_USER = 'lehanhunter@gmail.com'
-PASSWORD = env("PASSWORD")
+EMAIL_HOST_PASSWORD = env("PASSWORD")  # Note: PASSWORD, not just PASSWORD
 EMAIL_USE_TLS = True
 
 
 
 # login
 # LOGIN_URL = 'login'
-# LOGOUT_REDIRECT_URL = '/'
-# REGISTRATION_OPEN = True
+LOGOUT_REDIRECT_URL = '/'
+REGISTRATION_OPEN = True
