@@ -86,14 +86,13 @@ WSGI_APPLICATION = 'stockmgtr.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'username',
-        'USER': 'username',
-        'PASSWORD': 'password_here',
-        'HOST': '127.0.0.1',
-        'PORT': '3306'
+        'NAME': env("MYSQL_DATABASE"),
+        'USER': env("MYSQL_USER"),
+        'PASSWORD': env("MYSQL_PASSWORD"),
+        'HOST': env("MYSQL_HOST"),   # <--- use Railway MySQL host
+        'PORT': env("MYSQL_PORT"),
     }
 }
-
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
 
