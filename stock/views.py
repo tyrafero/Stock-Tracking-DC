@@ -134,24 +134,9 @@ def scrum_view(request):
 @login_required
 def add_stock(request):
     title = 'Add Stock'
-    add = Stock.objects.all()
-    form = StockCreateForm
+    
     if request.method == 'POST':
-        form = StockCreateForm(request.POST, request.FILES)
-        if form.is_valid():
-            instance = form.save()
-            messages.success(request, 'Successful')
-            return redirect('/view_stock')
-        else:
-            print("Form errors:", form.errors)  # Add this line
-            messages.error(request, 'Failed to add stock')  # Add error message
-    context = {'add': add, 'form': form, 'title': title}
-    return render(request, 'stock/add_stock.html', context)
-
-@login_required
-def add_stock(request):
-    if request.method == 'POST':
-        print("\n=== FORM DATA ===")
+        print("\n=== ADD STOCK DEBUG ===")
         print("POST:", request.POST)
         print("FILES:", request.FILES)
         
@@ -160,38 +145,102 @@ def add_stock(request):
             stock = form.save(commit=False)
             stock.created_by = request.user.username
             stock.save()
-            print("=== SAVED ===")
+            
+            # CREATE HISTORY RECORD - ADD THIS
+            from django.utils import timezone
+            StockHistory.objects.create(
+                category=stock.category,
+                item_name=stock.item_name,
+                quantity=stock.quantity,
+                issue_quantity=0,
+                receive_quantity=stock.quantity,  # Initial stock is like receiving
+                received_by=request.user.username,
+                created_by=request.user.username,
+                last_updated=timezone.now(),
+                timestamp=timezone.now()
+            )
+            
+            print("=== STOCK AND HISTORY CREATED ===")
+            messages.success(request, f'Successfully added {stock.item_name} to stock!')
             return redirect('view_stock')
         else:
-            print("=== ERRORS ===")
+            print("=== FORM ERRORS ===")
             print(form.errors)
+            messages.error(request, 'Failed to add stock. Please check the form.')
     else:
         form = StockCreateForm()
     
-    return render(request, 'stock/add_stock.html', {'form': form})
+    # Include 'add' variable for template compatibility
+    add = Stock.objects.all()
+    context = {
+        'add': add,
+        'form': form, 
+        'title': title
+    }
+    return render(request, 'stock/add_stock.html', context)
 
 
 @login_required
 def update_stock(request, pk):
     title = 'Update Stock'
     update = Stock.objects.get(id=pk)
+    old_quantity = update.quantity  # Store old quantity
+    
     form = StockUpdateForm(instance=update)
     if request.method == 'POST':
         form = StockUpdateForm(request.POST, request.FILES, instance=update)
         if form.is_valid():
-            image_path = update.image.path
-            if os.path.exists(image_path):
-                os.remove(image_path)
-            form.save()
+            # Remove old image if exists
+            if update.image and os.path.exists(update.image.path):
+                os.remove(update.image.path)
+                
+            updated_stock = form.save()
+            
+            # CREATE HISTORY RECORD
+            from django.utils import timezone
+            quantity_change = updated_stock.quantity - old_quantity
+            
+            StockHistory.objects.create(
+                category=updated_stock.category,
+                item_name=updated_stock.item_name,
+                quantity=updated_stock.quantity,
+                issue_quantity=0 if quantity_change >= 0 else abs(quantity_change),
+                receive_quantity=quantity_change if quantity_change >= 0 else 0,
+                received_by=request.user.username if quantity_change >= 0 else None,
+                issued_by=request.user.username if quantity_change < 0 else None,
+                created_by=request.user.username,
+                last_updated=timezone.now(),
+                timestamp=timezone.now()
+            )
+            
             messages.success(request, 'Successfully Updated!')
             return redirect('/view_stock')
+            
     context = {'form': form, 'update': update, 'title': title}
     return render(request, 'stock/add_stock.html', context)
 
 
 @login_required
 def delete_stock(request, pk):
-    Stock.objects.get(id=pk).delete()
+    # Get stock item before deleting to create history record
+    stock_item = Stock.objects.get(id=pk)
+    
+    # CREATE HISTORY RECORD FOR DELETION
+    from django.utils import timezone
+    StockHistory.objects.create(
+        category=stock_item.category,
+        item_name=f"DELETED: {stock_item.item_name}",
+        quantity=0,
+        issue_quantity=stock_item.quantity,  # All quantity is "issued" (removed)
+        receive_quantity=0,
+        issued_by=request.user.username,
+        created_by=request.user.username,
+        last_updated=timezone.now(),
+        timestamp=timezone.now()
+    )
+    
+    # Delete the stock item
+    stock_item.delete()
     messages.success(request, 'Your file has been deleted.')
     return redirect('/view_stock')
 
@@ -215,14 +264,28 @@ def issue_item(request, pk):
         value.quantity = value.quantity - value.issue_quantity
         value.issued_by = str(request.user)
         if value.quantity >= 0:
-            messages.success(request, "Issued Successfully, " + str(value.quantity) + " " + str(
-                value.item_name) + "s now left in Store")
             value.save()
+            
+            # CREATE HISTORY RECORD
+            from django.utils import timezone
+            StockHistory.objects.create(
+                category=value.category,
+                item_name=value.item_name,
+                quantity=value.quantity,
+                issue_quantity=value.issue_quantity,
+                receive_quantity=0,
+                issued_by=value.issued_by,
+                issued_to=value.issued_to,
+                created_by=str(request.user),
+                last_updated=timezone.now(),
+                timestamp=timezone.now()
+            )
+            
+            messages.success(request, "Issued Successfully, " + str(value.quantity) + " " + str(value.item_name) + "s now left in Store")
         else:
             messages.error(request, "Insufficient Stock")
-
         return redirect('/stock_detail/' + str(value.id))
-
+    
     context = {
         "title": 'Issue ' + str(issue.item_name),
         "issue": issue,
@@ -260,6 +323,20 @@ def receive_item(request, pk):
             value.edited_by = str(request.user)
             value.save()
             
+            # CREATE HISTORY RECORD
+            from django.utils import timezone  # Import moved here
+            StockHistory.objects.create(
+                category=value.category,
+                item_name=value.item_name,
+                quantity=value.quantity,
+                issue_quantity=0,
+                receive_quantity=value.receive_quantity,
+                received_by=value.received_by,
+                created_by=str(request.user),
+                last_updated=timezone.now(),
+                timestamp=timezone.now()
+            )
+            
             messages.success(
                 request,
                 f"Received Successfully, {value.quantity} {value.item_name}s now in Store"
@@ -276,6 +353,7 @@ def receive_item(request, pk):
     }
     print(f"Rendering template with context: {list(context.keys())}")
     return render(request, "stock/add_stock.html", context)
+
 
 @login_required
 def re_order(request, pk):
@@ -295,58 +373,62 @@ def re_order(request, pk):
 
 @login_required()
 def view_history(request):
-    title = "STOCK HISTORY"
-    history = StockHistory.objects.all()
-    form = StockHistorySearchForm(request.POST or None)
-    context = {
-        'title': title,
-        'history': history,
-        'form': form
-    }
-    if request.method == 'POST':
-        category = form['category'].value()
-        history = StockHistory.objects.filter(item_name__icontains=form['item_name'].value(),
-
-                                              last_updated__range=[
-                                                                form['start_date'].value(),
-                                                                form['end_date'].value()
-                                              ]
-                                              )
-        if category != '':
-            history = history.filter(category_id=category)
-
-        if form['export_to_CSV'].value() == True:
-            response = HttpResponse(content_type='text/csv')
-            response['Content-Disposition'] = 'attachment; filename="Stock History.csv"'
-            writer = csv.writer(response)
-            writer.writerow(
-                ['CATEGORY',
-                 'ITEM NAME',
-                 'QUANTITY',
-                 'ISSUE QUANTITY',
-                 'RECEIVE QUANTITY',
-                 'RECEIVE BY',
-                 'ISSUE BY',
-                 'LAST UPDATED'])
-            instance = history
-            for stock in instance:
-                writer.writerow(
-                    [stock.category,
-                     stock.item_name,
-                     stock.quantity,
-                     stock.issue_quantity,
-                     stock.receive_quantity,
-                     stock.received_by,
-                     stock.issued_by,
-                     stock.last_updated])
-            return response
+    print("=== VIEW HISTORY DEBUG START ===")
+    print(f"Request method: {request.method}")
+    print(f"Request path: {request.path}")
+    
+    try:
+        title = "STOCK HISTORY"
+        history = StockHistory.objects.all()
+        print(f"Total StockHistory records: {history.count()}")
+        
+        # Debug: Show some records
+        for record in history[:5]:  # Show first 5 records
+            print(f"Record: {record.item_name} - {record.last_updated}")
+        
+        form = StockHistorySearchForm(request.POST or None)
+        print(f"Form created successfully")
+        
         context = {
-            'form': form,
             'title': title,
             'history': history,
+            'form': form
         }
-    return render(request, 'stock/view_history.html', context)
+        
+        if request.method == 'POST':
+            print("Processing POST request...")
+            print("POST data:", dict(request.POST))
+            
+            try:
+                print("Form is_valid check...")
+                if form.is_valid():
+                    print("Form is valid!")
+                    # Just return the basic context for now - no filtering
+                    context = {
+                        'title': title,
+                        'history': history,
+                        'form': form
+                    }
+                else:
+                    print("Form is invalid!")
+                    print("Form errors:", form.errors)
+            except Exception as e:
+                print(f"Error in form validation: {e}")
+                import traceback
+                traceback.print_exc()
+        
+        print("About to render template...")
+        return render(request, 'stock/view_history.html', context)
+        
+    except Exception as e:
+        print(f"ERROR in view_history: {e}")
+        import traceback
+        traceback.print_exc()
+        # Return a simple response to see if this is the issue
+        from django.http import HttpResponse
+        return HttpResponse(f"Error: {e}")
 
+    print("=== VIEW HISTORY DEBUG END ===")
 
 @login_required
 def dependent_forms(request):
