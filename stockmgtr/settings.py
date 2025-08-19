@@ -14,13 +14,13 @@ SECRET_KEY = env("SECRET_KEY")
 DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = [
-    'balanced-enchantment.up.railway.app',
+    'stock-tracking-dc-production.up.railway.app',
     'localhost',
     '127.0.0.1',
 ]
 
 CSRF_TRUSTED_ORIGINS = [
-    'https://balanced-enchantment.up.railway.app'
+    'https://stock-tracking-dc-production.up.railway.app'
 ]
 
 # CORS
@@ -50,7 +50,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    'https://balanced-enchantment.up.railway.app'
+    'https://stock-tracking-dc-production.up.railway.app'
 ]
 
 ROOT_URLCONF = 'stockmgtr.urls'
