@@ -26,7 +26,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = [
-    'balanced-enchantment.railway.app'
+    'https://balanced-enchantment.railway.app'
 ]
 
 # Application definition
