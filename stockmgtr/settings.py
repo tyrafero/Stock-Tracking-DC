@@ -22,11 +22,15 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 SECRET_KEY = env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    'balanced-enchantment.up.railway.app',  # Railway app URL
+    'localhost',                            # for local testing
+    '127.0.0.1',                            # for local testing
+]
 CSRF_TRUSTED_ORIGINS = [
-    'https://balanced-enchantment.railway.app'
+    'https://balanced-enchantment.up.railway.app'
 ]
 
 # Application definition
