@@ -443,9 +443,19 @@ def view_history(request):
         history = StockHistory.objects.all()
         print(f"Total StockHistory records: {history.count()}")
         
-        # Debug: Show some records
-        for record in history[:5]:  # Show first 5 records
-            print(f"Record: {record.item_name} - {record.last_updated}")
+        # ✅ Add row_class to each record for coloring
+        for record in history:
+            if record.issue_quantity and record.issue_quantity > 0:
+                record.row_class = "table-success"   # Green row when issued
+            elif record.receive_quantity and record.receive_quantity > 0:
+                record.row_class = "table-danger"    # Red row when received
+            else:
+                record.row_class = ""                # Default
+
+        # Debug: show first 5 records with row_class
+        for record in history[:5]:
+            print(f"Record: {record.item_name}, Issue: {record.issue_quantity}, "
+                  f"Receive: {record.receive_quantity}, RowClass: {record.row_class}")
         
         form = StockHistorySearchForm(request.POST or None)
         print(f"Form created successfully")
@@ -464,7 +474,7 @@ def view_history(request):
                 print("Form is_valid check...")
                 if form.is_valid():
                     print("Form is valid!")
-                    # Just return the basic context for now - no filtering
+                    # Filtering logic can stay here if needed
                     context = {
                         'title': title,
                         'history': history,
@@ -480,16 +490,16 @@ def view_history(request):
         
         print("About to render template...")
         return render(request, 'stock/view_history.html', context)
-        
+    
     except Exception as e:
         print(f"ERROR in view_history: {e}")
         import traceback
         traceback.print_exc()
-        # Return a simple response to see if this is the issue
         from django.http import HttpResponse
         return HttpResponse(f"Error: {e}")
 
     print("=== VIEW HISTORY DEBUG END ===")
+
 
 @login_required
 def dependent_forms(request):
