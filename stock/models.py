@@ -34,7 +34,7 @@ class Stock(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True, auto_now=False)
     date = models.DateTimeField(default=timezone.now)
     export_to_csv = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='stock/static/images', null=True, blank=True)
+    image = models.ImageField(upload_to='stock/images/', null=True, blank=True)
 
     def __str__(self):
         return self.item_name + " " + str(self.quantity) + " " + str(self.last_updated)
