@@ -25,6 +25,7 @@ urlpatterns = [
     path('scrumboard', views.scrum_list, name='scrumboard'),
     path('scrumboard_view', views.scrum_view, name='scrumboard_view'),
     path('contacts', views.contact, name='contacts'),
+    path('debug/', views.debug_info, name='debug_info'),
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

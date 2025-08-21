@@ -134,11 +134,29 @@ def scrum_view(request):
 @login_required
 def add_stock(request):
     title = 'Add Stock'
-    
     if request.method == 'POST':
         print("\n=== ADD STOCK DEBUG ===")
         print("POST:", request.POST)
         print("FILES:", request.FILES)
+        
+        # Debug Django/Cloudinary configuration
+        print("\n=== ENVIRONMENT DEBUG ===")
+        from django.conf import settings
+        import os
+        print(f"DEBUG: {settings.DEBUG}")
+        print(f"DEFAULT_FILE_STORAGE: {getattr(settings, 'DEFAULT_FILE_STORAGE', 'Not set')}")
+        print(f"CLOUDINARY_CLOUD_NAME set: {'Yes' if os.getenv('CLOUDINARY_CLOUD_NAME') else 'No'}")
+        print(f"CLOUDINARY_API_KEY set: {'Yes' if os.getenv('CLOUDINARY_API_KEY') else 'No'}")
+        print(f"CLOUDINARY_API_SECRET set: {'Yes' if os.getenv('CLOUDINARY_API_SECRET') else 'No'}")
+        
+        # Test Cloudinary configuration
+        try:
+            import cloudinary
+            config = cloudinary.config()
+            print(f"Cloudinary cloud_name: {config.cloud_name}")
+            print(f"Cloudinary configured: {'Yes' if config.cloud_name else 'No'}")
+        except Exception as e:
+            print(f"Cloudinary config error: {e}")
         
         form = StockCreateForm(request.POST, request.FILES)
         if form.is_valid():
@@ -146,20 +164,35 @@ def add_stock(request):
             stock.created_by = request.user.username
             stock.save()
             
-            # CREATE HISTORY RECORD - ADD THIS
+            # Debug the saved image
+            print("\n=== IMAGE DEBUG ===")
+            print(f"Image field: {stock.image}")
+            if stock.image:
+                print(f"Image name: {stock.image.name}")
+                print(f"Image URL: {stock.image.url}")
+                print(f"Image storage: {type(stock.image.storage)}")
+                
+                # Test if we can get image info
+                try:
+                    print(f"Image size: {stock.image.size} bytes")
+                except Exception as e:
+                    print(f"Error getting image size: {e}")
+            else:
+                print("No image was saved!")
+            
+            # CREATE HISTORY RECORD
             from django.utils import timezone
             StockHistory.objects.create(
                 category=stock.category,
                 item_name=stock.item_name,
                 quantity=stock.quantity,
                 issue_quantity=0,
-                receive_quantity=stock.quantity,  # Initial stock is like receiving
+                receive_quantity=stock.quantity,
                 received_by=request.user.username,
                 created_by=request.user.username,
                 last_updated=timezone.now(),
                 timestamp=timezone.now()
             )
-            
             print("=== STOCK AND HISTORY CREATED ===")
             messages.success(request, f'Successfully added {stock.item_name} to stock!')
             return redirect('view_stock')
@@ -174,11 +207,39 @@ def add_stock(request):
     add = Stock.objects.all()
     context = {
         'add': add,
-        'form': form, 
+        'form': form,
         'title': title
     }
     return render(request, 'stock/add_stock.html', context)
 
+from django.http import JsonResponse
+import os
+from django.conf import settings
+
+def debug_info(request):
+    """Debug view to check configuration - remove after testing"""
+    try:
+        import cloudinary
+        config = cloudinary.config()
+        cloudinary_info = {
+            'configured': bool(config.cloud_name),
+            'cloud_name': config.cloud_name or 'NOT SET'
+        }
+    except Exception as e:
+        cloudinary_info = {'error': str(e)}
+    
+    debug_data = {
+        'DEBUG': settings.DEBUG,
+        'DEFAULT_FILE_STORAGE': getattr(settings, 'DEFAULT_FILE_STORAGE', 'Django default'),
+        'environment_vars': {
+            'CLOUDINARY_CLOUD_NAME': 'SET' if os.getenv('CLOUDINARY_CLOUD_NAME') else 'NOT SET',
+            'CLOUDINARY_API_KEY': 'SET' if os.getenv('CLOUDINARY_API_KEY') else 'NOT SET',
+            'CLOUDINARY_API_SECRET': 'SET' if os.getenv('CLOUDINARY_API_SECRET') else 'NOT SET',
+        },
+        'cloudinary': cloudinary_info
+    }
+    
+    return JsonResponse(debug_data, indent=2)
 
 @login_required
 def update_stock(request, pk):
