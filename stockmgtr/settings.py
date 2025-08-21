@@ -24,7 +24,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://stock-tracking-dc-production.up.railway.app'
 ]
 
-# INSTALLED APPS
+# INSTALLED APPS - Include Cloudinary apps always (they won't hurt in development)
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -111,19 +111,23 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
+# CLOUDINARY CONFIGURATION (Always configure, but only use in production)
+cloudinary.config(
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+    api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
+    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+)
+
 # MEDIA FILES - CONDITIONAL CONFIGURATION
 if DEBUG:
     # Development - Use local media files
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    # Don't set DEFAULT_FILE_STORAGE, use Django default
 else:
     # Production - Use Cloudinary
-    cloudinary.config(
-        cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
-        api_key=os.environ.get('CLOUDINARY_API_KEY'),
-        api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
-    )
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+    # No need to set MEDIA_URL and MEDIA_ROOT for Cloudinary
 
 # CRISPY FORMS
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
