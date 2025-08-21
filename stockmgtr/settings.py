@@ -1,18 +1,19 @@
-import os
 from pathlib import Path
-import environ
+from dotenv import load_dotenv
+import os
 import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 
 # BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Load environment variables
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+# Load environment variables from .env file
+load_dotenv(os.path.join(BASE_DIR, '.env'))
 
 # SECURITY
-SECRET_KEY = env("SECRET_KEY")
-DEBUG = env.bool("DEBUG", default=True)
+SECRET_KEY = os.getenv("SECRET_KEY")
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = [
     'stock-tracking-dc-production.up.railway.app',
@@ -24,7 +25,7 @@ CSRF_TRUSTED_ORIGINS = [
     'https://stock-tracking-dc-production.up.railway.app'
 ]
 
-# INSTALLED APPS - Include Cloudinary apps always (they won't hurt in development)
+# INSTALLED APPS
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -82,11 +83,11 @@ WSGI_APPLICATION = 'stockmgtr.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': env("MYSQL_DATABASE"),
-        'USER': env("MYSQL_USER"),
-        'PASSWORD': env("MYSQL_PASSWORD"),
-        'HOST': env("MYSQL_HOST"),
-        'PORT': env("MYSQL_PORT"),
+        'NAME': os.getenv("MYSQL_DATABASE"),
+        'USER': os.getenv("MYSQL_USER"),
+        'PASSWORD': os.getenv("MYSQL_PASSWORD"),
+        'HOST': os.getenv("MYSQL_HOST"),
+        'PORT': os.getenv("MYSQL_PORT"),
     }
 }
 
@@ -111,11 +112,12 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-# CLOUDINARY CONFIGURATION (Always configure, but only use in production)
+# CLOUDINARY CONFIGURATION
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
-    api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
-    api_secret=os.environ.get('CLOUDINARY_API_SECRET', ''),
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
+    secure=True  # Use HTTPS URLs
 )
 
 # MEDIA FILES - CONDITIONAL CONFIGURATION
@@ -123,11 +125,9 @@ if DEBUG:
     # Development - Use local media files
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    # Don't set DEFAULT_FILE_STORAGE, use Django default
 else:
     # Production - Use Cloudinary
     DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    # No need to set MEDIA_URL and MEDIA_ROOT for Cloudinary
 
 # CRISPY FORMS
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
@@ -147,6 +147,6 @@ REGISTRATION_OPEN = True
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = env("EMAIL_USER")
-EMAIL_HOST_PASSWORD = env("EMAIL_PASSWORD")
+EMAIL_HOST_USER = os.getenv("EMAIL_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_USE_TLS = True
