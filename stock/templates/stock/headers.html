@@ -55,6 +55,11 @@
                                         <span class="nk-menu-text">Home</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                
+                                <!-- Stock Management Section -->
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Stock Management</h6>
+                                </li>
                                 <li class="nk-menu-item">
                                     <a href="/add_stock" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-cart-fill"></em></span>
@@ -73,10 +78,60 @@
                                         <span class="nk-menu-text">View History</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                
+                                <!-- Purchase Orders Section -->
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Purchase Orders</h6>
+                                </li>
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'purchase_order_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-list-check"></em></span>
+                                        <span class="nk-menu-text">All Purchase Orders</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'create_purchase_order' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-plus-circle"></em></span>
+                                        <span class="nk-menu-text">Create Purchase Order</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                
+                                <!-- Management Section -->
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Management</h6>
+                                </li>
+                                <li class="nk-menu-item has-sub">
+                                    <a href="#" class="nk-menu-link nk-menu-toggle">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-setting"></em></span>
+                                        <span class="nk-menu-text">Manage</span>
+                                    </a>
+                                    <ul class="nk-menu-sub">
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_manufacturers' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Manufacturers</span>
+                                            </a>
+                                        </li>
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_delivery_persons' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Delivery Persons</span>
+                                            </a>
+                                        </li>
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_stores' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Stores</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li><!-- .nk-menu-item -->
+                                
+                                <!-- Other Sections -->
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Other</h6>
+                                </li>
                                 <li class="nk-menu-item">
                                     <a href="/dependent_forms" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-user-list-fill"></em></span>
-                                        <span class="nk-menu-text">Add Dependent Forms</span>
+                                        <span class="nk-menu-text">Dependent Forms</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
                                 <li class="nk-menu-item">
@@ -140,6 +195,25 @@
                             </div><!-- .nk-header-news -->
                             <div class="nk-header-tools">
                                 <ul class="nk-quick-nav">
+                                    <!-- Quick Access for Purchase Orders -->
+                                    {% if request.user.is_authenticated %}
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown">
+                                            <em class="icon ni ni-cart"></em>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-md dropdown-menu-right">
+                                            <div class="dropdown-inner">
+                                                <ul class="link-list">
+                                                    <li><a href="{% url 'purchase_order_list' %}"><em class="icon ni ni-list-check"></em><span>All Purchase Orders</span></a></li>
+                                                    <li><a href="{% url 'create_purchase_order' %}"><em class="icon ni ni-plus-circle"></em><span>Create New PO</span></a></li>
+                                                    <li class="divider"></li>
+                                                    <li><a href="{% url 'manage_manufacturers' %}"><em class="icon ni ni-building"></em><span>Manage Manufacturers</span></a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    {% endif %}
+                                    
                                     <li class="dropdown user-dropdown">
                                         <a href="#" class="dropdown-toggle mr-n1" data-toggle="dropdown">
                                             <div class="user-toggle">

@@ -73,6 +73,9 @@ class ReorderLevelForm(forms.ModelForm):
 
 
 class DependentDropdownForm(forms.ModelForm):
+    country = forms.ModelChoiceField(queryset=Country.objects.all())
+    state = forms.ModelChoiceField(queryset=State.objects.none())  # Add this line
+    city = forms.ModelChoiceField(queryset=City.objects.none())
     class Meta:
         model = Person
         fields = '__all__'

@@ -26,6 +26,33 @@ urlpatterns = [
     path('scrumboard_view', views.scrum_view, name='scrumboard_view'),
     path('contacts', views.contact, name='contacts'),
     path('debug/', views.debug_info, name='debug_info'),
+    path('purchase-orders/', views.purchase_order_list, name='purchase_order_list'),
+    path('purchase-orders/create/', views.create_purchase_order, name='create_purchase_order'),
+    path('purchase-orders/<int:pk>/', views.purchase_order_detail, name='purchase_order_detail'),
+    path('purchase-orders/<int:pk>/update/', views.update_purchase_order, name='update_purchase_order'),
+    path('purchase-orders/<int:pk>/submit/', views.submit_purchase_order, name='submit_purchase_order'),
+    path('purchase-orders/<int:pk>/send-email/', views.send_purchase_order_email, name='send_purchase_order_email'),
+    path('purchase-orders/<int:pk>/history/', views.purchase_order_history, name='purchase_order_history'),
+    
+    # AJAX endpoints
+    path('api/manufacturer-details/', views.get_manufacturer_details, name='get_manufacturer_details'),
+    
+    # Management URLs
+    path('manufacturers/', views.manage_manufacturers, name='manage_manufacturers'),
+    path('manufacturers/add/', views.add_manufacturer, name='add_manufacturer'),
+    path('manufacturers/<int:pk>/edit/', views.edit_manufacturer, name='edit_manufacturer'),
+    path('manufacturers/<int:pk>/delete/', views.delete_manufacturer, name='delete_manufacturer'),
+    
+    path('delivery-persons/', views.manage_delivery_persons, name='manage_delivery_persons'),
+    path('delivery-persons/add/', views.add_delivery_person, name='add_delivery_person'),
+    path('delivery-persons/<int:pk>/edit/', views.edit_delivery_person, name='edit_delivery_person'),
+    path('delivery-persons/<int:pk>/delete/', views.delete_delivery_person, name='delete_delivery_person'),
+    
+    path('stores/', views.manage_stores, name='manage_stores'),
+    path('stores/add/', views.add_store, name='add_store'),
+    path('stores/<int:pk>/edit/', views.edit_store, name='edit_store'),
+    path('stores/<int:pk>/delete/', views.delete_store, name='delete_store'),
+
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

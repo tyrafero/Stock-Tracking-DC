@@ -37,13 +37,16 @@ def get_client_ip(request):
         ip = x_forwarded_for.split(',')[0]
     else:
         ip = request.META.get('REMOTE_ADDR')
-    u = User(user=ip)
-    result = User.objects.filter(Q(user__icontains=ip))
+    
+    u = User(username=ip)
+    result = User.objects.filter(Q(username__icontains=ip))
+    
     if len(result) == 1:
         pass
     else:
         u.save()
-        return ip
+        # Don't return here - continue to render the template
+    
     queryset = Stock.objects.all()
     querys = Category.objects.all()
     for chart in queryset:
@@ -58,6 +61,7 @@ def get_client_ip(request):
     body = Category.objects.values('stock').count()
     mind = Category.objects.values('stockhistory').count()
     soul = Category.objects.values('group').count()
+    
     context = {
         'count': count,
         'body': body,
@@ -69,7 +73,7 @@ def get_client_ip(request):
         'receive_data': receive_data,
         'label_item': label_item
     }
-    return render(request, 'stock/home.html', context)
+    return render(request, 'stock/home.html', context)  # ✅ Always return HttpResponse
 
 
 @login_required
@@ -578,3 +582,368 @@ def contact(request):
     return render(request, 'stock/contacts.html', context)
 
 
+# stock/views.py
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from django.core.mail import send_mail
+from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.db import transaction
+
+@login_required
+def purchase_order_list(request):
+    form = PurchaseOrderSearchForm(request.GET or None)
+    purchase_orders = PurchaseOrder.objects.all().select_related('manufacturer', 'created_by')
+    if form.is_valid():
+        if ref := form.cleaned_data.get('reference_number'):
+            purchase_orders = purchase_orders.filter(reference_number__icontains=ref)
+        if manufacturer := form.cleaned_data.get('manufacturer'):
+            purchase_orders = purchase_orders.filter(manufacturer=manufacturer)
+        if status := form.cleaned_data.get('status'):
+            purchase_orders = purchase_orders.filter(status=status)
+    context = {
+        'title': 'Purchase Orders',
+        'purchase_orders': purchase_orders,
+        'form': form,
+    }
+    return render(request, 'stock/purchase_order_list.html', context)
+
+@login_required
+def create_purchase_order(request):
+    if request.method == 'POST':
+        po_form = PurchaseOrderForm(request.POST)
+        item_formset = PurchaseOrderItemFormSet(request.POST)
+        if po_form.is_valid() and item_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    purchase_order = po_form.save(commit=False)
+                    purchase_order.created_by = request.user
+                    purchase_order.save()
+                    item_formset.instance = purchase_order
+                    item_formset.save()
+                    PurchaseOrderHistory.objects.create(
+                        purchase_order=purchase_order,
+                        action='created',
+                        notes='Purchase order created',
+                        created_by=request.user
+                    )
+                    if request.POST.get('action') == 'submit':
+                        purchase_order.status = 'submitted'
+                        purchase_order.submitted_at = timezone.now()
+                        purchase_order.save()
+                        PurchaseOrderHistory.objects.create(
+                            purchase_order=purchase_order,
+                            action='submitted',
+                            notes='Purchase order submitted',
+                            created_by=request.user
+                        )
+                    messages.success(request, f'Purchase Order {purchase_order.reference_number} created successfully!')
+                    return redirect('purchase_order_detail', pk=purchase_order.pk)
+            except Exception as e:
+                messages.error(request, f'Error creating purchase order: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        po_form = PurchaseOrderForm()
+        item_formset = PurchaseOrderItemFormSet()
+    context = {
+        'title': 'Create Purchase Order',
+        'po_form': po_form,
+        'item_formset': item_formset,
+    }
+    return render(request, 'stock/create_purchase_order.html', context)
+
+@login_required
+def purchase_order_detail(request, pk):
+    purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    context = {
+        'title': f'Purchase Order - {purchase_order.reference_number}',
+        'purchase_order': purchase_order,
+        'items': purchase_order.items.all(),
+    }
+    return render(request, 'stock/purchase_order_detail.html', context)
+
+@login_required
+def update_purchase_order(request, pk):
+    purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    if purchase_order.status not in ['draft', 'submitted']:
+        messages.error(request, 'This purchase order cannot be modified.')
+        return redirect('purchase_order_detail', pk=pk)
+    if request.method == 'POST':
+        po_form = PurchaseOrderForm(request.POST, instance=purchase_order)
+        item_formset = PurchaseOrderItemFormSet(request.POST, instance=purchase_order)
+        if po_form.is_valid() and item_formset.is_valid():
+            try:
+                with transaction.atomic():
+                    po_form.save()
+                    item_formset.save()
+                    PurchaseOrderHistory.objects.create(
+                        purchase_order=purchase_order,
+                        action='updated',
+                        notes='Purchase order updated',
+                        created_by=request.user
+                    )
+                    if request.POST.get('action') == 'submit':
+                        purchase_order.status = 'submitted'
+                        purchase_order.submitted_at = timezone.now()
+                        purchase_order.save()
+                        PurchaseOrderHistory.objects.create(
+                            purchase_order=purchase_order,
+                            action='submitted',
+                            notes='Purchase order submitted',
+                            created_by=request.user
+                        )
+                    messages.success(request, f'Purchase Order {purchase_order.reference_number} updated successfully!')
+                    return redirect('purchase_order_detail', pk=purchase_order.pk)
+            except Exception as e:
+                messages.error(request, f'Error updating purchase order: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        po_form = PurchaseOrderForm(instance=purchase_order)
+        item_formset = PurchaseOrderItemFormSet(instance=purchase_order)
+    context = {
+        'title': f'Update Purchase Order - {purchase_order.reference_number}',
+        'po_form': po_form,
+        'item_formset': item_formset,
+        'purchase_order': purchase_order,
+    }
+    return render(request, 'stock/update_purchase_order.html', context)
+
+@login_required
+def submit_purchase_order(request, pk):
+    if request.method == 'POST':
+        purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+        if purchase_order.status == 'draft':
+            purchase_order.status = 'submitted'
+            purchase_order.submitted_at = timezone.now()
+            purchase_order.save()
+            PurchaseOrderHistory.objects.create(
+                purchase_order=purchase_order,
+                action='submitted',
+                notes='Purchase order submitted',
+                created_by=request.user
+            )
+            messages.success(request, f'Purchase Order {purchase_order.reference_number} submitted successfully!')
+        else:
+            messages.error(request, 'Purchase order cannot be submitted.')
+    return redirect('purchase_order_detail', pk=pk)
+
+@login_required
+def send_purchase_order_email(request, pk):
+    if request.method == 'POST':
+        purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+        if purchase_order.status not in ['submitted', 'sent']:
+            messages.error(request, 'Purchase order must be submitted before sending.')
+            return redirect('purchase_order_detail', pk=pk)
+        try:
+            context = {
+                'purchase_order': purchase_order,
+                'items': purchase_order.items.all(),
+                'company_name': getattr(settings, 'COMPANY_NAME', 'Your Company'),
+            }
+            email_subject = f'Purchase Order {purchase_order.reference_number}'
+            email_body = render_to_string('stock/email/purchase_order_email.html', context)
+            recipient_emails = [purchase_order.manufacturer.company_email]
+            if purchase_order.manufacturer.additional_email:
+                recipient_emails.append(purchase_order.manufacturer.additional_email)
+            send_mail(
+                subject=email_subject,
+                message='',
+                html_message=email_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=recipient_emails,
+                fail_silently=False,
+            )
+            purchase_order.status = 'sent'
+            purchase_order.sent_at = timezone.now()
+            purchase_order.save()
+            PurchaseOrderHistory.objects.create(
+                purchase_order=purchase_order,
+                action='sent',
+                notes=f'Purchase order sent to {", ".join(recipient_emails)}',
+                created_by=request.user
+            )
+            messages.success(request, f'Purchase Order {purchase_order.reference_number} sent successfully!')
+        except Exception as e:
+            messages.error(request, f'Failed to send email: {str(e)}')
+    return redirect('purchase_order_detail', pk=pk)
+
+@login_required
+def get_manufacturer_details(request):
+    manufacturer_id = request.GET.get('manufacturer_id')
+    if manufacturer_id:
+        try:
+            manufacturer = Manufacturer.objects.get(id=manufacturer_id)
+            data = {
+                'company_name': manufacturer.company_name,
+                'company_email': manufacturer.company_email,
+                'additional_email': manufacturer.additional_email or '',
+                'street_address': manufacturer.street_address,
+                'city': manufacturer.city,
+                'country': manufacturer.country,
+                'region': manufacturer.region,
+                'postal_code': manufacturer.postal_code,
+                'company_telephone': manufacturer.company_telephone,
+            }
+            return JsonResponse(data)
+        except Manufacturer.DoesNotExist:
+            return JsonResponse({'error': 'Manufacturer not found'}, status=404)
+    return JsonResponse({'error': 'No manufacturer ID provided'}, status=400)
+
+# Management Views
+@login_required
+def manage_manufacturers(request):
+    manufacturers = Manufacturer.objects.all()
+    context = {'title': 'Manage Manufacturers', 'manufacturers': manufacturers}
+    return render(request, 'stock/manage_manufacturers.html', context)
+
+@login_required
+def add_manufacturer(request):
+    if request.method == 'POST':
+        form = ManufacturerForm(request.POST)
+        if form.is_valid():
+            manufacturer = form.save()
+            messages.success(request, f'Manufacturer "{manufacturer.company_name}" added successfully!')
+            return redirect('manage_manufacturers')
+    else:
+        form = ManufacturerForm()
+    context = {'title': 'Add Manufacturer', 'form': form}
+    return render(request, 'stock/add_manufacturer.html', context)
+
+@login_required
+def edit_manufacturer(request, pk):
+    manufacturer = get_object_or_404(Manufacturer, pk=pk)
+    if request.method == 'POST':
+        form = ManufacturerForm(request.POST, instance=manufacturer)
+        if form.is_valid():
+            manufacturer = form.save()
+            messages.success(request, f'Manufacturer "{manufacturer.company_name}" updated successfully!')
+            return redirect('manage_manufacturers')
+    else:
+        form = ManufacturerForm(instance=manufacturer)
+    context = {'title': f'Edit Manufacturer - {manufacturer.company_name}', 'form': form, 'manufacturer': manufacturer}
+    return render(request, 'stock/edit_manufacturer.html', context)
+
+@login_required
+def delete_manufacturer(request, pk):
+    if request.method == 'POST':
+        manufacturer = get_object_or_404(Manufacturer, pk=pk)
+        if manufacturer.purchaseorder_set.exists():
+            messages.error(request, f'Cannot delete "{manufacturer.company_name}" as it has associated purchase orders.')
+        else:
+            manufacturer.delete()
+            messages.success(request, f'Manufacturer "{manufacturer.company_name}" deleted successfully!')
+    return redirect('manage_manufacturers')
+
+@login_required
+def manage_delivery_persons(request):
+    delivery_persons = DeliveryPerson.objects.all()
+    context = {'title': 'Manage Delivery Persons', 'delivery_persons': delivery_persons}
+    return render(request, 'stock/manage_delivery_persons.html', context)
+
+@login_required
+def add_delivery_person(request):
+    if request.method == 'POST':
+        form = DeliveryPersonForm(request.POST)
+        if form.is_valid():
+            delivery_person = form.save()
+            messages.success(request, f'Delivery person "{delivery_person.name}" added successfully!')
+            return redirect('manage_delivery_persons')
+    else:
+        form = DeliveryPersonForm()
+    
+    context = {
+        'title': 'Add Delivery Person', 
+        'form': form,
+        'delivery_person': None  # Explicitly set to None for add operation
+    }
+    return render(request, 'stock/add_delivery_person.html', context)
+
+@login_required
+def edit_delivery_person(request, pk):
+    delivery_person = get_object_or_404(DeliveryPerson, pk=pk)
+    if request.method == 'POST':
+        form = DeliveryPersonForm(request.POST, instance=delivery_person)
+        if form.is_valid():
+            delivery_person = form.save()
+            messages.success(request, f'Delivery person "{delivery_person.name}" updated successfully!')
+            return redirect('manage_delivery_persons')
+    else:
+        form = DeliveryPersonForm(instance=delivery_person)
+    
+    context = {
+        'title': f'Edit Delivery Person - {delivery_person.name}', 
+        'form': form, 
+        'delivery_person': delivery_person  # Pass the instance for edit operation
+    }
+    return render(request, 'stock/add_delivery_person.html', context)
+
+@login_required
+def delete_delivery_person(request, pk):
+    if request.method == 'POST':
+        delivery_person = get_object_or_404(DeliveryPerson, pk=pk)
+        if delivery_person.purchaseorder_set.exists():
+            messages.error(request, f'Cannot delete "{delivery_person.name}" as they have associated purchase orders.')
+        else:
+            delivery_person.delete()
+            messages.success(request, f'Delivery person "{delivery_person.name}" deleted successfully!')
+    return redirect('manage_delivery_persons')
+
+@login_required
+def manage_stores(request):
+    stores = Store.objects.all()
+    context = {'title': 'Manage Stores', 'stores': stores}
+    return render(request, 'stock/manage_stores.html', context)
+
+@login_required
+def add_store(request):
+    if request.method == 'POST':
+        form = StoreForm(request.POST)
+        if form.is_valid():
+            store = form.save()
+            messages.success(request, f'Store "{store.name}" added successfully!')
+            return redirect('manage_stores')
+    else:
+        form = StoreForm()
+    context = {'title': 'Add Store', 'form': form}
+    return render(request, 'stock/add_store.html', context)
+
+@login_required
+def edit_store(request, pk):
+    store = get_object_or_404(Store, pk=pk)
+    if request.method == 'POST':
+        form = StoreForm(request.POST, instance=store)
+        if form.is_valid():
+            store = form.save()
+            messages.success(request, f'Store "{store.name}" updated successfully!')
+            return redirect('manage_stores')
+    else:
+        form = StoreForm(instance=store)
+    context = {'title': f'Edit Store - {store.name}', 'form': form, 'store': store}
+    return render(request, 'stock/edit_store.html', context)
+
+@login_required
+def delete_store(request, pk):
+    if request.method == 'POST':
+        store = get_object_or_404(Store, pk=pk)
+        if store.purchaseorder_set.exists():
+            messages.error(request, f'Cannot delete "{store.name}" as it has associated purchase orders.')
+        else:
+            store.delete()
+            messages.success(request, f'Store "{store.name}" deleted successfully!')
+    return redirect('manage_stores')
+
+@login_required
+def purchase_order_history(request, pk):
+    purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    history = purchase_order.history.all()
+    context = {
+        'title': f'Purchase Order History - {purchase_order.reference_number}',
+        'purchase_order': purchase_order,
+        'history': history,
+    }
+    return render(request, 'stock/purchase_order_history.html', context)
