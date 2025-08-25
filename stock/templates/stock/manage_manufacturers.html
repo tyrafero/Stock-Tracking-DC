@@ -1,0 +1,86 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+<div class="nk-content">
+<div class="container-fluid">
+<div class="nk-content-inner">
+<div class="nk-content-body">
+<div class="components-preview wide-md mx-auto">
+<div class="nk-block nk-block-lg">
+<div class="nk-block-head">
+<div class="nk-block-head-content">
+<h4 class="nk-block-title">{{ title }}</h4>
+<div class="nk-block-des">
+<p>Manage your manufacturers here.</p>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-inner">
+<div class="text-end mb-3">
+<a href="{% url 'add_manufacturer' %}" class="btn btn-primary">
+<em class="icon ni ni-plus"></em> Add Manufacturer
+</a>
+</div>
+<table class="table" id="manufacturer-table">
+<thead>
+<tr>
+<th>Company</th>
+<th>Phone</th>
+<th>Email</th>
+<th>Actions</th>
+</tr>
+</thead>
+<tbody>
+ {% for manufacturer in manufacturers %}
+<tr>
+<td>{{ manufacturer.company_name }}</td>
+<td>{{ manufacturer.company_telephone|default:"N/A" }}</td>
+<td>{{ manufacturer.company_email|default:"N/A" }}</td>
+<td>
+<a href="{% url 'edit_manufacturer' pk=manufacturer.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+<form method="post" action="{% url 'delete_manufacturer' pk=manufacturer.pk %}" style="display:inline;">
+ {% csrf_token %}
+<button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete {{ manufacturer.company }}?')">Delete</button>
+</form>
+</td>
+</tr>
+ {% empty %}
+<tr>
+<td colspan="4" class="text-center">No manufacturers found.</td>
+</tr>
+ {% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% include 'stock/footers.html' %}
+
+<!-- Override DataTables initialization for this specific table -->
+<script>
+$(document).ready(function() {
+    // Wait a bit for other scripts to load, then configure our table
+    setTimeout(function() {
+        // If DataTables is already initialized on our table, destroy it
+        if ($.fn.DataTable.isDataTable('#manufacturer-table')) {
+            $('#manufacturer-table').DataTable().destroy();
+        }
+        
+        // Re-initialize with pagination disabled
+        $('#manufacturer-table').DataTable({
+            "paging": false,        // No pagination
+            "searching": false,     // No search box
+            "info": false,          // No "Showing X of Y entries"
+            "ordering": true,       // Keep sorting
+            "lengthChange": false,  // No "Show X entries" dropdown
+            "autoWidth": false,     // Prevent width issues
+            "responsive": true      // Keep responsive behavior
+        });
+    }, 100);
+});
+</script>

@@ -825,8 +825,14 @@ def edit_manufacturer(request, pk):
             return redirect('manage_manufacturers')
     else:
         form = ManufacturerForm(instance=manufacturer)
-    context = {'title': f'Edit Manufacturer - {manufacturer.company_name}', 'form': form, 'manufacturer': manufacturer}
-    return render(request, 'stock/edit_manufacturer.html', context)
+    
+    context = {
+        'title': f'Edit Manufacturer - {manufacturer.company_name}', 
+        'form': form, 
+        'manufacturer': manufacturer  # This tells the template it's an edit
+    }
+    # Use the same template as add_manufacturer
+    return render(request, 'stock/add_manufacturer.html', context)
 
 @login_required
 def delete_manufacturer(request, pk):

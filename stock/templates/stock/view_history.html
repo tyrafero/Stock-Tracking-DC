@@ -70,8 +70,6 @@
                         <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
                             <thead>
                                 <tr class="nk-tb-item nk-tb-head">
-                                    <th class="nk-tb-col tb-col-sm"><span>COUNT</span></th>
-                                    <th class="nk-tb-col"><span>ID</span></th>
                                     <th class="nk-tb-col"><span>CATEGORY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>ITEM NAME</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>QUANTITY IN STORE</span></th>
@@ -87,12 +85,6 @@
                                     {% if total.issue_quantity > 0 %}row-issue
                                     {% elif total.receive_quantity > 0 %}row-receive
                                     {% endif %}">
-                                    <td class="nk-tb-col">
-                                        <span class="tb-sub">{{ forloop.counter }}</span>
-                                    </td>
-                                    <td class="nk-tb-col">
-                                        <span class="tb-lead">{{ total.id }}</span>
-                                    </td>
                                     <td class="nk-tb-col">
                                         <span class="tb-lead">{{ total.category }}</span>
                                     </td>
@@ -184,7 +176,7 @@
           icon: 'warning',
           showCancelButton: true,
           confirmButtonText: '<a href="{% url 'delete_stock' every.id %}">Delete</a>',
-          cancelButtonText: 'Cancel',
+          cancelButton: 'Cancel',
           reverseButtons: true
         }).then((result) => {
           if (result.isConfirmed) {
