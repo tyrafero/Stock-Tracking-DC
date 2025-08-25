@@ -182,6 +182,8 @@ class Store(models.Model):
     def __str__(self):
         return f"{self.name} - {self.location}"
 
+from decimal import Decimal
+
 class PurchaseOrder(models.Model):
     DELIVERY_CHOICES = [
         ('dropship', 'Dropship'),
@@ -234,7 +236,7 @@ class PurchaseOrder(models.Model):
 
     @property
     def gst_amount(self):
-        return self.subtotal_after_discount * 0.10
+        return self.subtotal_after_discount * Decimal("0.10")
 
     @property
     def grand_total(self):
@@ -251,7 +253,8 @@ class PurchaseOrder(models.Model):
 
 class PurchaseOrderItem(models.Model):
     purchase_order = models.ForeignKey(PurchaseOrder, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    # Changed from ForeignKey to CharField for text input
+    product = models.CharField(max_length=255, help_text="Product name or description")
     associated_order_number = models.CharField(max_length=100, blank=True, null=True)
     price_inc = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
@@ -259,15 +262,17 @@ class PurchaseOrderItem(models.Model):
         max_digits=5,
         decimal_places=2,
         default=0.00,
-        validators=[MinValueValidator(0), MaxValueValidator(100)]
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        blank=True,
+        null=True
     )
-    received_quantity = models.PositiveIntegerField(default=0, validators=[MinValueValidator(0)])
+    received_quantity = models.PositiveIntegerField(default=0, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
     def price_exc(self):
-        return self.price_inc * 0.90
+        return self.price_inc * Decimal("0.90")
 
     @property
     def line_total_inc(self):
@@ -279,14 +284,16 @@ class PurchaseOrderItem(models.Model):
 
     @property
     def discount_amount(self):
-        return (self.line_total_exc * self.discount_percent) / 100
+        if not self.discount_percent:
+            return Decimal("0.00")
+        return (self.line_total_exc * self.discount_percent) / Decimal("100")
 
     @property
     def subtotal_exc(self):
         return self.line_total_exc - self.discount_amount
 
     def __str__(self):
-        return f"{self.product.name} - {self.purchase_order.reference_number}"
+        return f"{self.product} - {self.purchase_order.reference_number}"
 
     class Meta:
         ordering = ['id']

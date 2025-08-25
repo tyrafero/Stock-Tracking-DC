@@ -1,0 +1,329 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<style>
+/* General spacing & typography */
+.card-inner { padding: 1.5rem; }
+.card-title { margin-bottom: 1rem; font-weight: 600; }
+.row > [class*="col-"] { margin-bottom: 0.75rem; }
+
+/* PO Header */
+.po-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.status-badge {
+    font-size: 0.875rem;
+    padding: 0.45rem 1rem;
+    border-radius: 2rem;
+    font-weight: 500;
+}
+
+/* Status colors */
+.status-draft { background-color: #f3f4f6; color: #374151; }
+.status-submitted { background-color: #fef3c7; color: #d97706; }
+.status-sent { background-color: #dbeafe; color: #2563eb; }
+.status-confirmed { background-color: #d1fae5; color: #059669; }
+.status-completed { background-color: #d1fae5; color: #047857; }
+.status-cancelled { background-color: #fee2e2; color: #dc2626; }
+
+/* Info Cards */
+.po-info-card { border-left: 4px solid #667eea; }
+.po-info-card p { margin-bottom: 0.5rem; }
+
+/* Tables */
+.item-table th {
+    background-color: #495057;
+    color: white;
+    border: none;
+    padding: 0.75rem;
+}
+.item-table td {
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem;
+}
+
+/* Totals Section */
+.totals-section {
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    border-left: 4px solid #28a745;
+    background-color: transparent;
+    font-size: 1rem;
+}
+.totals-section .d-flex { padding: 0.5rem 0; }
+.totals-section hr { margin: 0.75rem 0; }
+
+/* Action Buttons */
+.action-buttons {
+    position: static; /* remove sticky */
+    margin-bottom: 1rem;
+}
+.action-buttons .btn { margin-bottom: 0.5rem; }
+
+/* Alerts & Notes */
+.alert { margin-top: 0.75rem; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .po-header .row { flex-direction: column; align-items: flex-start; }
+    .po-header .col-md-4 { text-align: left; margin-top: 0.5rem; }
+}
+</style>
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-lg mx-auto">
+
+                    <!-- Purchase Order Header -->
+                    <div class="po-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h3 class="mb-1">{{ purchase_order.reference_number }}</h3>
+                                <p class="mb-0 opacity-75">Purchase Order Details</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="status-badge status-{{ purchase_order.status }}">
+                                    {{ purchase_order.get_status_display|upper }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-4">
+                        <!-- Left Column: PO Info + Items -->
+                        <div class="col-lg-8">
+
+                            <!-- Purchase Order Info -->
+                            <div class="card po-info-card mb-4">
+                                <div class="card-inner">
+                                    <h5 class="card-title">📋 Purchase Order Information</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Reference Number:</strong> {{ purchase_order.reference_number }}</p>
+                                            <p><strong>Status:</strong> 
+                                                <span class="status-badge status-{{ purchase_order.status }}">
+                                                    {{ purchase_order.get_status_display }}
+                                                </span>
+                                            </p>
+                                            <p><strong>Created By:</strong> {{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.username }}</p>
+                                            <p><strong>Created Date:</strong> {{ purchase_order.created_at|date:"M d, Y g:i A" }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            {% if purchase_order.submitted_at %}
+                                            <p><strong>Submitted:</strong> {{ purchase_order.submitted_at|date:"M d, Y g:i A" }}</p>
+                                            {% endif %}
+                                            {% if purchase_order.sent_at %}
+                                            <p><strong>Sent:</strong> {{ purchase_order.sent_at|date:"M d, Y g:i A" }}</p>
+                                            {% endif %}
+                                            <p><strong>Last Updated:</strong> {{ purchase_order.updated_at|date:"M d, Y g:i A" }}</p>
+                                        </div>
+                                    </div>
+                                    {% if purchase_order.note_for_manufacturer %}
+                                    <hr>
+                                    <div class="alert alert-info">
+                                        <strong>Note for Manufacturer:</strong><br>
+                                        {{ purchase_order.note_for_manufacturer|linebreaks }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Manufacturer Info -->
+                            <div class="card mb-4">
+                                <div class="card-inner">
+                                    <h5 class="card-title">🏭 Manufacturer Information</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Company:</strong> {{ purchase_order.manufacturer.company_name }}</p>
+                                            <p><strong>Email:</strong> {{ purchase_order.manufacturer.company_email }}</p>
+                                            {% if purchase_order.manufacturer.additional_email %}
+                                            <p><strong>Additional Email:</strong> {{ purchase_order.manufacturer.additional_email }}</p>
+                                            {% endif %}
+                                            <p><strong>Phone:</strong> {{ purchase_order.manufacturer.company_telephone }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Address:</strong></p>
+                                            <address>
+                                                {{ purchase_order.manufacturer.street_address }}<br>
+                                                {{ purchase_order.manufacturer.city }}, {{ purchase_order.manufacturer.region }} {{ purchase_order.manufacturer.postal_code }}<br>
+                                                {{ purchase_order.manufacturer.country }}
+                                            </address>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Delivery Info -->
+                            <div class="card mb-4">
+                                <div class="card-inner">
+                                    <h5 class="card-title">🚚 Delivery Information</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <p><strong>Responsible Person:</strong> {{ purchase_order.delivery_person.name }}</p>
+                                            <p><strong>Contact:</strong> {{ purchase_order.delivery_person.phone_number }}</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <p><strong>Delivery Type:</strong> {{ purchase_order.get_delivery_type_display }}</p>
+                                            {% if purchase_order.store %}
+                                            <p><strong>Store:</strong> {{ purchase_order.store.name }}</p>
+                                            <p><strong>Location:</strong> {{ purchase_order.store.location }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Product Items -->
+                            <div class="card mb-4">
+                                <div class="card-inner">
+                                    <h5 class="card-title">🛍️ Product Items</h5>
+                                    <div class="table-responsive">
+                                        <table class="table item-table mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product Name</th>
+                                                    <th>Order #</th>
+                                                    <th>Price Inc</th>
+                                                    <th>Price Exc</th>
+                                                    <th>Qty</th>
+                                                    <th>Discount %</th>
+                                                    <th>Subtotal Exc</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in items %}
+                                                <tr>
+                                                    <td>{{ item.product }}</td>
+                                                    <td>{{ item.associated_order_number|default:"-" }}</td>
+                                                    <td>${{ item.price_inc }}</td>
+                                                    <td class="text-primary">${{ item.price_exc }}</td>
+                                                    <td>{{ item.quantity }}</td>
+                                                    <td>{{ item.discount_percent }}%</td>
+                                                    <td class="text-success">${{ item.subtotal_exc }}</td>
+                                                </tr>
+                                                {% empty %}
+                                                <tr>
+                                                    <td colspan="7" class="text-center text-muted">No items found</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- Sidebar -->
+                        <div class="col-lg-4 d-flex flex-column">
+
+                            <!-- Action Buttons -->
+                            <div class="card action-buttons no-print mb-3">
+                                <div class="card-inner">
+                                    <h6 class="card-title">Actions</h6>
+                                    <div class="d-grid gap-2">
+                                        {% if purchase_order.status == 'draft' %}
+                                        <a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary w-100">
+                                            <i class="icon ni ni-edit"></i> Edit PO
+                                        </a>
+                                        <form method="post" action="{% url 'submit_purchase_order' purchase_order.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Submit this purchase order?')">
+                                                <i class="icon ni ni-check"></i> Submit PO
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        {% if purchase_order.status in 'submitted,sent' %}
+                                        <a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary w-100">
+                                            <i class="icon ni ni-edit"></i> Edit PO
+                                        </a>
+                                        <form method="post" action="{% url 'send_purchase_order_email' purchase_order.pk %}" class="d-inline">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success w-100 mt-2" onclick="return confirm('Send this purchase order to the manufacturer?')">
+                                                <i class="icon ni ni-emails"></i> 
+                                                {% if purchase_order.status == 'sent' %}Resend Email{% else %}Send Email{% endif %}
+                                            </button>
+                                        </form>
+                                        {% endif %}
+
+                                        <a href="{% url 'purchase_order_history' purchase_order.pk %}" class="btn btn-outline-info w-100">
+                                            <i class="icon ni ni-clock"></i> View History
+                                        </a>
+
+                                        <button onclick="window.print()" class="btn btn-outline-secondary w-100">
+                                            <i class="icon ni ni-printer"></i> Print PO
+                                        </button>
+
+                                        <a href="{% url 'purchase_order_list' %}" class="btn btn-outline-gray w-100">
+                                            <i class="icon ni ni-arrow-left"></i> Back to List
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Purchase Order Totals -->
+                            <div class="card mt-auto">
+                                <div class="card-inner">
+                                    <div class="totals-section">
+                                        <h6 class="mb-3">📊 Purchase Order Totals</h6>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>Subtotal (Exc GST):</span>
+                                            <span>${{ purchase_order.subtotal_exc|add:purchase_order.total_discount_amount|floatformat:2 }}</span>
+                                        </div>
+                                        {% if purchase_order.total_discount_amount > 0 %}
+                                        <div class="d-flex justify-content-between mb-2 text-danger">
+                                            <span>Total Discount:</span>
+                                            <span>-${{ purchase_order.total_discount_amount|floatformat:2 }}</span>
+                                        </div>
+                                        {% endif %}
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>After Discount:</span>
+                                            <span>${{ purchase_order.subtotal_exc|floatformat:2 }}</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span>GST (10%):</span>
+                                            <span>${{ purchase_order.gst_amount|floatformat:2 }}</span>
+                                        </div>
+                                        <hr>
+                                        <div class="d-flex justify-content-between">
+                                            <strong>GRAND TOTAL:</strong>
+                                            <strong class="text-success">${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div> <!-- end sidebar -->
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script src="{% static 'js/sweetalert2.all.min.js' %}"></script>
+{% for message in messages %}
+<script>
+    Swal.fire({
+        position: 'center',
+        icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+        title: '{{ message }}',
+        showConfirmButton: true,
+        timer: 5000
+    });
+</script>
+{% endfor %}

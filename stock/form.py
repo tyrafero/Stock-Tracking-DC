@@ -229,19 +229,32 @@ class PurchaseOrderItemForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        edit_mode = kwargs.pop('edit_mode', False)
         super().__init__(*args, **kwargs)
+        self.fields['product'] = forms.CharField(widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Product Name'
+        }))
+
         for field_name, field in self.fields.items():
             field.required = field_name in ['product', 'price_inc', 'quantity']
-        if self.instance.pk and self.instance.product:
-            self.fields['price_inc'].initial = self.instance.product.default_price_inc
 
+        # Only set price_inc if instance.product is a Product object
+        product_instance = getattr(self.instance, 'product', None)
+        if isinstance(product_instance, Product):
+            self.fields['price_inc'].initial = product_instance.default_price_inc
+
+        # received_quantity readonly in Add mode
+        if not edit_mode:
+            self.fields['received_quantity'].initial = 0
+            self.fields['received_quantity'].widget.attrs['readonly'] = True
 PurchaseOrderItemFormSet = inlineformset_factory(
     PurchaseOrder,
     PurchaseOrderItem,
     form=PurchaseOrderItemForm,
-    extra=1,
+    extra=0,
     can_delete=True,
-    min_num=1,
+    min_num=0,
     validate_min=True,
 )
 

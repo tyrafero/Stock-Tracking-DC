@@ -645,6 +645,8 @@ def create_purchase_order(request):
             except Exception as e:
                 messages.error(request, f'Error creating purchase order: {str(e)}')
         else:
+            print(po_form.errors)
+            print(item_formset.errors)
             messages.error(request, 'Please correct the errors below.')
     else:
         po_form = PurchaseOrderForm()
@@ -701,17 +703,21 @@ def update_purchase_order(request, pk):
             except Exception as e:
                 messages.error(request, f'Error updating purchase order: {str(e)}')
         else:
+            print(po_form.errors)
+            print(item_formset.errors)
             messages.error(request, 'Please correct the errors below.')
     else:
         po_form = PurchaseOrderForm(instance=purchase_order)
-        item_formset = PurchaseOrderItemFormSet(instance=purchase_order)
+        item_formset = PurchaseOrderItemFormSet(instance=purchase_order,
+                                                form_kwargs={'edit_mode': True})  # Edit mode
+
     context = {
         'title': f'Update Purchase Order - {purchase_order.reference_number}',
         'po_form': po_form,
         'item_formset': item_formset,
         'purchase_order': purchase_order,
     }
-    return render(request, 'stock/update_purchase_order.html', context)
+    return render(request, 'stock/create_purchase_order.html', context)
 
 @login_required
 def submit_purchase_order(request, pk):
