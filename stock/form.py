@@ -373,3 +373,21 @@ class PurchaseOrderSearchForm(forms.Form):
             ),
             Submit('search', 'Search', css_class='btn btn-primary')
         )
+
+from registration.forms import RegistrationForm
+from django import forms
+
+class CustomRegistrationForm(RegistrationForm):
+    allowed_domains = ['digitalcinema.com.au','gmail.com']  # all emails ending with this domain
+    allowed_specific_emails = ['atish.digitalcinema@gmail.com', ]  # individual allowed emails
+
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        domain = email.split('@')[-1]
+
+        if domain in self.allowed_domains or email.lower() in [e.lower() for e in self.allowed_specific_emails]:
+            return email
+
+        raise forms.ValidationError(
+            "Registration is only allowed with @dc.com.au emails or certain approved Gmail accounts."
+        )
