@@ -166,6 +166,11 @@ def add_stock(request):
         if form.is_valid():
             stock = form.save(commit=False)
             stock.created_by = request.user.username
+            
+            # Set default note for new stock
+            if not stock.note:
+                stock.note = "Fresh Stock"
+            
             stock.save()
             
             # Debug the saved image
@@ -175,7 +180,6 @@ def add_stock(request):
                 print(f"Image name: {stock.image.name}")
                 print(f"Image URL: {stock.image.url}")
                 print(f"Image storage: {type(stock.image.storage)}")
-                
                 # Test if we can get image info
                 try:
                     print(f"Image size: {stock.image.size} bytes")
@@ -185,7 +189,6 @@ def add_stock(request):
                 print("No image was saved!")
             
             # CREATE HISTORY RECORD
-            from django.utils import timezone
             StockHistory.objects.create(
                 category=stock.category,
                 item_name=stock.item_name,
@@ -193,10 +196,12 @@ def add_stock(request):
                 issue_quantity=0,
                 receive_quantity=stock.quantity,
                 received_by=request.user.username,
+                note="Fresh Stock",  # Single note field
                 created_by=request.user.username,
                 last_updated=timezone.now(),
                 timestamp=timezone.now()
             )
+            
             print("=== STOCK AND HISTORY CREATED ===")
             messages.success(request, f'Successfully added {stock.item_name} to stock!')
             return redirect('view_stock')
@@ -250,20 +255,25 @@ def update_stock(request, pk):
     title = 'Update Stock'
     update = Stock.objects.get(id=pk)
     old_quantity = update.quantity  # Store old quantity
-    
     form = StockUpdateForm(instance=update)
+    
     if request.method == 'POST':
         form = StockUpdateForm(request.POST, request.FILES, instance=update)
         if form.is_valid():
             # Remove old image if exists
             if update.image and os.path.exists(update.image.path):
                 os.remove(update.image.path)
-                
+            
             updated_stock = form.save()
             
             # CREATE HISTORY RECORD
-            from django.utils import timezone
             quantity_change = updated_stock.quantity - old_quantity
+            
+            # Determine note based on quantity change
+            if quantity_change >= 0:
+                note = "Stock Updated - Quantity Increased"
+            else:
+                note = "Stock Updated - Quantity Decreased"
             
             StockHistory.objects.create(
                 category=updated_stock.category,
@@ -273,6 +283,7 @@ def update_stock(request, pk):
                 receive_quantity=quantity_change if quantity_change >= 0 else 0,
                 received_by=request.user.username if quantity_change >= 0 else None,
                 issued_by=request.user.username if quantity_change < 0 else None,
+                note=note,  # Single note field
                 created_by=request.user.username,
                 last_updated=timezone.now(),
                 timestamp=timezone.now()
@@ -280,10 +291,90 @@ def update_stock(request, pk):
             
             messages.success(request, 'Successfully Updated!')
             return redirect('/view_stock')
-            
+    
     context = {'form': form, 'update': update, 'title': title}
     return render(request, 'stock/add_stock.html', context)
 
+@login_required
+def issue_stock(request, pk):
+    """Handle stock issuing with notes"""
+    stock = Stock.objects.get(id=pk)
+    
+    if request.method == 'POST':
+        form = IssueForm(request.POST, instance=stock)
+        if form.is_valid():
+            issue_quantity = form.cleaned_data['issue_quantity']
+            note = form.cleaned_data.get('note', '')  # Get note from form
+            
+            if issue_quantity <= stock.quantity:
+                # Update stock
+                stock.quantity -= issue_quantity
+                stock.issued_by = request.user.username
+                stock.note = note  # Store in single note field
+                stock.save()
+                
+                # Create history record
+                StockHistory.objects.create(
+                    category=stock.category,
+                    item_name=stock.item_name,
+                    quantity=stock.quantity,
+                    issue_quantity=issue_quantity,
+                    receive_quantity=0,
+                    issued_by=request.user.username,
+                    note=note,  # Single note field
+                    created_by=request.user.username,
+                    last_updated=timezone.now(),
+                    timestamp=timezone.now()
+                )
+                
+                messages.success(request, f'Successfully issued {issue_quantity} {stock.item_name}!')
+                return redirect('view_stock')
+            else:
+                messages.error(request, 'Cannot issue more than available stock!')
+    else:
+        form = IssueForm(instance=stock)
+    
+    context = {'form': form, 'stock': stock}
+    return render(request, 'stock/issue_stock.html', context)
+
+@login_required
+def receive_stock(request, pk):
+    """Handle stock receiving with notes"""
+    stock = Stock.objects.get(id=pk)
+    
+    if request.method == 'POST':
+        form = ReceiveForm(request.POST, instance=stock)
+        if form.is_valid():
+            receive_quantity = form.cleaned_data['receive_quantity']
+            note = form.cleaned_data.get('note', '')  # Get note from form
+            
+            # Update stock
+            stock.quantity += receive_quantity
+            stock.received_by = request.user.username
+            stock.note = note  # Store in single note field
+            stock.save()
+            
+            # Create history record
+            StockHistory.objects.create(
+                category=stock.category,
+                item_name=stock.item_name,
+                quantity=stock.quantity,
+                issue_quantity=0,
+                receive_quantity=receive_quantity,
+                received_by=request.user.username,
+                note=note,  # Single note field
+                created_by=request.user.username,
+                last_updated=timezone.now(),
+                timestamp=timezone.now()
+            )
+            
+            messages.success(request, f'Successfully received {receive_quantity} {stock.item_name}!')
+            return redirect('view_stock')
+    else:
+        form = ReceiveForm(instance=stock)
+    
+    context = {'form': form, 'stock': stock}
+    return render(request, 'stock/receive_stock.html', context)
 
 @login_required
 def delete_stock(request, pk):
@@ -300,6 +391,7 @@ def delete_stock(request, pk):
         receive_quantity=0,
         issued_by=request.user.username,
         created_by=request.user.username,
+        note=f"Stock deleted by {request.user.username}",
         last_updated=timezone.now(),
         timestamp=timezone.now()
     )
@@ -340,7 +432,7 @@ def issue_item(request, pk):
                 issue_quantity=value.issue_quantity,
                 receive_quantity=0,
                 issued_by=value.issued_by,
-                issued_to=value.issued_to,
+                note=value.note,
                 created_by=str(request.user),
                 last_updated=timezone.now(),
                 timestamp=timezone.now()
@@ -397,6 +489,7 @@ def receive_item(request, pk):
                 issue_quantity=0,
                 receive_quantity=value.receive_quantity,
                 received_by=value.received_by,
+                note=value.note,
                 created_by=str(request.user),
                 last_updated=timezone.now(),
                 timestamp=timezone.now()

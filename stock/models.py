@@ -26,7 +26,7 @@ class Stock(models.Model):
     received_by = models.CharField(max_length=50, blank=True, null=True)
     issue_quantity = models.IntegerField(default='0', blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
-    issued_to = models.CharField(max_length=50, blank=True, null=True)
+    note = models.CharField(max_length=255, blank=True, null=True)  # SINGLE FIELD for both issue and receive notes
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)
     re_order = models.IntegerField(default='0', blank=True, null=True)
@@ -40,7 +40,6 @@ class Stock(models.Model):
     def __str__(self):
         return self.item_name + " " + str(self.quantity) + " " + str(self.last_updated)
 
-
 class StockHistory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
@@ -49,13 +48,12 @@ class StockHistory(models.Model):
     received_by = models.CharField(max_length=50, blank=True, null=True)
     issue_quantity = models.IntegerField(default='0', blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
-    issued_to = models.CharField(max_length=50, blank=True, null=True)
+    note = models.CharField(max_length=255, blank=True, null=True)  # SINGLE FIELD for both issue and receive notes
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)
     re_order = models.IntegerField(default='0', blank=True, null=True)
     last_updated = models.DateTimeField(auto_now_add=False, auto_now=False, null=True)
     timestamp = models.DateTimeField(auto_now_add=False, auto_now=False, null=True)
-
 
 class User(models.Model):
     user = models.TextField(default=None)

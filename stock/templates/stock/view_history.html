@@ -75,7 +75,7 @@
                                     <th class="nk-tb-col tb-col-md"><span>QUANTITY IN STORE</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>ISSUE QUANTITY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>RECEIVE QUANTITY</span></th>
-                                    <th class="nk-tb-col tb-col-md"><span>ISSUED BY</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>ISSUED BY / RECEIVED BY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
                                 </tr>
                             </thead>
@@ -90,7 +90,7 @@
                                     </td>
                                     <td class="nk-tb-col">
                                         <span class="tb-sub" data-toggle="tooltip" data-placement="top"
-                                              title="Issued To: {{ total.issued_to }}">
+                                              title="{% if total.issue_quantity > 0 %}Issued To: {{ total.note|default:'No note provided' }}{% elif total.receive_quantity > 0 %}Received From: {{ total.note|default:'No note provided' }}{% else %}Note: {{ total.note|default:'No note' }}{% endif %}">
                                             {{ total.item_name }}
                                         </span>
                                     </td>
@@ -98,17 +98,21 @@
                                         <span class="tb-sub">{{ total.quantity }}</span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub">
+                                        <span class="tb-sub" 
+                                              {% if total.issue_quantity > 0 %}data-toggle="tooltip" data-placement="top" title="Issued To: {{ total.note|default:'No note provided' }}"{% endif %}>
                                             {{ total.issue_quantity }}
                                         </span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub">
+                                        <span class="tb-sub"
+                                              {% if total.receive_quantity > 0 %}data-toggle="tooltip" data-placement="top" title="Received From: {{ total.note|default:'No note provided' }}"{% endif %}>
                                             {{ total.receive_quantity }}
                                         </span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub">{{ total.issued_by }}</span>
+                                        <span class="tb-sub">
+                                            {% if total.issue_quantity > 0 %}{{ total.issued_by }}{% elif total.receive_quantity > 0 %}{{ total.received_by }}{% else %}{{ total.created_by }}{% endif %}
+                                        </span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
                                         <span class="tb-sub">{{ total.last_updated }}</span>
