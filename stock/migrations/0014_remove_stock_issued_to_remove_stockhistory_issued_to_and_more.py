@@ -3,6 +3,62 @@
 from django.db import migrations, models
 
 
+def safe_alter_note_fields(apps, schema_editor):
+    """
+    Safely add/alter note fields without removing them first
+    """
+    db_alias = schema_editor.connection.alias
+    with schema_editor.connection.cursor() as cursor:
+        # Check if note column exists in stock table
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'stock_stock' 
+            AND COLUMN_NAME = 'note'
+        """)
+        stock_note_exists = cursor.fetchone()[0] > 0
+        
+        # Check if note column exists in stockhistory table  
+        cursor.execute("""
+            SELECT COUNT(*) FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'stock_stockhistory' 
+            AND COLUMN_NAME = 'note'
+        """)
+        stockhistory_note_exists = cursor.fetchone()[0] > 0
+        
+        # Add or modify note column in stock table
+        if not stock_note_exists:
+            cursor.execute("""
+                ALTER TABLE stock_stock 
+                ADD COLUMN note VARCHAR(255) NULL
+            """)
+        else:
+            cursor.execute("""
+                ALTER TABLE stock_stock 
+                MODIFY COLUMN note VARCHAR(255) NULL
+            """)
+        
+        # Add or modify note column in stockhistory table
+        if not stockhistory_note_exists:
+            cursor.execute("""
+                ALTER TABLE stock_stockhistory 
+                ADD COLUMN note VARCHAR(255) NULL
+            """)
+        else:
+            cursor.execute("""
+                ALTER TABLE stock_stockhistory 
+                MODIFY COLUMN note VARCHAR(255) NULL
+            """)
+
+
+def reverse_note_fields(apps, schema_editor):
+    """
+    Reverse operation - this is a no-op since we're just ensuring fields exist
+    """
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,22 +66,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='stock',
-            name='note',
-        ),
-        migrations.RemoveField(
-            model_name='stockhistory',
-            name='note',
-        ),
-        migrations.AddField(
-            model_name='stock',
-            name='note',
-            field=models.CharField(blank=True, max_length=255, null=True),
-        ),
-        migrations.AddField(
-            model_name='stockhistory',
-            name='note',
-            field=models.CharField(blank=True, max_length=255, null=True),
-        ),
+        migrations.RunPython(safe_alter_note_fields, reverse_note_fields),
     ]
