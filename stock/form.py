@@ -222,6 +222,84 @@ PurchaseOrderItemFormSet = inlineformset_factory(
 )
 
 
+
+class BulkReceivingForm(forms.Form):
+    """Form for receiving multiple items at once"""
+    def __init__(self, *args, purchase_order=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.purchase_order = purchase_order
+        
+        if purchase_order:
+            # Create fields for each item that hasn't been fully received
+            for item in purchase_order.items.all():
+                remaining = item.remaining_quantity
+                if remaining > 0:
+                    field_name = f'item_{item.pk}_quantity'
+                    self.fields[field_name] = forms.IntegerField(
+                        required=False,
+                        min_value=0,
+                        max_value=remaining,
+                        widget=forms.NumberInput(attrs={
+                            'class': 'form-control',
+                            'placeholder': f'Max: {remaining}',
+                            'min': '0',
+                            'max': str(remaining)
+                        }),
+                        label=f'{item.product} (Remaining: {remaining})',
+                        help_text=f'Enter quantity received (max: {remaining})'
+                    )
+            
+            # Common fields for all items
+            self.fields['delivery_reference'] = forms.CharField(
+                required=False,
+                widget=forms.TextInput(attrs={
+                    'class': 'form-control',
+                    'placeholder': 'Delivery note, invoice #, tracking #'
+                }),
+                label='Delivery Reference',
+                help_text='Common reference for all items in this delivery'
+            )
+            
+            self.fields['notes'] = forms.CharField(
+                required=False,
+                widget=forms.Textarea(attrs={
+                    'class': 'form-control',
+                    'rows': 3,
+                    'placeholder': 'Notes about this delivery...'
+                }),
+                label='Delivery Notes',
+                help_text='Common notes for all items in this delivery'
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Check if at least one item quantity is provided
+        has_quantities = False
+        for field_name, value in cleaned_data.items():
+            if field_name.startswith('item_') and field_name.endswith('_quantity') and value and value > 0:
+                has_quantities = True
+                break
+        
+        if not has_quantities:
+            raise forms.ValidationError('Please enter at least one quantity to receive.')
+        
+        return cleaned_data
+
+    def get_receiving_data(self):
+        """Extract receiving data for processing"""
+        data = []
+        for field_name, value in self.cleaned_data.items():
+            if field_name.startswith('item_') and field_name.endswith('_quantity') and value and value > 0:
+                item_pk = field_name.replace('item_', '').replace('_quantity', '')
+                data.append({
+                    'item_pk': int(item_pk),
+                    'quantity': value,
+                    'delivery_reference': self.cleaned_data.get('delivery_reference', ''),
+                    'notes': self.cleaned_data.get('notes', '')
+                })
+        return data
+
 class ManufacturerForm(forms.ModelForm):
     class Meta:
         model = Manufacturer

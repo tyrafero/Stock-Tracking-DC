@@ -1,0 +1,274 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<style>
+/* Receiving History Styles */
+.history-header {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.history-item {
+    border-left: 4px solid #10b981;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    background: transparent;
+    border-radius: 6px;
+    border: 1px solid #374151;
+    transition: all 0.3s ease;
+}
+
+.history-item:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+
+.history-item.recent {
+    border-left-color: #3b82f6;
+}
+
+.quantity-badge {
+    background: #10b981;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.timeline-date {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.user-info {
+    color: #4b5563;
+    font-size: 0.875rem;
+}
+
+.reference-tag {
+    background: #dbeafe;
+    color: #2563eb;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: transparent;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+    color: #10b981;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6b7280;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+</style>
+
+<div class="nk-content">
+<div class="container-fluid">
+<div class="nk-content-inner">
+<div class="nk-content-body">
+<div class="components-preview wide-lg mx-auto">
+
+<!-- Header -->
+<div class="history-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">📋 Receiving History</h3>
+            <p class="mb-1 opacity-75">{{ purchase_order.reference_number }} - {{ purchase_order.manufacturer.company_name }}</p>
+            <p class="mb-0 opacity-75">Complete receiving activity log</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <span class="badge badge-lg badge-{{ purchase_order.status }}">
+                {{ purchase_order.get_status_display|upper }}
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- Summary Statistics -->
+<div class="summary-stats">
+    <div class="stat-card">
+        <span class="stat-number">{{ receiving_records|length }}</span>
+        <div class="stat-label">Total Deliveries</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ total_items_received }}</span>
+        <div class="stat-label">Items Received</div>
+    </div>
+    <div class="stat-card">
+        <span class="stat-number">{{ unique_products_affected }}</span>
+        <div class="stat-label">Products Affected</div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- History Timeline -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-inner">
+                <h5 class="card-title">🕒 Activity Timeline</h5>
+                
+                {% if receiving_records %}
+                <div class="receiving-timeline">
+                    {% for record in receiving_records %}
+                    <div class="history-item {% if forloop.counter <= 3 %}recent{% endif %}">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ record.purchase_order_item.product }}</h6>
+                                <span class="quantity-badge">+{{ record.quantity_received }} received</span>
+                            </div>
+                            <div class="text-end">
+                                <div class="timeline-date">{{ record.received_at|date:"M d, Y g:i A" }}</div>
+                                <small class="text-muted">{{ record.received_at|timesince }} ago</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="user-info mb-2">
+                                    <strong>Received by:</strong> {{ record.received_by.get_full_name|default:record.received_by.username }}
+                                </div>
+                                {% if record.delivery_reference %}
+                                <div class="mb-2">
+                                    <span class="reference-tag">{{ record.delivery_reference }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-muted">
+                                    <small><strong>Remaining:</strong> {{ record.purchase_order_item.remaining_quantity }} items</small>
+                                </div>
+                                <div class="progress mt-2" style="height: 6px;">
+                                    {% widthratio record.purchase_order_item.total_received_quantity record.purchase_order_item.quantity 100 as progress %}
+                                    <div class="progress-bar bg-success" style="width: {{ progress }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {% if record.notes %}
+                        <div class="mt-3 pt-3 border-top">
+                            <strong>Notes:</strong>
+                            <p class="mb-0 text-muted">{{ record.notes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <em class="icon ni ni-inbox" style="font-size: 4rem; color: #9ca3af;"></em>
+                    <h4 class="mt-3 text-muted">No Receiving History</h4>
+                    <p class="text-muted">No items have been received for this purchase order yet.</p>
+                    <a href="{% url 'receive_purchase_order_items' purchase_order.pk %}" class="btn btn-primary">
+                        <em class="icon ni ni-plus"></em> Start Receiving Items
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-inner">
+                <h6 class="card-title">Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'receive_purchase_order_items' purchase_order.pk %}" class="btn btn-primary">
+                        <em class="icon ni ni-check-circle"></em> Receive Items
+                    </a>
+                    <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-primary">
+                        <em class="icon ni ni-file-docs"></em> PO Details
+                    </a>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <em class="icon ni ni-printer"></em> Print History
+                    </button>
+                    <a href="{% url 'purchase_order_list' %}" class="btn btn-outline-gray">
+                        <em class="icon ni ni-arrow-left"></em> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Items Progress -->
+        <div class="card">
+            <div class="card-inner">
+                <h6 class="card-title">Items Progress</h6>
+                <div class="items-summary">
+                    {% for item in purchase_order.items.all %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ item.product }}</div>
+                            <small class="text-muted">{{ item.total_received_quantity }}/{{ item.quantity }}</small>
+                        </div>
+                        <div class="text-end">
+                            {% widthratio item.total_received_quantity item.quantity 100 as progress %}
+                            <div class="progress mb-1" style="width: 60px; height: 6px;">
+                                <div class="progress-bar 
+                                    {% if progress == 100 %}bg-success
+                                    {% elif progress > 0 %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ progress }}%"></div>
+                            </div>
+                            <small class="text-{% if progress == 100 %}success{% elif progress > 0 %}warning{% else %}danger{% endif %}">
+                                {{ progress }}%
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script src="{% static 'js/sweetalert2.all.min.js' %}"></script>
+
+{% for message in messages %}
+<script>
+Swal.fire({
+    position: 'center',
+    icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+    title: '{{ message }}',
+    showConfirmButton: true,
+    timer: 5000
+});
+</script>
+{% endfor %}

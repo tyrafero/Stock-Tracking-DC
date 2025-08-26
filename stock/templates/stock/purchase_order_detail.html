@@ -11,18 +11,18 @@
 
 /* PO Header */
 .po-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 2rem 1.5rem;
-    border-radius: 0.5rem;
-    margin-bottom: 2rem;
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+color: white;
+padding: 2rem 1.5rem;
+border-radius: 0.5rem;
+margin-bottom: 2rem;
 }
 
 .status-badge {
-    font-size: 0.875rem;
-    padding: 0.45rem 1rem;
-    border-radius: 2rem;
-    font-weight: 500;
+font-size: 0.875rem;
+padding: 0.45rem 1rem;
+border-radius: 2rem;
+font-weight: 500;
 }
 
 /* Status colors */
@@ -39,291 +39,488 @@
 
 /* Tables */
 .item-table th {
-    background-color: #495057;
-    color: white;
-    border: none;
-    padding: 0.75rem;
+background-color: #495057;
+color: white;
+border: none;
+padding: 0.75rem;
 }
 .item-table td {
-    vertical-align: middle;
-    border-bottom: 1px solid #dee2e6;
-    padding: 0.75rem;
+vertical-align: middle;
+border-bottom: 1px solid #dee2e6;
+padding: 0.75rem;
+}
+
+/* Enhanced item table for receiving status */
+.item-table-enhanced .receiving-status {
+text-align: center;
+}
+
+.receiving-progress {
+width: 100%;
+height: 6px;
+background: #e5e7eb;
+border-radius: 3px;
+overflow: hidden;
+margin-bottom: 0.25rem;
+}
+
+.receiving-progress-bar {
+height: 100%;
+transition: width 0.3s ease;
+border-radius: 3px;
+}
+
+.receiving-progress-bar.bg-success { background: #10b981; }
+.receiving-progress-bar.bg-warning { background: #f59e0b; }
+.receiving-progress-bar.bg-danger { background: #ef4444; }
+
+.receiving-badge {
+font-size: 0.75rem;
+padding: 0.25rem 0.5rem;
+border-radius: 1rem;
+font-weight: 500;
+}
+
+.receiving-badge.not-received {
+background: #fef2f2;
+color: #dc2626;
+}
+
+.receiving-badge.partially-received {
+background: #fffbeb;
+color: #d97706;
+}
+
+.receiving-badge.fully-received {
+background: #f0fdf4;
+color: #059669;
+}
+
+.receive-btn {
+padding: 0.25rem 0.75rem;
+font-size: 0.8rem;
+border-radius: 0.375rem;
 }
 
 /* Totals Section */
 .totals-section {
-    padding: 1.5rem;
-    border-radius: 0.5rem;
-    border-left: 4px solid #28a745;
-    background-color: transparent;
-    font-size: 1rem;
+padding: 1.5rem;
+border-radius: 0.5rem;
+border-left: 4px solid #28a745;
+background-color: transparent;
+font-size: 1rem;
 }
 .totals-section .d-flex { padding: 0.5rem 0; }
 .totals-section hr { margin: 0.75rem 0; }
 
 /* Action Buttons */
 .action-buttons {
-    position: static; /* remove sticky */
-    margin-bottom: 1rem;
+position: static;
+margin-bottom: 1rem;
 }
 .action-buttons .btn { margin-bottom: 0.5rem; }
+
+/* Receiving action buttons enhancement */
+.receiving-actions {
+background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+border: none;
+color: white;
+}
+
+.receiving-actions:hover {
+background: linear-gradient(135deg, #059669 0%, #047857 100%);
+color: white;
+}
 
 /* Alerts & Notes */
 .alert { margin-top: 0.75rem; }
 
+/* Overall receiving status card */
+.receiving-status-card {
+background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+border: 1px solid #bbf7d0;
+border-radius: 0.5rem;
+padding: 1.5rem;
+margin-bottom: 1rem;
+}
+
+.receiving-status-card.partial {
+background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+border-color: #fed7aa;
+}
+
+.receiving-status-card.not-started {
+background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+border-color: #fecaca;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .po-header .row { flex-direction: column; align-items: flex-start; }
-    .po-header .col-md-4 { text-align: left; margin-top: 0.5rem; }
+.po-header .row { flex-direction: column; align-items: flex-start; }
+.po-header .col-md-4 { text-align: left; margin-top: 0.5rem; }
 }
 </style>
 
 <div class="nk-content">
-    <div class="container-fluid">
-        <div class="nk-content-inner">
-            <div class="nk-content-body">
-                <div class="components-preview wide-lg mx-auto">
+<div class="container-fluid">
+<div class="nk-content-inner">
+<div class="nk-content-body">
+<div class="components-preview wide-lg mx-auto">
 
-                    <!-- Purchase Order Header -->
-                    <div class="po-header">
-                        <div class="row align-items-center">
-                            <div class="col-md-8">
-                                <h3 class="mb-1">{{ purchase_order.reference_number }}</h3>
-                                <p class="mb-0 opacity-75">Purchase Order Details</p>
-                            </div>
-                            <div class="col-md-4 text-end">
-                                <span class="status-badge status-{{ purchase_order.status }}">
-                                    {{ purchase_order.get_status_display|upper }}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+<!-- Purchase Order Header -->
+<div class="po-header">
+<div class="row align-items-center">
+<div class="col-md-8">
+<h3 class="mb-1">{{ purchase_order.reference_number }}</h3>
+<p class="mb-0 opacity-75">Purchase Order Details</p>
+</div>
+<div class="col-md-4 text-end">
+<span class="status-badge status-{{ purchase_order.status }}">
+{{ purchase_order.get_status_display|upper }}
+</span>
+</div>
+</div>
+</div>
 
-                    <div class="row g-4">
-                        <!-- Left Column: PO Info + Items -->
-                        <div class="col-lg-8">
+<!-- Receiving Status Overview -->
+{% if purchase_order.status in 'sent,confirmed,completed' %}
+<div class="receiving-status-card {% if purchase_order.overall_receiving_status == 'fully_received' %}completed{% elif purchase_order.overall_receiving_status == 'partially_received' %}partial{% else %}not-started{% endif %}">
+<div class="row align-items-center">
+<div class="col-md-8">
+<h5 class="mb-2">
+📦 Receiving Status:
+{% if purchase_order.overall_receiving_status == 'fully_received' %}
+<span class="text-success">All Items Received</span>
+{% elif purchase_order.overall_receiving_status == 'partially_received' %}
+<span class="text-warning">Partially Received</span>
+{% else %}
+<span class="text-danger">Awaiting Items</span>
+{% endif %}
+</h5>
+<p class="mb-0">
+{% with completed_items=purchase_order.items.all|length %}
+{% for item in purchase_order.items.all %}{% if item.is_fully_received %}{{ forloop.counter }}{% endif %}{% endfor %}/{{ completed_items }} items complete
+{% endwith %}
+</p>
+</div>
+<div class="col-md-4 text-end">
+<a href="{% url 'receive_purchase_order_items' purchase_order.pk %}" class="btn receiving-actions btn-lg">
+<em class="icon ni ni-check-circle"></em>
+Receive Items
+</a>
+</div>
+</div>
+</div>
+{% endif %}
 
-                            <!-- Purchase Order Info -->
-                            <div class="card po-info-card mb-4">
-                                <div class="card-inner">
-                                    <h5 class="card-title">📋 Purchase Order Information</h5>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><strong>Reference Number:</strong> {{ purchase_order.reference_number }}</p>
-                                            <p><strong>Status:</strong> 
-                                                <span class="status-badge status-{{ purchase_order.status }}">
-                                                    {{ purchase_order.get_status_display }}
-                                                </span>
-                                            </p>
-                                            <p><strong>Created By:</strong> {{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.username }}</p>
-                                            <p><strong>Created Date:</strong> {{ purchase_order.created_at|date:"M d, Y g:i A" }}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            {% if purchase_order.submitted_at %}
-                                            <p><strong>Submitted:</strong> {{ purchase_order.submitted_at|date:"M d, Y g:i A" }}</p>
-                                            {% endif %}
-                                            {% if purchase_order.sent_at %}
-                                            <p><strong>Sent:</strong> {{ purchase_order.sent_at|date:"M d, Y g:i A" }}</p>
-                                            {% endif %}
-                                            <p><strong>Last Updated:</strong> {{ purchase_order.updated_at|date:"M d, Y g:i A" }}</p>
-                                        </div>
-                                    </div>
-                                    {% if purchase_order.note_for_manufacturer %}
-                                    <hr>
-                                    <div class="alert alert-info">
-                                        <strong>Note for Manufacturer:</strong><br>
-                                        {{ purchase_order.note_for_manufacturer|linebreaks }}
-                                    </div>
-                                    {% endif %}
-                                </div>
-                            </div>
+<div class="row g-4">
+<!-- Left Column: PO Info + Items -->
+<div class="col-lg-8">
 
-                            <!-- Manufacturer Info -->
-                            <div class="card mb-4">
-                                <div class="card-inner">
-                                    <h5 class="card-title">🏭 Manufacturer Information</h5>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><strong>Company:</strong> {{ purchase_order.manufacturer.company_name }}</p>
-                                            <p><strong>Email:</strong> {{ purchase_order.manufacturer.company_email }}</p>
-                                            {% if purchase_order.manufacturer.additional_email %}
-                                            <p><strong>Additional Email:</strong> {{ purchase_order.manufacturer.additional_email }}</p>
-                                            {% endif %}
-                                            <p><strong>Phone:</strong> {{ purchase_order.manufacturer.company_telephone }}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p><strong>Address:</strong></p>
-                                            <address>
-                                                {{ purchase_order.manufacturer.street_address }}<br>
-                                                {{ purchase_order.manufacturer.city }}, {{ purchase_order.manufacturer.region }} {{ purchase_order.manufacturer.postal_code }}<br>
-                                                {{ purchase_order.manufacturer.country }}
-                                            </address>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+<!-- Purchase Order Info -->
+<div class="card po-info-card mb-4">
+<div class="card-inner">
+<h5 class="card-title">📋 Purchase Order Information</h5>
+<div class="row">
+<div class="col-md-6">
+<p><strong>Reference Number:</strong> {{ purchase_order.reference_number }}</p>
+<p><strong>Status:</strong>
+<span class="status-badge status-{{ purchase_order.status }}">
+{{ purchase_order.get_status_display }}
+</span>
+</p>
+<p><strong>Created By:</strong> {{ purchase_order.created_by.get_full_name|default:purchase_order.created_by.username }}</p>
+<p><strong>Created Date:</strong> {{ purchase_order.created_at|date:"M d, Y g:i A" }}</p>
+</div>
+<div class="col-md-6">
+{% if purchase_order.submitted_at %}
+<p><strong>Submitted:</strong> {{ purchase_order.submitted_at|date:"M d, Y g:i A" }}</p>
+{% endif %}
+{% if purchase_order.sent_at %}
+<p><strong>Sent:</strong> {{ purchase_order.sent_at|date:"M d, Y g:i A" }}</p>
+{% endif %}
+<p><strong>Last Updated:</strong> {{ purchase_order.updated_at|date:"M d, Y g:i A" }}</p>
+</div>
+</div>
+{% if purchase_order.note_for_manufacturer %}
+<hr>
+<div class="alert alert-info">
+<strong>Note for Manufacturer:</strong><br>
+{{ purchase_order.note_for_manufacturer|linebreaks }}
+</div>
+{% endif %}
+</div>
+</div>
 
-                            <!-- Delivery Info -->
-                            <div class="card mb-4">
-                                <div class="card-inner">
-                                    <h5 class="card-title">🚚 Delivery Information</h5>
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <p><strong>Responsible Person:</strong> {{ purchase_order.delivery_person.name }}</p>
-                                            <p><strong>Contact:</strong> {{ purchase_order.delivery_person.phone_number }}</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <p><strong>Delivery Type:</strong> {{ purchase_order.get_delivery_type_display }}</p>
-                                            {% if purchase_order.store %}
-                                            <p><strong>Store:</strong> {{ purchase_order.store.name }}</p>
-                                            <p><strong>Location:</strong> {{ purchase_order.store.location }}</p>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+<!-- Manufacturer Info -->
+<div class="card mb-4">
+<div class="card-inner">
+<h5 class="card-title">🏭 Manufacturer Information</h5>
+<div class="row">
+<div class="col-md-6">
+<p><strong>Company:</strong> {{ purchase_order.manufacturer.company_name }}</p>
+<p><strong>Email:</strong> {{ purchase_order.manufacturer.company_email }}</p>
+{% if purchase_order.manufacturer.additional_email %}
+<p><strong>Additional Email:</strong> {{ purchase_order.manufacturer.additional_email }}</p>
+{% endif %}
+<p><strong>Phone:</strong> {{ purchase_order.manufacturer.company_telephone }}</p>
+</div>
+<div class="col-md-6">
+<p><strong>Address:</strong></p>
+<address>
+{{ purchase_order.manufacturer.street_address }}<br>
+{{ purchase_order.manufacturer.city }}, {{ purchase_order.manufacturer.region }} {{ purchase_order.manufacturer.postal_code }}<br>
+{{ purchase_order.manufacturer.country }}
+</address>
+</div>
+</div>
+</div>
+</div>
 
-                            <!-- Product Items -->
-                            <div class="card mb-4">
-                                <div class="card-inner">
-                                    <h5 class="card-title">🛍️ Product Items</h5>
-                                    <div class="table-responsive">
-                                        <table class="table item-table mb-0">
-                                            <thead>
-                                                <tr>
-                                                    <th>Product Name</th>
-                                                    <th>Order #</th>
-                                                    <th>Price Inc</th>
-                                                    <th>Price Exc</th>
-                                                    <th>Qty</th>
-                                                    <th>Discount %</th>
-                                                    <th>Subtotal Exc</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {% for item in items %}
-                                                <tr>
-                                                    <td>{{ item.product }}</td>
-                                                    <td>{{ item.associated_order_number|default:"-" }}</td>
-                                                    <td>${{ item.price_inc }}</td>
-                                                    <td class="text-primary">${{ item.price_exc }}</td>
-                                                    <td>{{ item.quantity }}</td>
-                                                    <td>{{ item.discount_percent }}%</td>
-                                                    <td class="text-success">${{ item.subtotal_exc }}</td>
-                                                </tr>
-                                                {% empty %}
-                                                <tr>
-                                                    <td colspan="7" class="text-center text-muted">No items found</td>
-                                                </tr>
-                                                {% endfor %}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
+<!-- Delivery Info -->
+<div class="card mb-4">
+<div class="card-inner">
+<h5 class="card-title">🚚 Delivery Information</h5>
+<div class="row">
+<div class="col-md-6">
+<p><strong>Responsible Person:</strong> {{ purchase_order.delivery_person.name }}</p>
+<p><strong>Contact:</strong> {{ purchase_order.delivery_person.phone_number }}</p>
+</div>
+<div class="col-md-6">
+<p><strong>Delivery Type:</strong> {{ purchase_order.get_delivery_type_display }}</p>
+{% if purchase_order.store %}
+<p><strong>Store:</strong> {{ purchase_order.store.name }}</p>
+<p><strong>Location:</strong> {{ purchase_order.store.location }}</p>
+{% endif %}
+</div>
+</div>
+</div>
+</div>
 
-                        </div>
+<!-- Product Items -->
+<div class="card mb-4">
+<div class="card-inner">
+<h5 class="card-title">🛍️ Product Items</h5>
+<div class="table-responsive">
+<table class="table item-table item-table-enhanced mb-0">
+<thead>
+<tr>
+<th>Product Name</th>
+<th>Order #</th>
+<th>Price Inc</th>
+<th>Price Exc</th>
+<th>Qty</th>
+<th>Discount %</th>
+<th>Subtotal Exc</th>
+{% if purchase_order.status in 'sent,confirmed,completed' %}
+<th>Receiving Status</th>
+{% endif %}
+</tr>
+</thead>
+<tbody>
+{% for item in items %}
+<tr>
+<td>
+<strong>{{ item.product }}</strong>
+{% if purchase_order.status in 'sent,confirmed,completed' %}
+<div class="receiving-progress mt-1">
+<div class="receiving-progress-bar 
+{% if item.receiving_status == 'fully_received' %}bg-success
+{% elif item.receiving_status == 'partially_received' %}bg-warning
+{% else %}bg-danger{% endif %}"
+style="width: {% if item.quantity > 0 %}{% widthratio item.total_received_quantity item.quantity 100 %}{% else %}0{% endif %}%"></div>
+</div>
+<small class="text-muted">{{ item.total_received_quantity }}/{{ item.quantity }} received</small>
+{% endif %}
+</td>
+<td>{{ item.associated_order_number|default:"-" }}</td>
+<td>${{ item.price_inc }}</td>
+<td class="text-primary">${{ item.price_exc }}</td>
+<td>{{ item.quantity }}</td>
+<td>{{ item.discount_percent }}%</td>
+<td class="text-success">${{ item.subtotal_exc }}</td>
+{% if purchase_order.status in 'sent,confirmed,completed' %}
+<td class="receiving-status">
+<span class="receiving-badge {{ item.receiving_status|default:'not-received' }}">
+{% if item.receiving_status == 'fully_received' %}Complete
+{% elif item.receiving_status == 'partially_received' %}Partial
+{% else %}Pending{% endif %}
+</span>
+{% if item.receiving_status == 'partially_received' %}
+<div class="mt-1">
+<small class="text-warning">{{ item.remaining_quantity }} remaining</small>
+</div>
+{% endif %}
+</td>
+<td>
+{% if item.remaining_quantity > 0 %}
+<span class="text-warning">
+<em class="icon ni ni-clock"></em>
+Pending
+</span>
+{% else %}
+<span class="text-success">
+<em class="icon ni ni-check-circle-fill"></em>
+Complete
+</span>
+{% endif %}
+</td>
+{% endif %}
+</tr>
+{% empty %}
+<tr>
+<td colspan="{% if purchase_order.status in 'sent,confirmed,completed' %}8{% else %}7{% endif %}" class="text-center text-muted">No items found</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+</div>
 
-                        <!-- Sidebar -->
-                        <div class="col-lg-4 d-flex flex-column">
+</div>
 
-                            <!-- Action Buttons -->
-                            <div class="card action-buttons no-print mb-3">
-                                <div class="card-inner">
-                                    <h6 class="card-title">Actions</h6>
-                                    <div class="d-grid gap-2">
-                                        {% if purchase_order.status == 'draft' %}
-                                        <a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary w-100">
-                                            <i class="icon ni ni-edit"></i> Edit PO
-                                        </a>
-                                        <form method="post" action="{% url 'submit_purchase_order' purchase_order.pk %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-primary w-100" onclick="return confirm('Submit this purchase order?')">
-                                                <i class="icon ni ni-check"></i> Submit PO
-                                            </button>
-                                        </form>
-                                        {% endif %}
+<!-- Sidebar -->
+<div class="col-lg-4 d-flex flex-column">
 
-                                        {% if purchase_order.status in 'submitted,sent' %}
-                                        <a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary w-100">
-                                            <i class="icon ni ni-edit"></i> Edit PO
-                                        </a>
-                                        <form method="post" action="{% url 'send_purchase_order_email' purchase_order.pk %}" class="d-inline">
-                                            {% csrf_token %}
-                                            <button type="submit" class="btn btn-success w-100 mt-2" onclick="return confirm('Send this purchase order to the manufacturer?')">
-                                                <i class="icon ni ni-emails"></i> 
-                                                {% if purchase_order.status == 'sent' %}Resend Email{% else %}Send Email{% endif %}
-                                            </button>
-                                        </form>
-                                        {% endif %}
+<!-- Action Buttons -->
+<div class="card action-buttons no-print mb-3">
+<div class="card-inner">
+<h6 class="card-title">Actions</h6>
+<div class="d-grid gap-2">
 
-                                        <a href="{% url 'purchase_order_history' purchase_order.pk %}" class="btn btn-outline-info w-100">
-                                            <i class="icon ni ni-clock"></i> View History
-                                        </a>
+<!-- Receiving Actions (Priority) -->
+{% if purchase_order.status in 'sent,confirmed,completed' %}
+<a href="{% url 'receive_purchase_order_items' purchase_order.pk %}" class="btn receiving-actions w-100">
+<i class="icon ni ni-check-circle"></i> Receive Items
+</a>
+<a href="{% url 'purchase_order_receiving_history' purchase_order.pk %}" class="btn btn-outline-success w-100">
+<i class="icon ni ni-clock"></i> Receiving History
+</a>
+<hr>
+{% endif %}
 
-                                        <button onclick="window.print()" class="btn btn-outline-secondary w-100">
-                                            <i class="icon ni ni-printer"></i> Print PO
-                                        </button>
+<!-- Standard PO Actions -->
+{% if purchase_order.status == 'draft' %}
+<a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary w-100">
+<i class="icon ni ni-edit"></i> Edit PO
+</a>
+<form method="post" action="{% url 'submit_purchase_order' purchase_order.pk %}" class="d-inline">
+{% csrf_token %}
+<button type="submit" class="btn btn-primary w-100" onclick="return confirm('Submit this purchase order?')">
+<i class="icon ni ni-check"></i> Submit PO
+</button>
+</form>
+{% endif %}
 
-                                        <a href="{% url 'purchase_order_list' %}" class="btn btn-outline-gray w-100">
-                                            <i class="icon ni ni-arrow-left"></i> Back to List
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
+{% if purchase_order.status in 'submitted,sent' %}
+<a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary w-100">
+<i class="icon ni ni-edit"></i> Edit PO
+</a>
+<form method="post" action="{% url 'send_purchase_order_email' purchase_order.pk %}" class="d-inline">
+{% csrf_token %}
+<button type="submit" class="btn btn-success w-100 mt-2" onclick="return confirm('Send this purchase order to the manufacturer?')">
+<i class="icon ni ni-emails"></i>
+{% if purchase_order.status == 'sent' %}Resend Email{% else %}Send Email{% endif %}
+</button>
+</form>
+{% endif %}
 
-                            <!-- Purchase Order Totals -->
-                            <div class="card mt-auto">
-                                <div class="card-inner">
-                                    <div class="totals-section">
-                                        <h6 class="mb-3">📊 Purchase Order Totals</h6>
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>Subtotal (Exc GST):</span>
-                                            <span>${{ purchase_order.subtotal_exc|add:purchase_order.total_discount_amount|floatformat:2 }}</span>
-                                        </div>
-                                        {% if purchase_order.total_discount_amount > 0 %}
-                                        <div class="d-flex justify-content-between mb-2 text-danger">
-                                            <span>Total Discount:</span>
-                                            <span>-${{ purchase_order.total_discount_amount|floatformat:2 }}</span>
-                                        </div>
-                                        {% endif %}
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>After Discount:</span>
-                                            <span>${{ purchase_order.subtotal_exc|floatformat:2 }}</span>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>GST (10%):</span>
-                                            <span>${{ purchase_order.gst_amount|floatformat:2 }}</span>
-                                        </div>
-                                        <hr>
-                                        <div class="d-flex justify-content-between">
-                                            <strong>GRAND TOTAL:</strong>
-                                            <strong class="text-success">${{ purchase_order.grand_total|floatformat:2 }}</strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+<a href="{% url 'purchase_order_history' purchase_order.pk %}" class="btn btn-outline-info w-100">
+<i class="icon ni ni-clock"></i> View History
+</a>
 
-                        </div> <!-- end sidebar -->
-                    </div>
+<button onclick="window.print()" class="btn btn-outline-secondary w-100">
+<i class="icon ni ni-printer"></i> Print PO
+</button>
 
-                </div>
-            </div>
-        </div>
-    </div>
+<a href="{% url 'purchase_order_list' %}" class="btn btn-outline-gray w-100">
+<i class="icon ni ni-arrow-left"></i> Back to List
+</a>
+</div>
+</div>
+</div>
+
+<!-- Purchase Order Totals -->
+<div class="card mt-auto">
+<div class="card-inner">
+<div class="totals-section">
+<h6 class="mb-3">📊 Purchase Order Totals</h6>
+<div class="d-flex justify-content-between mb-2">
+<span>Subtotal (Exc GST):</span>
+<span>${{ purchase_order.subtotal_exc|floatformat:2 }}</span>
+</div>
+{% if purchase_order.total_discount_amount > 0 %}
+<div class="d-flex justify-content-between mb-2 text-danger">
+<span>Total Discount:</span>
+<span>-${{ purchase_order.total_discount_amount|floatformat:2 }}</span>
+</div>
+{% endif %}
+<div class="d-flex justify-content-between mb-2">
+<span>After Discount:</span>
+<span>${{ purchase_order.subtotal_after_discount|floatformat:2 }}</span>
+</div>
+<div class="d-flex justify-content-between mb-2">
+<span>GST (10%):</span>
+<span>${{ purchase_order.gst_amount|floatformat:2 }}</span>
+</div>
+<hr>
+<div class="d-flex justify-content-between">
+<strong>GRAND TOTAL:</strong>
+<strong class="text-success">${{ purchase_order.grand_total|floatformat:2 }}</strong>
+</div>
+</div>
+</div>
+</div>
+
+</div> <!-- end sidebar -->
+</div>
+
+</div>
+</div>
+</div>
+</div>
 </div>
 
 {% include 'stock/footers.html' %}
 
 <script src="{% static 'js/sweetalert2.all.min.js' %}"></script>
+
+<script>
+// Add some interactivity to receiving progress bars
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate progress bars on load
+    const progressBars = document.querySelectorAll('.receiving-progress-bar');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 300);
+    });
+    
+    // Add hover effects to receive buttons
+    const receiveButtons = document.querySelectorAll('.receive-btn');
+    receiveButtons.forEach(btn => {
+        btn.addEventListener('mouseenter', function() {
+            this.innerHTML = '<em class="icon ni ni-plus-circle"></em> Receive Now';
+        });
+        
+        btn.addEventListener('mouseleave', function() {
+            this.innerHTML = '<em class="icon ni ni-check-circle"></em> Receive';
+        });
+    });
+});
+</script>
+
 {% for message in messages %}
 <script>
-    Swal.fire({
-        position: 'center',
-        icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
-        title: '{{ message }}',
-        showConfirmButton: true,
-        timer: 5000
-    });
+Swal.fire({
+position: 'center',
+icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+title: '{{ message }}',
+showConfirmButton: true,
+timer: 5000
+});
 </script>
 {% endfor %}

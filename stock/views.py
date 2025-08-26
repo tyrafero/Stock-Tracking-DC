@@ -872,6 +872,154 @@ def send_purchase_order_email(request, pk):
     return redirect('purchase_order_detail', pk=pk)
 
 @login_required
+def receive_purchase_order_items(request, pk):
+    """Main receiving interface - shows all items and allows bulk receiving"""
+    purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    
+    # Check if PO is in a receivable state
+    if purchase_order.status not in ['sent', 'confirmed', 'completed']:
+        messages.error(request, 'This purchase order is not ready for receiving items.')
+        return redirect('purchase_order_detail', pk=pk)
+    
+    if request.method == 'POST':
+        form = BulkReceivingForm(request.POST, purchase_order=purchase_order)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    receiving_data = form.get_receiving_data()
+                    created_records = []
+                    
+                    for item_data in receiving_data:
+                        item = get_object_or_404(PurchaseOrderItem, pk=item_data['item_pk'])
+                        
+                        # Create receiving record
+                        receiving_record = PurchaseOrderReceiving.objects.create(
+                            purchase_order_item=item,
+                            quantity_received=item_data['quantity'],
+                            delivery_reference=item_data['delivery_reference'],
+                            notes=item_data['notes'],
+                            received_by=request.user
+                        )
+                        created_records.append(receiving_record)
+                    
+                    # Create history entry
+                    total_items = sum(r.quantity_received for r in created_records)
+                    products_received = ', '.join([f"{r.purchase_order_item.product} ({r.quantity_received})" 
+                                                 for r in created_records])
+                    
+                    PurchaseOrderHistory.objects.create(
+                        purchase_order=purchase_order,
+                        action='updated',
+                        notes=f'Items received: {products_received}',
+                        created_by=request.user
+                    )
+                    
+                    messages.success(
+                        request, 
+                        f'Successfully received {total_items} items across {len(created_records)} products!'
+                    )
+                    return redirect('receive_purchase_order_items', pk=pk)
+                    
+            except Exception as e:
+                messages.error(request, f'Error receiving items: {str(e)}')
+    else:
+        form = BulkReceivingForm(purchase_order=purchase_order)
+    
+    # Get receiving records for display
+    receiving_records = PurchaseOrderReceiving.objects.filter(
+        purchase_order_item__purchase_order=purchase_order
+    ).select_related('purchase_order_item', 'received_by').order_by('-received_at')
+    
+    context = {
+        'title': f'Receive Items - {purchase_order.reference_number}',
+        'purchase_order': purchase_order,
+        'form': form,
+        'receiving_records': receiving_records,
+        'items_with_progress': _get_items_with_progress(purchase_order),
+    }
+    
+    return render(request, 'stock/receive_purchase_order_items.html', context)
+
+
+
+
+@login_required
+def purchase_order_receiving_history(request, pk):
+    """View complete receiving history for a purchase order"""
+    purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    
+    receiving_records = PurchaseOrderReceiving.objects.filter(
+        purchase_order_item__purchase_order=purchase_order
+    ).select_related('purchase_order_item', 'received_by').order_by('-received_at')
+    
+    # Calculate statistics
+    total_items_received = sum(record.quantity_received for record in receiving_records)
+    unique_products_affected = receiving_records.values('purchase_order_item').distinct().count()
+    
+    context = {
+        'title': f'Receiving History - {purchase_order.reference_number}',
+        'purchase_order': purchase_order,
+        'receiving_records': receiving_records,
+        'total_items_received': total_items_received,
+        'unique_products_affected': unique_products_affected,
+    }
+    
+    return render(request, 'stock/receive_purchase_order_item.html', context)
+
+
+@login_required
+def receiving_summary_api(request, pk):
+    """API endpoint for receiving summary data"""
+    purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    
+    items_data = []
+    for item in purchase_order.items.all():
+        items_data.append({
+            'id': item.pk,
+            'product': item.product,
+            'ordered': item.quantity,
+            'received': item.total_received_quantity,
+            'remaining': item.remaining_quantity,
+            'status': item.receiving_status,
+            'progress_percentage': round((item.total_received_quantity / item.quantity) * 100, 1),
+            'is_complete': item.is_fully_received,
+        })
+    
+    summary = {
+        'overall_status': purchase_order.overall_receiving_status,
+        'total_items': purchase_order.items.count(),
+        'completed_items': sum(1 for item in purchase_order.items.all() if item.is_fully_received),
+        'total_deliveries': PurchaseOrderReceiving.objects.filter(
+            purchase_order_item__purchase_order=purchase_order
+        ).count(),
+        'items': items_data
+    }
+    
+    return JsonResponse(summary)
+
+
+def _get_items_with_progress(purchase_order):
+    """Helper function to get items with progress data"""
+    items = []
+    for item in purchase_order.items.all():
+        progress_percentage = 0
+        if item.quantity > 0:
+            progress_percentage = round((item.total_received_quantity / item.quantity) * 100, 1)
+        
+        items.append({
+            'item': item,
+            'progress_percentage': progress_percentage,
+            'status_class': {
+                'not_received': 'danger',
+                'partially_received': 'warning', 
+                'fully_received': 'success'
+            }.get(item.receiving_status, 'secondary')
+        })
+    
+    return items
+
+
+@login_required
 def get_manufacturer_details(request):
     manufacturer_id = request.GET.get('manufacturer_id')
     if manufacturer_id:

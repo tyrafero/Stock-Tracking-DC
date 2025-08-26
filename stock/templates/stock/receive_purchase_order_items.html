@@ -1,0 +1,483 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<style>
+/* Enhanced receiving interface styles */
+.receiving-header {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.progress-ring {
+    width: 60px;
+    height: 60px;
+    position: relative;
+    margin: 0 auto 1rem;
+}
+
+.progress-ring svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+}
+
+.progress-ring circle {
+    fill: transparent;
+    stroke-width: 4;
+    r: 26;
+    cx: 30;
+    cy: 30;
+}
+
+.progress-ring .bg {
+    stroke: rgba(255,255,255,0.2);
+}
+
+.progress-ring .progress {
+    stroke: #ffffff;
+    stroke-linecap: round;
+    transition: stroke-dasharray 0.3s ease;
+}
+
+.item-receiving-card {
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
+    margin-bottom: 1rem;
+}
+
+.item-receiving-card:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.item-receiving-card.completed {
+    border-color: #10b981;
+    background-color: #f0fdf4;
+}
+
+.item-receiving-card.partial {
+    border-color: #f59e0b;
+    background-color: #fffbeb;
+}
+
+.item-receiving-card.not-started {
+    border-color: #ef4444;
+    background-color: #fef2f2;
+}
+
+.receiving-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.1);
+    padding: 1.5rem;
+    border-radius: 8px;
+    text-align: center;
+    color: white;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.quick-actions {
+    position: sticky;
+    top: 20px;
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.timeline-compact {
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.timeline-compact .timeline-item {
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #10b981;
+    font-size: 0.875rem;
+}
+
+.timeline-compact .timeline-item:nth-child(even) {
+    border-left-color: #3b82f6;
+}
+
+.receiving-form-section {
+    background: transparent;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.form-row-receiving {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 1rem;
+    align-items: center;
+    padding: 1rem;
+    background: transparent;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    border: 1px solid #374151;
+}
+
+.form-row-receiving:hover {
+    border-color: #3b82f6;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+
+.form-row-receiving.completed {
+    opacity: 0.6;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.quantity-input {
+    max-width: 120px;
+}
+
+@media (max-width: 768px) {
+    .form-row-receiving {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    
+    .receiving-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
+
+<div class="nk-content">
+<div class="container-fluid">
+<div class="nk-content-inner">
+<div class="nk-content-body">
+<div class="components-preview wide-lg mx-auto">
+
+<!-- Receiving Header -->
+<div class="receiving-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">📦 Receive Items</h3>
+            <p class="mb-1 opacity-75">{{ purchase_order.reference_number }} - {{ purchase_order.manufacturer.company_name }}</p>
+            <p class="mb-0 opacity-75">Status: {{ purchase_order.get_status_display }}</p>
+        </div>
+        <div class="col-md-4">
+            <div class="receiving-stats">
+                <div class="stat-card">
+                    <span class="stat-number">{{ receiving_records|length }}</span>
+                    <small>Total Deliveries</small>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-number">
+                        {% for item_data in items_with_progress %}
+                            {% if item_data.item.is_fully_received %}{{ forloop.counter }}{% endif %}
+                        {% empty %}0{% endfor %}
+                    </span>
+                    <small>Items Complete</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Receiving Form -->
+    <div class="col-lg-8">
+        
+        <!-- Bulk Receiving Form -->
+        <div class="card">
+            <div class="card-inner">
+                <h5 class="card-title">🚚 Record New Delivery</h5>
+                
+                {% if form.fields %}
+                <form method="post" id="bulk-receiving-form">
+                    {% csrf_token %}
+                    
+                    <!-- Common delivery info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form.delivery_reference.label_tag }}
+                            {{ form.delivery_reference }}
+                            <small class="form-text text-muted">{{ form.delivery_reference.help_text }}</small>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.notes.label_tag }}
+                            {{ form.notes }}
+                            <small class="form-text text-muted">{{ form.notes.help_text }}</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Items to receive -->
+                    <h6 class="mb-3">Items to Receive</h6>
+                    <div class="receiving-items-grid">
+                        {% for field in form %}
+                            {% if 'item_' in field.name and '_quantity' in field.name %}
+                            {% with field.name|slice:"5:-9" as item_id %}
+                            {% for item_data in items_with_progress %}
+                                {% if item_data.item.pk|stringformat:"s" == item_id %}
+                                <div class="form-row-receiving {% if item_data.item.is_fully_received %}completed{% elif item_data.item.total_received_quantity > 0 %}partial{% else %}not-started{% endif %}">
+                                    <div class="item-info">
+                                        <strong>{{ item_data.item.product }}</strong>
+                                        {% if item_data.item.associated_order_number %}
+                                        <br><small class="text-muted">Order #: {{ item_data.item.associated_order_number }}</small>
+                                        {% endif %}
+                                        <div class="progress mt-2" style="height: 6px;">
+                                            <div class="progress-bar 
+                                                {% if item_data.progress_percentage == 100 %}bg-success
+                                                {% elif item_data.progress_percentage > 0 %}bg-warning
+                                                {% else %}bg-danger{% endif %}"
+                                                style="width: {{ item_data.progress_percentage }}%"></div>
+                                        </div>
+                                        <small class="text-muted">{{ item_data.item.total_received_quantity }}/{{ item_data.item.quantity }} received</small>
+                                    </div>
+                                    
+                                    <div class="quantity-section">
+                                        {% if not item_data.item.is_fully_received %}
+                                            {{ field }}
+                                            <small class="form-text text-muted">{{ field.help_text }}</small>
+                                        {% else %}
+                                            <span class="badge badge-success">✓ Complete</span>
+                                        {% endif %}
+                                    </div>
+                                    
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                            {% endwith %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <em class="icon ni ni-check-circle"></em>
+                                Record Receipt
+                            </button>
+                            <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-gray ml-2">
+                                <em class="icon ni ni-arrow-left"></em>
+                                Back to PO
+                            </a>
+                        </div>
+                    </div>
+                </form>
+                {% else %}
+                <div class="text-center py-5">
+                    <em class="icon ni ni-check-circle-fill text-success" style="font-size: 4rem;"></em>
+                    <h4 class="mt-3 text-success">All Items Received!</h4>
+                    <p class="text-muted">This purchase order has been fully received.</p>
+                    <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-primary">
+                        View Purchase Order
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-inner">
+                <h6 class="card-title">Quick Actions</h6>
+                <div class="d-grid gap-2">
+                    <a href="{% url 'purchase_order_receiving_history' purchase_order.pk %}" class="btn btn-outline-info">
+                        <em class="icon ni ni-clock"></em> Full History
+                    </a>
+                    <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-primary">
+                        <em class="icon ni ni-file-docs"></em> PO Details
+                    </a>
+                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                        <em class="icon ni ni-printer"></em> Print Report
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Receiving Activity -->
+        {% if receiving_records %}
+        <div class="card">
+            <div class="card-inner">
+                <h6 class="card-title">Recent Activity</h6>
+                <div class="timeline-compact">
+                    {% for record in receiving_records|slice:":5" %}
+                    <div class="timeline-item">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <strong class="text-success">+{{ record.quantity_received }}</strong>
+                            <small class="text-muted">{{ record.received_at|timesince }} ago</small>
+                        </div>
+                        <div class="mb-1">{{ record.purchase_order_item.product }}</div>
+                        <small class="text-muted">
+                            by {{ record.received_by.get_full_name|default:record.received_by.username }}
+                        </small>
+                        {% if record.delivery_reference %}
+                        <br><small class="text-muted">Ref: {{ record.delivery_reference }}</small>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    
+                    {% if receiving_records|length > 5 %}
+                    <div class="text-center mt-2">
+                        <a href="{% url 'purchase_order_receiving_history' purchase_order.pk %}" class="btn btn-sm btn-outline-primary">
+                            View All ({{ receiving_records|length }})
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Items Summary -->
+        <div class="card mt-3">
+            <div class="card-inner">
+                <h6 class="card-title">Items Overview</h6>
+                <div class="items-summary">
+                    {% for item_data in items_with_progress %}
+                    <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold">{{ item_data.item.product }}</div>
+                            <small class="text-muted">{{ item_data.item.total_received_quantity }}/{{ item_data.item.quantity }}</small>
+                        </div>
+                        <div class="text-end">
+                            <div class="progress mb-1" style="width: 60px; height: 6px;">
+                                <div class="progress-bar bg-{{ item_data.status_class }}" 
+                                     style="width: {{ item_data.progress_percentage }}%"></div>
+                            </div>
+                            <small class="text-{{ item_data.status_class }}">{{ item_data.progress_percentage }}%</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script src="{% static 'js/sweetalert2.all.min.js' %}"></script>
+
+<script>
+// Auto-calculate totals and validate quantities
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('bulk-receiving-form');
+    const quantityInputs = form.querySelectorAll('input[type="number"]');
+    
+    // Add change listeners to quantity inputs
+    quantityInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            validateQuantity(this);
+            updateFormState();
+        });
+        
+        input.addEventListener('input', function() {
+            validateQuantity(this);
+        });
+    });
+    
+    function validateQuantity(input) {
+        const max = parseInt(input.getAttribute('max'));
+        const value = parseInt(input.value);
+        
+        if (value > max) {
+            input.setCustomValidity(`Cannot exceed ${max} items`);
+            input.classList.add('is-invalid');
+        } else {
+            input.setCustomValidity('');
+            input.classList.remove('is-invalid');
+        }
+    }
+    
+    function updateFormState() {
+        const hasValues = Array.from(quantityInputs).some(input => 
+            input.value && parseInt(input.value) > 0
+        );
+        
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = !hasValues;
+        }
+    }
+    
+    // Form submission confirmation
+    form.addEventListener('submit', function(e) {
+        const receivingItems = [];
+        quantityInputs.forEach(input => {
+            if (input.value && parseInt(input.value) > 0) {
+                const row = input.closest('.form-row-receiving');
+                const productName = row.querySelector('.item-info strong').textContent;
+                receivingItems.push(`${productName}: ${input.value} units`);
+            }
+        });
+        
+        if (receivingItems.length > 0) {
+            const confirmMsg = `Confirm receipt of:\n\n${receivingItems.join('\n')}\n\nThis action cannot be undone.`;
+            if (!confirm(confirmMsg)) {
+                e.preventDefault();
+            }
+        }
+    });
+    
+    // Initial form state
+    updateFormState();
+});
+
+// Progress ring animation
+function animateProgressRing(element, percentage) {
+    const circle = element.querySelector('.progress');
+    const radius = circle.r.baseVal.value;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - percentage / 100 * circumference;
+    
+    circle.style.strokeDasharray = circumference;
+    circle.style.strokeDashoffset = offset;
+}
+
+// Animate progress rings on load
+document.querySelectorAll('.progress-ring').forEach(ring => {
+    const percentage = ring.dataset.percentage || 0;
+    animateProgressRing(ring, percentage);
+});
+</script>
+
+{% for message in messages %}
+<script>
+Swal.fire({
+    position: 'center',
+    icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+    title: '{{ message }}',
+    showConfirmButton: true,
+    timer: 5000
+});
+</script>
+{% endfor %}

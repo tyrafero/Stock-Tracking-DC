@@ -1,14 +1,12 @@
 from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 
-
-# Create your models here.
-# A way to add a choice box
-# payment_method = (
-#     ('Cash', 'Cash'),
-#     ('Transfer', 'Transfer'),
-#     ('Cheque', 'Cheque')
-# )
-
+# ----------------------------
+# Category & Stock Models
+# ----------------------------
 
 class Category(models.Model):
     group = models.CharField(max_length=50, blank=True, null=True)
@@ -16,93 +14,90 @@ class Category(models.Model):
     def __str__(self):
         return self.group
 
-from django.utils import timezone
-
 class Stock(models.Model):
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
-    quantity = models.IntegerField(default='0', blank=True, null=True)
-    receive_quantity = models.IntegerField(default='0', blank=True, null=True)
+    quantity = models.IntegerField(default=0, blank=True, null=True)
+    receive_quantity = models.IntegerField(default=0, blank=True, null=True)
     received_by = models.CharField(max_length=50, blank=True, null=True)
-    issue_quantity = models.IntegerField(default='0', blank=True, null=True)
+    issue_quantity = models.IntegerField(default=0, blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
-    note = models.CharField(max_length=255, blank=True, null=True)  # SINGLE FIELD for both issue and receive notes
+    note = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)
-    re_order = models.IntegerField(default='0', blank=True, null=True)
-    last_updated = models.DateTimeField(auto_now_add=False, auto_now=True)
-    timestamp = models.DateTimeField(auto_now_add=True, auto_now=False)
+    re_order = models.IntegerField(default=0, blank=True, null=True)
+    last_updated = models.DateTimeField(auto_now=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
     date = models.DateTimeField(default=timezone.now)
     export_to_csv = models.BooleanField(default=False)
     image = models.ImageField(upload_to='stock/images/', null=True, blank=True)
-    source_purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.SET_NULL, null=True, blank=True)
+    source_purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
-        return self.item_name + " " + str(self.quantity) + " " + str(self.last_updated)
+        return f"{self.item_name} ({self.quantity}) - {self.last_updated}"
 
 class StockHistory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
-    quantity = models.IntegerField(default='0', blank=True, null=True)
-    receive_quantity = models.IntegerField(default='0', blank=True, null=True)
+    quantity = models.IntegerField(default=0, blank=True, null=True)
+    receive_quantity = models.IntegerField(default=0, blank=True, null=True)
     received_by = models.CharField(max_length=50, blank=True, null=True)
-    issue_quantity = models.IntegerField(default='0', blank=True, null=True)
+    issue_quantity = models.IntegerField(default=0, blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
-    note = models.CharField(max_length=255, blank=True, null=True)  # SINGLE FIELD for both issue and receive notes
+    note = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)
-    re_order = models.IntegerField(default='0', blank=True, null=True)
-    last_updated = models.DateTimeField(auto_now_add=False, auto_now=False, null=True)
-    timestamp = models.DateTimeField(auto_now_add=False, auto_now=False, null=True)
+    re_order = models.IntegerField(default=0, blank=True, null=True)
+    last_updated = models.DateTimeField(null=True)
+    timestamp = models.DateTimeField(null=True)
 
-class User(models.Model):
-    user = models.TextField(default=None)
-
-    def __str__(self):
-        return self.user
-
+# ----------------------------
+# Location & Person Models
+# ----------------------------
 
 class Country(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
-
 
 class State(models.Model):
+    name = models.CharField(max_length=100)
     country = models.ForeignKey(Country, on_delete=models.CASCADE)
-    name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
-
 
 class City(models.Model):
+    name = models.CharField(max_length=100)
     state = models.ForeignKey(State, on_delete=models.CASCADE)
-    name = models.CharField(max_length=50)
 
     def __str__(self):
         return self.name
-
 
 class Person(models.Model):
     name = models.CharField(max_length=150)
     country = models.ForeignKey(Country, on_delete=models.SET_NULL, blank=True, null=True)
     state = models.ForeignKey(State, on_delete=models.SET_NULL, blank=True, null=True)
     city = models.ForeignKey(City, on_delete=models.SET_NULL, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
 
     def __str__(self):
         return self.name
 
-
-class Scrums(models.Model):
-    task = models.CharField(max_length=100, blank=True, null=True)
-    task_description = models.CharField(max_length=100, blank=True, null=True)
-    task_date = models.DateTimeField(auto_now_add=False, auto_now=False, null=True, blank=True)
+class Contacts(models.Model):
+    person = models.ForeignKey(Person, on_delete=models.CASCADE, null=True, blank=True)
+    address = models.TextField(blank=True, null=True)
+    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return self.task
+        return f"Contact for {self.person.name if self.person else 'Unknown'}"
 
+# ----------------------------
+# Scrum Models
+# ----------------------------
 
 class ScrumTitles(models.Model):
     lists = models.CharField(max_length=150, blank=True, null=True)
@@ -110,22 +105,17 @@ class ScrumTitles(models.Model):
     def __str__(self):
         return str(self.lists)
 
-
-class Contacts(models.Model):
-    name = models.CharField(max_length=100, blank=True, null=True)
-    email = models.EmailField(max_length=100, blank=True, null=True)
-    occupation = models.CharField(max_length=100, blank=True, null=True)
-    phone = models.CharField(max_length=100, blank=100, null=True)
-    location = models.CharField(max_length=100, blank=True, null=True)
-    image = models.ImageField(upload_to='stock/static/images', null=True, blank=True)
+class Scrums(models.Model):
+    task = models.CharField(max_length=100, blank=True, null=True)
+    task_description = models.CharField(max_length=100, blank=True, null=True)
+    task_date = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-        return str(self.name)
+        return self.task
 
-from django.db import models
-from django.contrib.auth.models import User
-from django.core.validators import MinValueValidator, MaxValueValidator
-import uuid
+# ----------------------------
+# Product & Inventory Models
+# ----------------------------
 
 class Product(models.Model):
     name = models.CharField(max_length=200)
@@ -137,8 +127,9 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
-    class Meta:
-        ordering = ['name']
+# ----------------------------
+# Manufacturer, DeliveryPerson, Store
+# ----------------------------
 
 class Manufacturer(models.Model):
     company_name = models.CharField(max_length=200)
@@ -156,9 +147,6 @@ class Manufacturer(models.Model):
     def __str__(self):
         return self.company_name
 
-    class Meta:
-        ordering = ['company_name']
-
 class DeliveryPerson(models.Model):
     name = models.CharField(max_length=100)
     phone_number = models.CharField(max_length=20)
@@ -167,9 +155,6 @@ class DeliveryPerson(models.Model):
 
     def __str__(self):
         return f"{self.name}, {self.phone_number}"
-
-    class Meta:
-        ordering = ['name']
 
 class Store(models.Model):
     name = models.CharField(max_length=200)
@@ -180,7 +165,9 @@ class Store(models.Model):
     def __str__(self):
         return f"{self.name} - {self.location}"
 
-from decimal import Decimal
+# ----------------------------
+# Purchase Order Models
+# ----------------------------
 
 class PurchaseOrder(models.Model):
     DELIVERY_CHOICES = [
@@ -221,8 +208,20 @@ class PurchaseOrder(models.Model):
         super().save(*args, **kwargs)
 
     @property
+    def overall_receiving_status(self):
+        if not self.items.exists():
+            return 'no_items'
+        statuses = [item.receiving_status for item in self.items.all()]
+        if all(status == 'not_received' for status in statuses):
+            return 'not_received'
+        elif all(status == 'fully_received' for status in statuses):
+            return 'fully_received'
+        else:
+            return 'partially_received'
+
+    @property
     def subtotal_exc(self):
-        return sum(item.subtotal_exc for item in self.items.all())
+        return sum(item.line_total_exc for item in self.items.all())
 
     @property
     def total_discount_amount(self):
@@ -243,26 +242,16 @@ class PurchaseOrder(models.Model):
     def __str__(self):
         return f"{self.reference_number} - {self.manufacturer.company_name}"
 
-    class Meta:
-        ordering = ['-created_at']
-        permissions = [
-            ("can_complete_purchase_order", "Can mark purchase order as completed"),
-        ]
-
 class PurchaseOrderItem(models.Model):
     purchase_order = models.ForeignKey(PurchaseOrder, related_name='items', on_delete=models.CASCADE)
-    # Changed from ForeignKey to CharField for text input
-    product = models.CharField(max_length=255, help_text="Product name or description")
+    product = models.CharField(max_length=255)
     associated_order_number = models.CharField(max_length=100, blank=True, null=True)
     price_inc = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0)])
     quantity = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     discount_percent = models.DecimalField(
-        max_digits=5,
-        decimal_places=2,
-        default=0.00,
+        max_digits=5, decimal_places=2, default=0.00,
         validators=[MinValueValidator(0), MaxValueValidator(100)],
-        blank=True,
-        null=True
+        blank=True, null=True
     )
     received_quantity = models.PositiveIntegerField(default=0, blank=True, null=True)
     created_at = models.DateTimeField(default=timezone.now)
@@ -290,11 +279,30 @@ class PurchaseOrderItem(models.Model):
     def subtotal_exc(self):
         return self.line_total_exc - self.discount_amount
 
+    @property
+    def total_received_quantity(self):
+        return sum(record.quantity_received for record in self.receiving_records.all())
+
+    @property
+    def remaining_quantity(self):
+        return self.quantity - self.total_received_quantity
+
+    @property
+    def is_fully_received(self):
+        return self.total_received_quantity >= self.quantity
+
+    @property
+    def receiving_status(self):
+        total_received = self.total_received_quantity
+        if total_received == 0:
+            return 'not_received'
+        elif total_received < self.quantity:
+            return 'partially_received'
+        else:
+            return 'fully_received'
+
     def __str__(self):
         return f"{self.product} - {self.purchase_order.reference_number}"
-
-    class Meta:
-        ordering = ['id']
 
 class PurchaseOrderHistory(models.Model):
     ACTION_CHOICES = [
@@ -315,43 +323,39 @@ class PurchaseOrderHistory(models.Model):
     def __str__(self):
         return f"{self.purchase_order.reference_number} - {self.action}"
 
-    class Meta:
-        ordering = ['-created_at']
-
-# Placeholder Models for Country, State, City, Person, Contacts
-class Country(models.Model):
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
-
-class State(models.Model):
-    name = models.CharField(max_length=100)
-    country = models.ForeignKey(Country, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.name
-
-class City(models.Model):
-    name = models.CharField(max_length=100)
-    state = models.ForeignKey(State, on_delete=models.CASCADE)
-
-    def __str__(self):
-        return self.name
-
-class Person(models.Model):
-    name = models.CharField(max_length=100)
-    email = models.EmailField(blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
-
-    def __str__(self):
-        return self.name
-
-class Contacts(models.Model):
-    person = models.ForeignKey(Person, on_delete=models.CASCADE, null=True, blank=True)
-    address = models.TextField(blank=True, null=True)
-    city = models.ForeignKey(City, on_delete=models.SET_NULL, null=True, blank=True)
+class PurchaseOrderReceiving(models.Model):
+    purchase_order_item = models.ForeignKey(PurchaseOrderItem, related_name='receiving_records', on_delete=models.CASCADE)
+    quantity_received = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    delivery_reference = models.CharField(max_length=100, blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    received_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    received_at = models.DateTimeField(default=timezone.now)
     created_at = models.DateTimeField(default=timezone.now)
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        existing_received = self.purchase_order_item.receiving_records.exclude(pk=self.pk).aggregate(
+            total=models.Sum('quantity_received')
+        )['total'] or 0
+        total_after_this = existing_received + self.quantity_received
+        if total_after_this > self.purchase_order_item.quantity:
+            raise ValidationError(
+                f'Cannot receive {self.quantity_received} items. Only {self.purchase_order_item.remaining_quantity} items remaining to receive.'
+            )
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+        po = self.purchase_order_item.purchase_order
+        if po.overall_receiving_status == 'fully_received' and po.status != 'completed':
+            po.status = 'completed'
+            po.save()
+            PurchaseOrderHistory.objects.create(
+                purchase_order=po,
+                action='completed',
+                notes='All items received - Purchase order completed automatically',
+                created_by=self.received_by
+            )
+
     def __str__(self):
-        return f"Contact for {self.person.name}"
+        return f"{self.purchase_order_item.product} - Received {self.quantity_received} on {self.received_at.strftime('%Y-%m-%d')}"

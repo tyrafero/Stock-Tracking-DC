@@ -33,6 +33,10 @@ urlpatterns = [
     path('purchase-orders/<int:pk>/submit/', views.submit_purchase_order, name='submit_purchase_order'),
     path('purchase-orders/<int:pk>/send-email/', views.send_purchase_order_email, name='send_purchase_order_email'),
     path('purchase-orders/<int:pk>/history/', views.purchase_order_history, name='purchase_order_history'),
+    path('purchase-order/<int:pk>/receive/', views.receive_purchase_order_items, name='receive_purchase_order_items'),
+    path('purchase-order/<int:pk>/receiving-history/', views.purchase_order_receiving_history, name='purchase_order_receiving_history'),
+    path('purchase-order/<int:pk>/receiving-summary-api/', views.receiving_summary_api, name='receiving_summary_api'),
+
     
     # AJAX endpoints
     path('api/manufacturer-details/', views.get_manufacturer_details, name='get_manufacturer_details'),
