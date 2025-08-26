@@ -7,6 +7,8 @@ from . import views
 
 urlpatterns = [
     path('', views.get_client_ip, name="home"),
+    path('search/', views.global_search, name="global_search"),
+    path('api/live-search/', views.live_search, name="live_search"),
     path('view_stock', views.view_stock, name="view_stock"),
     path('add_stock', views.add_stock, name="add_stock"),
     path('update_stock/<str:pk>/', views.update_stock, name="update_stock"),

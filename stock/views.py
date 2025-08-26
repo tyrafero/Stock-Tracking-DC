@@ -103,6 +103,58 @@ def view_stock(request):
 
 
 @login_required
+def global_search(request):
+    query = request.GET.get('q', '').strip()
+    results = []
+    
+    if query:
+        # Search in Stock items
+        stocks = Stock.objects.filter(
+            Q(item_name__icontains=query) |
+            Q(category__group__icontains=query)
+        )
+        results = stocks
+    else:
+        # If no search query, show all stocks
+        results = Stock.objects.all()
+    
+    context = {
+        'query': query,
+        'results': results,
+        'title': 'Search Results' if query else 'All Items'
+    }
+    
+    return render(request, 'stock/search_results.html', context)
+
+
+def live_search(request):
+    """AJAX endpoint for live search suggestions"""
+    if not request.user.is_authenticated:
+        return JsonResponse({'suggestions': []})
+        
+    query = request.GET.get('q', '').strip()
+    suggestions = []
+    
+    if query and len(query) >= 2:  # Only search if query is at least 2 characters
+        # Search in Stock items (limit to 10 results for performance)
+        stocks = Stock.objects.filter(
+            Q(item_name__icontains=query) |
+            Q(category__group__icontains=query)
+        ).select_related('category')[:10]
+        
+        suggestions = [{
+            'id': stock.id,
+            'item_name': stock.item_name,
+            'category': stock.category.group if stock.category else 'No Category',
+            'quantity': stock.quantity,
+            'image_url': stock.image.url if stock.image else None,
+            'low_stock': stock.quantity <= stock.re_order
+        } for stock in stocks]
+    
+    return JsonResponse({'suggestions': suggestions})
+
+
+@login_required
 def scrum_list(request):
     title = 'Add List'
     add = ScrumTitles.objects.all()
