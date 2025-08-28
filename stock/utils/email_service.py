@@ -44,21 +44,21 @@ class RailwayEmailService:
             logger.error(f"Email sending failed: {e}")
             
             # If it's a network issue in production, log instead of crash
-            if not settings.DEBUG and ('network' in error_msg or 'timeout' in error_msg):
-                # Log the email details to console/logs instead
+            if not settings.DEBUG and ('network' in error_msg or 'timeout' in error_msg or 'reachable' in error_msg):
+                # Log essential email details only (not full HTML)
                 console_message = f"""
-                EMAIL LOGGED (Network Issue):
-                To: {recipient_list}
+                EMAIL NOTIFICATION LOGGED (Network Restricted):
+                To: {', '.join(recipient_list)}
                 From: {from_email}
                 Subject: {subject}
-                Body: {message or html_message}
-                Error: {e}
+                Status: Failed to send via SMTP - {str(e)[:100]}...
+                Note: Purchase order status updated successfully
                 """
                 logger.warning(console_message)
                 
                 return {
                     'success': False,
-                    'message': f'Email logged due to network restrictions: {str(e)}',
+                    'message': 'Email could not be sent due to network restrictions, but purchase order was updated successfully',
                     'method': 'console_fallback',
                     'logged': True
                 }

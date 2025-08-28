@@ -148,25 +148,20 @@ LOGOUT_REDIRECT_URL = '/'
 REGISTRATION_OPEN = True
 
 # EMAIL SETTINGS - Production-friendly configuration
-# Use SendGrid if API key is available, otherwise fall back to SMTP
+# Always try SMTP first, handle failures gracefully in code
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_HOST_USER = os.getenv("EMAIL_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
+EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 30
+DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
+
+# SendGrid configuration (if API key is available)
 if os.getenv('SENDGRID_API_KEY'):
-    # SendGrid configuration for Railway
     EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
     SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
-    DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER", 'noreply@yourdomain.com')
-elif DEBUG:
-    # Local development with Gmail
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-    EMAIL_HOST = 'smtp.gmail.com'
-    EMAIL_PORT = 587
-    EMAIL_HOST_USER = os.getenv("EMAIL_USER")
-    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
-    EMAIL_USE_TLS = True
-    EMAIL_TIMEOUT = 30
-    DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
-else:
-    # Production fallback - log to console if SMTP fails
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER", 'noreply@yourdomain.com')
     
 # Keep Gmail settings for manual override
