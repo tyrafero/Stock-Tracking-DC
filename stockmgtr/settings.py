@@ -151,10 +151,10 @@ REGISTRATION_OPEN = True
 # Always try SMTP first, handle failures gracefully in code
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
+EMAIL_PORT = 465
 EMAIL_HOST_USER = os.getenv("EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
-EMAIL_USE_TLS = True
+EMAIL_USE_SSL = True
 EMAIL_TIMEOUT = 30
 DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
 
