@@ -159,6 +159,19 @@ border-color: #fecaca;
 @media (max-width: 768px) {
 .po-header .row { flex-direction: column; align-items: flex-start; }
 .po-header .col-md-4 { text-align: left; margin-top: 0.5rem; }
+
+/* Fix mobile sidebar overlap */
+.col-lg-4.d-flex.flex-column {
+    display: block !important;
+}
+
+.action-buttons {
+    margin-bottom: 2rem !important;
+}
+
+.card.mt-auto {
+    margin-top: 2rem !important;
+}
 }
 </style>
 

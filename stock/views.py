@@ -927,15 +927,18 @@ def send_purchase_order_email(request, pk):
                     email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
             else:
                 # Send email synchronously if Celery is not available
-                send_mail(
-                    subject=email_subject,
-                    message='',
-                    html_message=email_body,
-                    from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
-                    recipient_list=recipient_emails,
-                    fail_silently=False,
-                )
-                email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
+                try:
+                    send_mail(
+                        subject=email_subject,
+                        message='',
+                        html_message=email_body,
+                        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
+                        recipient_list=recipient_emails,
+                        fail_silently=False,
+                    )
+                    email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
+                except Exception as email_error:
+                    raise Exception(f'Email sending failed: {str(email_error)}')
             
             # Update purchase order status immediately (don't wait for email)
             purchase_order.status = 'sent'

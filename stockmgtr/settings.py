@@ -154,6 +154,7 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.getenv("EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 30  # 30 seconds timeout for email connections
 DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
 
 # CELERY CONFIGURATION
