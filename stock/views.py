@@ -737,6 +737,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils import timezone
 from django.db import transaction
+from .tasks import send_email_async
 
 @login_required
 def purchase_order_list(request):
@@ -901,24 +902,27 @@ def send_purchase_order_email(request, pk):
             recipient_emails = [purchase_order.manufacturer.company_email]
             if purchase_order.manufacturer.additional_email:
                 recipient_emails.append(purchase_order.manufacturer.additional_email)
-            send_mail(
+            # Send email asynchronously using Celery
+            send_email_async.delay(
                 subject=email_subject,
                 message='',
                 html_message=email_body,
-                from_email=settings.DEFAULT_FROM_EMAIL,
+                from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
                 recipient_list=recipient_emails,
                 fail_silently=False,
             )
+            
+            # Update purchase order status immediately (don't wait for email)
             purchase_order.status = 'sent'
             purchase_order.sent_at = timezone.now()
             purchase_order.save()
             PurchaseOrderHistory.objects.create(
                 purchase_order=purchase_order,
                 action='sent',
-                notes=f'Purchase order sent to {", ".join(recipient_emails)}',
+                notes=f'Purchase order email queued for {", ".join(recipient_emails)}',
                 created_by=request.user
             )
-            messages.success(request, f'Purchase Order {purchase_order.reference_number} sent successfully!')
+            messages.success(request, f'Purchase Order {purchase_order.reference_number} is being sent! Email queued for delivery.')
         except Exception as e:
             messages.error(request, f'Failed to send email: {str(e)}')
     return redirect('purchase_order_detail', pk=pk)

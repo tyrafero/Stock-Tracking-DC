@@ -154,6 +154,28 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.getenv("EMAIL_USER")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
 EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
 
+# CELERY CONFIGURATION
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Celery task routing
+CELERY_TASK_ROUTES = {
+    'stock.tasks.send_email_async': {'queue': 'email'},
+    'stock.tasks.send_purchase_order_email': {'queue': 'email'},
+}
+
+# Celery worker configuration
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_ACKS_LATE = True
+
+# Task result expires in 1 hour
+CELERY_RESULT_EXPIRES = 3600
 
 REGISTRATION_FORM = 'stock.form.CustomRegistrationForm'

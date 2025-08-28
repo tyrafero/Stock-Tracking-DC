@@ -315,6 +315,10 @@ class ManufacturerForm(forms.ModelForm):
             'postal_code': forms.TextInput(attrs={'class': 'form-control'}),
             'company_telephone': forms.TextInput(attrs={'class': 'form-control'}),
         }
+        labels = {
+            'city': 'Suburb',
+            'region': 'State',
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
