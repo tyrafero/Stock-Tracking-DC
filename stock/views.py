@@ -902,15 +902,40 @@ def send_purchase_order_email(request, pk):
             recipient_emails = [purchase_order.manufacturer.company_email]
             if purchase_order.manufacturer.additional_email:
                 recipient_emails.append(purchase_order.manufacturer.additional_email)
-            # Send email asynchronously using Celery
-            send_email_async.delay(
-                subject=email_subject,
-                message='',
-                html_message=email_body,
-                from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
-                recipient_list=recipient_emails,
-                fail_silently=False,
-            )
+            # Check if Celery is available before attempting async email
+            if getattr(settings, 'CELERY_AVAILABLE', False):
+                try:
+                    send_email_async.delay(
+                        subject=email_subject,
+                        message='',
+                        html_message=email_body,
+                        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
+                        recipient_list=recipient_emails,
+                        fail_silently=False,
+                    )
+                    email_status_message = f'Purchase Order {purchase_order.reference_number} is being sent! Email queued for delivery.'
+                except Exception as celery_error:
+                    # If async fails, fall back to sync
+                    send_mail(
+                        subject=email_subject,
+                        message='',
+                        html_message=email_body,
+                        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
+                        recipient_list=recipient_emails,
+                        fail_silently=False,
+                    )
+                    email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
+            else:
+                # Send email synchronously if Celery is not available
+                send_mail(
+                    subject=email_subject,
+                    message='',
+                    html_message=email_body,
+                    from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
+                    recipient_list=recipient_emails,
+                    fail_silently=False,
+                )
+                email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
             
             # Update purchase order status immediately (don't wait for email)
             purchase_order.status = 'sent'
@@ -919,10 +944,10 @@ def send_purchase_order_email(request, pk):
             PurchaseOrderHistory.objects.create(
                 purchase_order=purchase_order,
                 action='sent',
-                notes=f'Purchase order email queued for {", ".join(recipient_emails)}',
+                notes=f'Purchase order sent to {", ".join(recipient_emails)}',
                 created_by=request.user
             )
-            messages.success(request, f'Purchase Order {purchase_order.reference_number} is being sent! Email queued for delivery.')
+            messages.success(request, email_status_message)
         except Exception as e:
             messages.error(request, f'Failed to send email: {str(e)}')
     return redirect('purchase_order_detail', pk=pk)

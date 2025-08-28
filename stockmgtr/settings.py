@@ -157,25 +157,46 @@ EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
 
 # CELERY CONFIGURATION
-CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = TIME_ZONE
-CELERY_ENABLE_UTC = True
+# Check if Redis is available, if not, disable Celery
+def is_redis_available():
+    try:
+        import redis
+        redis_url = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+        r = redis.from_url(redis_url)
+        r.ping()
+        return True
+    except:
+        return False
 
-# Celery task routing
-CELERY_TASK_ROUTES = {
-    'stock.tasks.send_email_async': {'queue': 'email'},
-    'stock.tasks.send_purchase_order_email': {'queue': 'email'},
-}
+# Only configure Celery if Redis is available
+if is_redis_available():
+    CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+    CELERY_ACCEPT_CONTENT = ['json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+    CELERY_TIMEZONE = TIME_ZONE
+    CELERY_ENABLE_UTC = True
 
-# Celery worker configuration
-CELERY_WORKER_PREFETCH_MULTIPLIER = 1
-CELERY_TASK_ACKS_LATE = True
+    # Celery task routing
+    CELERY_TASK_ROUTES = {
+        'stock.tasks.send_email_async': {'queue': 'email'},
+        'stock.tasks.send_purchase_order_email': {'queue': 'email'},
+    }
 
-# Task result expires in 1 hour
-CELERY_RESULT_EXPIRES = 3600
+    # Celery worker configuration
+    CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+    CELERY_TASK_ACKS_LATE = True
+
+    # Task result expires in 1 hour
+    CELERY_RESULT_EXPIRES = 3600
+    
+    # Set a flag to indicate Celery is available
+    CELERY_AVAILABLE = True
+else:
+    # Disable Celery if Redis is not available
+    CELERY_ALWAYS_EAGER = True
+    CELERY_EAGER_PROPAGATES_EXCEPTIONS = True
+    CELERY_AVAILABLE = False
 
 REGISTRATION_FORM = 'stock.form.CustomRegistrationForm'
