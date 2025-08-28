@@ -147,15 +147,64 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 REGISTRATION_OPEN = True
 
-# EMAIL SETTINGS
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = os.getenv("EMAIL_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
-EMAIL_USE_TLS = True
-EMAIL_TIMEOUT = 30  # 30 seconds timeout for email connections
-DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
+# EMAIL SETTINGS - Production-friendly configuration
+# Use SendGrid if API key is available, otherwise fall back to SMTP
+if os.getenv('SENDGRID_API_KEY'):
+    # SendGrid configuration for Railway
+    EMAIL_BACKEND = 'sendgrid_backend.SendgridBackend'
+    SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
+    DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER", 'noreply@yourdomain.com')
+elif DEBUG:
+    # Local development with Gmail
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = 'smtp.gmail.com'
+    EMAIL_PORT = 587
+    EMAIL_HOST_USER = os.getenv("EMAIL_USER")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_PASSWORD")
+    EMAIL_USE_TLS = True
+    EMAIL_TIMEOUT = 30
+    DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
+else:
+    # Production fallback - log to console if SMTP fails
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER", 'noreply@yourdomain.com')
+    
+# Keep Gmail settings for manual override
+GMAIL_SMTP_SETTINGS = {
+    'EMAIL_BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+    'EMAIL_HOST': 'smtp.gmail.com',
+    'EMAIL_PORT': 587,
+    'EMAIL_HOST_USER': os.getenv("EMAIL_USER"),
+    'EMAIL_HOST_PASSWORD': os.getenv("EMAIL_PASSWORD"),
+    'EMAIL_USE_TLS': True,
+    'EMAIL_TIMEOUT': 30,
+}
+
+# Alternative SMTP settings (uncomment if Gmail fails)
+# EMAIL_HOST = 'smtp.outlook.com'
+# EMAIL_PORT = 587
+# Alternative: Try port 465 with SSL instead of TLS
+# EMAIL_PORT = 465
+# EMAIL_USE_SSL = True
+# EMAIL_USE_TLS = False
+
+# Logging for email debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'stock.tasks': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}
 
 # CELERY CONFIGURATION
 # Check if Redis is available, if not, disable Celery

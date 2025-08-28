@@ -50,7 +50,23 @@ def send_email_async(self, subject, message, html_message, from_email, recipient
             }
             
     except Exception as exc:
-        logger.error(f"Email sending error for {recipient_list}: {str(exc)}")
+        error_details = {
+            'error_type': type(exc).__name__,
+            'error_message': str(exc),
+            'recipients': recipient_list,
+            'subject': subject,
+            'attempt': self.request.retries + 1 if hasattr(self, 'request') else 1
+        }
+        logger.error(f"Email sending error: {error_details}")
+        
+        # Log specific network/connection errors
+        if 'network is not reachable' in str(exc).lower():
+            logger.error("Network connectivity issue - check internet connection and firewall settings")
+        elif 'authentication' in str(exc).lower():
+            logger.error("SMTP authentication failed - check email credentials")
+        elif 'timeout' in str(exc).lower():
+            logger.error("SMTP connection timeout - check network latency and server availability")
+            
         # Re-raise the exception so Celery can handle retries
         raise self.retry(exc=exc)
 

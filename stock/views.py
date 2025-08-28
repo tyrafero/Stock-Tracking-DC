@@ -10,6 +10,7 @@ from .form import *
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.http import JsonResponse
+from .utils.email_service import send_purchase_order_email_safe
 
 # Create your views here.
 
@@ -902,43 +903,13 @@ def send_purchase_order_email(request, pk):
             recipient_emails = [purchase_order.manufacturer.company_email]
             if purchase_order.manufacturer.additional_email:
                 recipient_emails.append(purchase_order.manufacturer.additional_email)
-            # Check if Celery is available before attempting async email
-            if getattr(settings, 'CELERY_AVAILABLE', False):
-                try:
-                    send_email_async.delay(
-                        subject=email_subject,
-                        message='',
-                        html_message=email_body,
-                        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
-                        recipient_list=recipient_emails,
-                        fail_silently=False,
-                    )
-                    email_status_message = f'Purchase Order {purchase_order.reference_number} is being sent! Email queued for delivery.'
-                except Exception as celery_error:
-                    # If async fails, fall back to sync
-                    send_mail(
-                        subject=email_subject,
-                        message='',
-                        html_message=email_body,
-                        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
-                        recipient_list=recipient_emails,
-                        fail_silently=False,
-                    )
-                    email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
-            else:
-                # Send email synchronously if Celery is not available
-                try:
-                    send_mail(
-                        subject=email_subject,
-                        message='',
-                        html_message=email_body,
-                        from_email=settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER,
-                        recipient_list=recipient_emails,
-                        fail_silently=False,
-                    )
-                    email_status_message = f'Purchase Order {purchase_order.reference_number} sent successfully!'
-                except Exception as email_error:
-                    raise Exception(f'Email sending failed: {str(email_error)}')
+            # Use Railway-friendly email service
+            email_status_message = send_purchase_order_email_safe(
+                purchase_order, 
+                recipient_emails, 
+                email_subject, 
+                email_body
+            )
             
             # Update purchase order status immediately (don't wait for email)
             purchase_order.status = 'sent'
