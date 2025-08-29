@@ -27,9 +27,11 @@
                                                     <th class="nk-tb-col tb-col-sm"><span>COUNT</span></th>
                                                     <th class="nk-tb-col"><span>STOCK NAME</span></th>
                                                     <th class="nk-tb-col"><span>CATEGORY</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>TOTAL STOCK</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>COMMITTED</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>AVAILABLE</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>REORDER LEVEL</span></th>
-                                                      <th class="nk-tb-col tb-col-md"><span>QUANTITY</span></th>
-                                                      <th class="nk-tb-col tb-col-md"><span>TIME STAMP</span></th>
                                                       <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
                                                     <th class="nk-tb-col nk-tb-col-tools">
                                                         <ul class="nk-tb-actions gx-1 my-n1">
@@ -67,17 +69,23 @@
                                                     <td class="nk-tb-col">
                                                         <span class="tb-lead"><a href="{% url 'update_stock' every.id %}">{{every.category}}</a></span>
                                                     </td>
-                                                    <td class="nk-tb-col">
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="badge badge-primary">{{ every.get_condition_display }}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub">{{ every.total_stock }}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub text-warning">{{ every.committed_stock }}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub {% if every.is_low_stock %}text-danger{% else %}text-success{% endif %}">{{ every.available_for_sale }}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
                                                         <span class="tb-sub"><a href="{% url 're_order' every.id %}">{{every.re_order}}</a></span>
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
-                                                        <span class="tb-sub">{{every.quantity}}</span>
-                                                    </td>
-                                                    <td class="nk-tb-col tb-col-md">
                                                         <span class="tb-sub">{{every.last_updated}}</span>
-                                                    </td>
-                                                    <td class="nk-tb-col tb-col-md">
-                                                        <span class="tb-sub">{{every.timestamp}}</span>
                                                     </td>
                                                     <td class="nk-tb-col nk-tb-col-tools">
                                                         <ul class="nk-tb-actions gx-1 my-n1">
@@ -88,6 +96,7 @@
                                                                         <ul class="link-list-opt no-bdr">
                                                                             <li><a href="{% url 'update_stock' every.id %}"><em class="icon ni ni-edit"></em><span>Edit Product</span></a></li>
                                                                             <li><a href="{% url 'stock_detail' every.id %}"><em class="icon ni ni-eye"></em><span>View Product</span></a></li>
+                                                                            <li><a href="{% url 'commit_stock' every.id %}"><em class="icon ni ni-lock"></em><span>Commit Stock</span></a></li>
                                                                             <li><a href="{% url 're_order' every.id %}"><em class="icon ni ni-activity-round"></em><span>Reorder Level</span></a></li>
                                                                             <li><a id="{{forloop.counter}}"  href="javascript:void(0)"><em class="icon ni ni-trash"></em><span>Remove Product</span></a></li>
                                                                         </ul>

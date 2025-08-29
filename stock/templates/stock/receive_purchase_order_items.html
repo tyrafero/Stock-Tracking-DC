@@ -304,13 +304,13 @@
             <div class="card-inner">
                 <h6 class="card-title">Quick Actions</h6>
                 <div class="d-grid gap-2">
-                    <a href="{% url 'purchase_order_receiving_history' purchase_order.pk %}" class="btn btn-outline-info">
+                    <a href="{% url 'purchase_order_receiving_history' purchase_order.pk %}" class="btn btn-outline-info w-100">
                         <em class="icon ni ni-clock"></em> Full History
                     </a>
-                    <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-primary">
+                    <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-primary w-100">
                         <em class="icon ni ni-file-docs"></em> PO Details
                     </a>
-                    <button onclick="window.print()" class="btn btn-outline-secondary">
+                    <button onclick="window.print()" class="btn btn-outline-secondary w-100">
                         <em class="icon ni ni-printer"></em> Print Report
                     </button>
                 </div>

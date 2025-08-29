@@ -59,9 +59,8 @@
                                         <div class="nk-tb-col tb-col-mb"><span class="sub-text">Manufacturer</span></div>
                                         <div class="nk-tb-col tb-col-md"><span class="sub-text">Status</span></div>
                                         <div class="nk-tb-col tb-col-lg"><span class="sub-text">Created Date</span></div>
-                                        <div class="nk-tb-col tb-col-md"><span class="sub-text">Total Amount</span></div>
-                                        <div class="nk-tb-col nk-tb-col-tools text-right">
-                                            <span class="sub-text">Actions</span>
+                                        <div class="nk-tb-col nk-tb-col-tools" style="width: auto;">
+                                            <span class="sub-text">Total Amount / Actions</span>
                                         </div>
                                     </div>
 
@@ -92,61 +91,63 @@
                                         <div class="nk-tb-col tb-col-lg">
                                             <span class="tb-date">{{ purchase_order.created_at|date:"M d, Y" }}</span>
                                         </div>
-                                        <div class="nk-tb-col tb-col-md">
-                                            <span class="tb-amount">${{ purchase_order.grand_total|floatformat:2 }}</span>
-                                        </div>
-                                        <div class="nk-tb-col nk-tb-col-tools">
-                                            <ul class="nk-tb-actions gx-1">
-                                                <li>
-                                                    <div class="drodown">
-                                                        <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
-                                                            <em class="icon ni ni-more-h"></em>
-                                                        </a>
-                                                        <div class="dropdown-menu dropdown-menu-right">
-                                                            <ul class="link-list-opt no-bdr">
-                                                                <li>
-                                                                    <a href="{% url 'purchase_order_detail' pk=purchase_order.pk %}">
-                                                                        <em class="icon ni ni-eye"></em>
-                                                                        <span>View Details</span>
-                                                                    </a>
-                                                                </li>
-                                                                {% if purchase_order.status in 'draft,submitted' %}
-                                                                <li>
-                                                                    <a href="{% url 'update_purchase_order' pk=purchase_order.pk %}">
-                                                                        <em class="icon ni ni-edit"></em>
-                                                                        <span>Edit</span>
-                                                                    </a>
-                                                                </li>
-                                                                {% endif %}
-                                                                {% if purchase_order.status == 'draft' %}
-                                                                <li>
-                                                                    <a href="{% url 'submit_purchase_order' pk=purchase_order.pk %}" 
-                                                                       onclick="return confirm('Are you sure you want to submit this purchase order?')">
-                                                                        <em class="icon ni ni-send"></em>
-                                                                        <span>Submit</span>
-                                                                    </a>
-                                                                </li>
-                                                                {% endif %}
-                                                                {% if purchase_order.status in 'submitted,sent' %}
-                                                                <li>
-                                                                    <a href="{% url 'send_purchase_order_email' pk=purchase_order.pk %}"
-                                                                       onclick="return confirm('Send this purchase order to manufacturer?')">
-                                                                        <em class="icon ni ni-emails"></em>
-                                                                        <span>Send Email</span>
-                                                                    </a>
-                                                                </li>
-                                                                {% endif %}
-                                                                <li>
-                                                                    <a href="{% url 'purchase_order_history' pk=purchase_order.pk %}">
-                                                                        <em class="icon ni ni-activity"></em>
-                                                                        <span>View History</span>
-                                                                    </a>
-                                                                </li>
-                                                            </ul>
+                                        <div class="nk-tb-col nk-tb-col-tools" style="width: auto;">
+                                            <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between">
+                                                <div class="tb-amount mb-2 mb-sm-0">
+                                                    <strong>${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                                                </div>
+                                                <ul class="nk-tb-actions gx-1">
+                                                    <li>
+                                                        <div class="drodown">
+                                                            <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                                <em class="icon ni ni-more-h"></em>
+                                                            </a>
+                                                            <div class="dropdown-menu dropdown-menu-right">
+                                                                <ul class="link-list-opt no-bdr">
+                                                                    <li>
+                                                                        <a href="{% url 'purchase_order_detail' pk=purchase_order.pk %}">
+                                                                            <em class="icon ni ni-eye"></em>
+                                                                            <span>View Details</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% if purchase_order.status in 'draft,submitted' %}
+                                                                    <li>
+                                                                        <a href="{% url 'update_purchase_order' pk=purchase_order.pk %}">
+                                                                            <em class="icon ni ni-edit"></em>
+                                                                            <span>Edit</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% if purchase_order.status == 'draft' %}
+                                                                    <li>
+                                                                        <a href="{% url 'submit_purchase_order' pk=purchase_order.pk %}" 
+                                                                           onclick="return confirm('Are you sure you want to submit this purchase order?')">
+                                                                            <em class="icon ni ni-send"></em>
+                                                                            <span>Submit</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% if purchase_order.status in 'submitted,sent' %}
+                                                                    <li>
+                                                                        <a href="{% url 'send_purchase_order_email' pk=purchase_order.pk %}"
+                                                                           onclick="return confirm('Send this purchase order to manufacturer?')">
+                                                                            <em class="icon ni ni-emails"></em>
+                                                                            <span>Send Email</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    <li>
+                                                                        <a href="{% url 'purchase_order_history' pk=purchase_order.pk %}">
+                                                                            <em class="icon ni ni-activity"></em>
+                                                                            <span>View History</span>
+                                                                        </a>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </li>
-                                            </ul>
+                                                    </li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </div>
                                     {% empty %}

@@ -430,6 +430,104 @@ def receive_stock(request, pk):
     return render(request, 'stock/receive_stock.html', context)
 
 @login_required
+def commit_stock(request, pk):
+    """Handle stock commitment with customer deposit and order details"""
+    stock = Stock.objects.get(id=pk)
+    
+    if request.method == 'POST':
+        from .form import CommitStockForm
+        form = CommitStockForm(request.POST)
+        if form.is_valid():
+            commit_quantity = form.cleaned_data['quantity']
+            
+            # Check if enough stock available
+            if commit_quantity > stock.available_for_sale:
+                messages.error(request, f'Cannot commit {commit_quantity} items. Only {stock.available_for_sale} available for sale.')
+                return render(request, 'stock/commit_stock.html', {'form': form, 'stock': stock})
+            
+            # Create commitment record
+            commitment = form.save(commit=False)
+            commitment.stock = stock
+            commitment.committed_by = request.user
+            commitment.save()
+            
+            messages.success(request, f'Successfully committed {commit_quantity} {stock.item_name} for order {commitment.customer_order_number}!')
+            return redirect('view_stock')
+    else:
+        from .form import CommitStockForm
+        form = CommitStockForm()
+    
+    context = {
+        'form': form, 
+        'stock': stock,
+        'available_quantity': stock.available_for_sale
+    }
+    return render(request, 'stock/commit_stock.html', context)
+
+@login_required
+def fulfill_commitment(request, pk):
+    """Fulfill a stock commitment - customer has paid in full and taken the items"""
+    commitment = CommittedStock.objects.get(id=pk)
+    
+    if commitment.is_fulfilled:
+        messages.warning(request, 'This commitment is already fulfilled.')
+        return redirect('stock_detail', pk=commitment.stock.pk)
+    
+    # Check if there's enough stock to fulfill
+    if commitment.quantity > commitment.stock.quantity:
+        messages.error(request, f'Cannot fulfill commitment. Only {commitment.stock.quantity} items in stock, but {commitment.quantity} needed.')
+        return redirect('stock_detail', pk=commitment.stock.pk)
+    
+    # Issue the stock (reduce quantity)
+    commitment.stock.quantity -= commitment.quantity
+    commitment.stock.issue_quantity = commitment.quantity
+    commitment.stock.issued_by = request.user.username
+    commitment.stock.save()
+    
+    # Mark commitment as fulfilled
+    commitment.is_fulfilled = True
+    commitment.fulfilled_at = timezone.now()
+    commitment.save()
+    
+    # Create history record for the stock issue
+    StockHistory.objects.create(
+        category=commitment.stock.category,
+        item_name=commitment.stock.item_name,
+        quantity=commitment.stock.quantity,
+        issue_quantity=commitment.quantity,
+        receive_quantity=0,
+        issued_by=request.user.username,
+        note=f"Fulfilled commitment for order {commitment.customer_order_number} - Customer: {commitment.customer_name}",
+        created_by=request.user.username,
+        last_updated=timezone.now(),
+        timestamp=timezone.now()
+    )
+    
+    messages.success(request, f'Commitment fulfilled! {commitment.quantity} items issued to {commitment.customer_name}.')
+    return redirect('stock_detail', pk=commitment.stock.pk)
+
+@login_required
+def cancel_commitment(request, pk):
+    """Cancel a stock commitment - release the committed stock back to available"""
+    commitment = CommittedStock.objects.get(id=pk)
+    
+    if commitment.is_fulfilled:
+        messages.warning(request, 'Cannot cancel a fulfilled commitment.')
+        return redirect('stock_detail', pk=commitment.stock.pk)
+    
+    # Mark commitment as fulfilled (to remove it from active commitments)
+    # but don't issue the stock - just release it back to available
+    commitment.is_fulfilled = True
+    commitment.fulfilled_at = timezone.now()
+    commitment.save()
+    
+    # Note: The stock's committed_quantity will be automatically updated 
+    # when the commitment is saved due to the save() method in CommittedStock model
+    
+    messages.success(request, f'Commitment cancelled for {commitment.customer_name}. Stock is now available for sale. Remember to process deposit refund manually.')
+    return redirect('stock_detail', pk=commitment.stock.pk)
+
+@login_required
 def delete_stock(request, pk):
     # Get stock item before deleting to create history record
     stock_item = Stock.objects.get(id=pk)
@@ -458,8 +556,21 @@ def delete_stock(request, pk):
 @login_required
 def stock_detail(request, pk):
     detail = Stock.objects.get(id=pk)
+    
+    # Get history for this specific item
+    stock_history = StockHistory.objects.filter(
+        item_name=detail.item_name
+    ).order_by('-timestamp')
+    
+    # Get commitments for this stock
+    commitments = CommittedStock.objects.filter(
+        stock=detail
+    ).order_by('-committed_at')
+    
     context = {
-        'detail': detail
+        'detail': detail,
+        'stock_history': stock_history,
+        'commitments': commitments
     }
     return render(request, 'stock/stock_detail.html', context)
 

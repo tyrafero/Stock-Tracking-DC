@@ -92,6 +92,44 @@ class ReceiveForm(forms.ModelForm):
             'receive_quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
         }
 
+class CommitStockForm(forms.ModelForm):
+    class Meta:
+        model = CommittedStock
+        fields = ['quantity', 'customer_order_number', 'deposit_amount', 'customer_name', 
+                 'customer_phone', 'customer_email', 'notes']
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'customer_order_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer order reference'}),
+            'deposit_amount': forms.NumberInput(attrs={'class': 'form-control', 'min': '0.01', 'step': '0.01'}),
+            'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer name'}),
+            'customer_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone number (optional)'}),
+            'customer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (optional)'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Additional notes (optional)'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('quantity', css_class='form-group col-md-6'),
+                Column('customer_order_number', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('deposit_amount', css_class='form-group col-md-6'),
+                Column('customer_name', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('customer_phone', css_class='form-group col-md-6'),
+                Column('customer_email', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('notes', css_class='form-group col-md-12'),
+            ),
+            Submit('submit', 'Commit Stock', css_class='btn btn-success')
+        )
+
 
 class ReorderLevelForm(forms.ModelForm):
     class Meta:

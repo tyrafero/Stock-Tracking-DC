@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from .models import (
     Stock, Category, Country, State, City, Person, Contacts, Product, 
     PurchaseOrder, PurchaseOrderItem, Manufacturer, DeliveryPerson, Store, 
-    PurchaseOrderHistory
+    PurchaseOrderHistory, CommittedStock
 )
 from .form import StockCreateForm  # Make sure this is the correct import path
 
@@ -27,12 +27,28 @@ class PurchaseOrderAdmin(admin.ModelAdmin):
     search_fields = ('reference_number',)
     inlines = [PurchaseOrderItemInline, PurchaseOrderHistoryInline]
 
+# CommittedStock Inline for Stock Admin
+class CommittedStockInline(admin.TabularInline):
+    model = CommittedStock
+    extra = 0
+    fields = ('quantity', 'customer_order_number', 'deposit_amount', 'customer_name', 'is_fulfilled')
+    readonly_fields = ('committed_at',)
+
 # Stock Admin
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['category', 'item_name', 'quantity']
+    list_display = ['category', 'item_name', 'quantity', 'committed_quantity', 'condition']
     form = StockCreateForm
-    list_filter = ['category']
+    list_filter = ['category', 'condition']
     search_fields = ['category', 'item_name']
+    inlines = [CommittedStockInline]
+
+# CommittedStock Admin
+@admin.register(CommittedStock)
+class CommittedStockAdmin(admin.ModelAdmin):
+    list_display = ('stock', 'quantity', 'customer_name', 'customer_order_number', 'deposit_amount', 'is_fulfilled', 'committed_at')
+    list_filter = ('is_fulfilled', 'committed_at')
+    search_fields = ('customer_name', 'customer_order_number', 'stock__item_name')
+    readonly_fields = ('committed_at', 'fulfilled_at')
 
 admin.site.register(Stock, StockAdmin)
 admin.site.register(Category)

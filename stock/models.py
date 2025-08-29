@@ -15,6 +15,12 @@ class Category(models.Model):
         return self.group
 
 class Stock(models.Model):
+    CONDITION_CHOICES = [
+        ('brand_new', 'Brand New'),
+        ('demo', 'Demo'),
+        ('bstock', 'B-Stock'),
+    ]
+    
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
     quantity = models.IntegerField(default=0, blank=True, null=True)
@@ -22,6 +28,8 @@ class Stock(models.Model):
     received_by = models.CharField(max_length=50, blank=True, null=True)
     issue_quantity = models.IntegerField(default=0, blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
+    committed_quantity = models.IntegerField(default=0, blank=True, null=True)
+    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='brand_new')
     note = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)
@@ -33,6 +41,26 @@ class Stock(models.Model):
     image = models.ImageField(upload_to='stock/images/', null=True, blank=True)
     source_purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.CASCADE, null=True, blank=True)
 
+    @property
+    def total_stock(self):
+        """Total stock quantity (current inventory)"""
+        return self.quantity or 0
+    
+    @property
+    def committed_stock(self):
+        """Total committed stock (reserved for customers with deposits)"""
+        return self.committed_quantity or 0
+    
+    @property
+    def available_for_sale(self):
+        """Available stock for sale (total - committed)"""
+        return self.total_stock - self.committed_stock
+    
+    @property
+    def is_low_stock(self):
+        """Check if stock is below reorder level"""
+        return self.available_for_sale <= (self.re_order or 0)
+    
     def __str__(self):
         return f"{self.item_name} ({self.quantity}) - {self.last_updated}"
 
@@ -50,6 +78,36 @@ class StockHistory(models.Model):
     re_order = models.IntegerField(default=0, blank=True, null=True)
     last_updated = models.DateTimeField(null=True)
     timestamp = models.DateTimeField(null=True)
+
+class CommittedStock(models.Model):
+    """Track individual stock commitments with deposit and order details"""
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='commitments')
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
+    customer_order_number = models.CharField(max_length=100, help_text="Customer's order reference number")
+    deposit_amount = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    customer_name = models.CharField(max_length=100)
+    customer_phone = models.CharField(max_length=50, blank=True, null=True)
+    customer_email = models.EmailField(blank=True, null=True)
+    notes = models.TextField(blank=True, null=True)
+    committed_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    committed_at = models.DateTimeField(auto_now_add=True)
+    is_fulfilled = models.BooleanField(default=False)
+    fulfilled_at = models.DateTimeField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-committed_at']
+    
+    def __str__(self):
+        status = "Fulfilled" if self.is_fulfilled else "Active"
+        return f"{self.stock.item_name} - {self.quantity}pcs - {self.customer_order_number} ({status})"
+    
+    def save(self, *args, **kwargs):
+        # Update the stock's committed_quantity when saving
+        super().save(*args, **kwargs)
+        self.stock.committed_quantity = self.stock.commitments.filter(is_fulfilled=False).aggregate(
+            total=models.Sum('quantity')
+        )['total'] or 0
+        self.stock.save(update_fields=['committed_quantity'])
 
 # ----------------------------
 # Location & Person Models
