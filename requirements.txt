@@ -30,7 +30,7 @@ pytz==2022.6
 redis==5.0.1
 requests==2.32.5
 sendgrid==6.11.0
-sendgrid-django==4.2.0
+django-sendgrid-v5
 setuptools==80.9.0
 six==1.17.0
 sqlparse==0.4.3

@@ -160,7 +160,7 @@ DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER")
 
 # SendGrid configuration (if API key is available)
 if os.getenv('SENDGRID_API_KEY'):
-    EMAIL_BACKEND = 'sendgrid_django.backends.SendgridBackend'
+    EMAIL_BACKEND = 'django_sendgrid_v5.backends.EmailBackend'
     SENDGRID_API_KEY = os.getenv('SENDGRID_API_KEY')
     DEFAULT_FROM_EMAIL = os.getenv("EMAIL_USER", 'noreply@yourdomain.com')
     
