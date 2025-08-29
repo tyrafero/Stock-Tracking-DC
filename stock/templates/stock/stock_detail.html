@@ -63,7 +63,15 @@
                                         <div class="form-group">
                                             <label class="form-label">Condition</label>
                                             <div class="form-control-wrap">
-                                                <span class="badge badge-primary">{{ detail.get_condition_display }}</span>
+                                                {% if detail.condition == 'new' %}
+                                                    <span class="badge badge-success">{{ detail.get_condition_display }}</span>
+                                                {% elif detail.condition == 'bstock' %}
+                                                    <span class="badge badge-warning">{{ detail.get_condition_display }}</span>
+                                                {% elif detail.condition == 'demo_unit' %}
+                                                    <span class="badge badge-info">{{ detail.get_condition_display }}</span>
+                                                {% else %}
+                                                    <span class="badge badge-primary">{{ detail.get_condition_display }}</span>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>

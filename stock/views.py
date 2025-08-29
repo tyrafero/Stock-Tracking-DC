@@ -149,7 +149,9 @@ def live_search(request):
             'category': stock.category.group if stock.category else 'No Category',
             'quantity': stock.quantity,
             'image_url': stock.image.url if stock.image else None,
-            'low_stock': stock.quantity <= stock.re_order
+            'low_stock': stock.quantity <= stock.re_order,
+            'condition': stock.condition,
+            'condition_display': stock.get_condition_display()
         } for stock in stocks]
     
     return JsonResponse({'suggestions': suggestions})

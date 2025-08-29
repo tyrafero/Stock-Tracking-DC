@@ -204,7 +204,17 @@
                              }
                              <div class="suggestion-content">
                                  <div class="suggestion-title ${item.low_stock ? 'low-stock' : ''}">${item.item_name}</div>
-                                 <div class="suggestion-meta">${item.category}</div>
+                                 <div class="suggestion-meta">
+                                     ${item.category}
+                                     ${item.condition === 'new' ? 
+                                         `<span class="badge badge-success" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                         item.condition === 'bstock' ? 
+                                         `<span class="badge badge-warning" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                         item.condition === 'demo_unit' ?
+                                         `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                         `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
+                                     }
+                                 </div>
                              </div>
                              <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
                          </div>

@@ -40,7 +40,15 @@
                                     </div>
                                     <div class="mt-2">
                                         <small class="text-muted">Condition:</small>
-                                        <span class="badge badge-primary">{{ stock.get_condition_display }}</span>
+                                        {% if stock.condition == 'new' %}
+                                            <span class="badge badge-success">{{ stock.get_condition_display }}</span>
+                                        {% elif stock.condition == 'bstock' %}
+                                            <span class="badge badge-warning">{{ stock.get_condition_display }}</span>
+                                        {% elif stock.condition == 'demo_unit' %}
+                                            <span class="badge badge-info">{{ stock.get_condition_display }}</span>
+                                        {% else %}
+                                            <span class="badge badge-primary">{{ stock.get_condition_display }}</span>
+                                        {% endif %}
                                     </div>
                                 </div>
 

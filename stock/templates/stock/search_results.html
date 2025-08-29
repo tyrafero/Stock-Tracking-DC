@@ -25,6 +25,7 @@
                                     <th class="nk-tb-col tb-col-sm"><span>COUNT</span></th>
                                     <th class="nk-tb-col"><span>STOCK NAME</span></th>
                                     <th class="nk-tb-col"><span>CATEGORY</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>REORDER LEVEL</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>QUANTITY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>TIME STAMP</span></th>
@@ -60,6 +61,17 @@
                                     </td>
                                     <td class="nk-tb-col">
                                         <span class="tb-lead"><a href="{% url 'update_stock' item.id %}">{{item.category}}</a></span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        {% if item.condition == 'new' %}
+                                            <span class="badge badge-success">{{ item.get_condition_display }}</span>
+                                        {% elif item.condition == 'bstock' %}
+                                            <span class="badge badge-warning">{{ item.get_condition_display }}</span>
+                                        {% elif item.condition == 'demo_unit' %}
+                                            <span class="badge badge-info">{{ item.get_condition_display }}</span>
+                                        {% else %}
+                                            <span class="badge badge-primary">{{ item.get_condition_display }}</span>
+                                        {% endif %}
                                     </td>
                                     <td class="nk-tb-col">
                                         <span class="tb-sub"><a href="{% url 're_order' item.id %}">{{item.re_order}}</a></span>

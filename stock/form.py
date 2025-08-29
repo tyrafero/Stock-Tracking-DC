@@ -9,9 +9,10 @@ from registration.forms import RegistrationForm
 class StockCreateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'quantity', 'image']
+        fields = ['category', 'item_name', 'condition', 'quantity', 'image']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter item name'}),
+            'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact phone number'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
@@ -27,8 +28,8 @@ class StockCreateForm(forms.ModelForm):
                 Column('item_name', css_class='form-group col-md-6'),
             ),
             Row(
+                Column('condition', css_class='form-group col-md-6'),
                 Column('quantity', css_class='form-group col-md-6'),
-                Column('phone_number', css_class='form-group col-md-6'),
             ),
             Row(
                 Column('note', css_class='form-group col-md-12'),
@@ -53,9 +54,10 @@ class StockCreateForm(forms.ModelForm):
 class StockUpdateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'quantity', 'phone_number', 'image', 'note']
+        fields = ['category', 'item_name', 'condition', 'quantity', 'phone_number', 'image', 'note']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),

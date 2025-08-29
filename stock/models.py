@@ -16,8 +16,8 @@ class Category(models.Model):
 
 class Stock(models.Model):
     CONDITION_CHOICES = [
-        ('brand_new', 'Brand New'),
-        ('demo', 'Demo'),
+        ('new', 'New'),
+        ('demo_unit', 'Demo Unit'),
         ('bstock', 'B-Stock'),
     ]
     
@@ -29,7 +29,7 @@ class Stock(models.Model):
     issue_quantity = models.IntegerField(default=0, blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
     committed_quantity = models.IntegerField(default=0, blank=True, null=True)
-    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='brand_new')
+    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new')
     note = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)

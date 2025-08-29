@@ -70,7 +70,15 @@
                                                         <span class="tb-lead"><a href="{% url 'update_stock' every.id %}">{{every.category}}</a></span>
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
-                                                        <span class="badge badge-primary">{{ every.get_condition_display }}</span>
+                                                        {% if every.condition == 'new' %}
+                                                            <span class="badge badge-success">{{ every.get_condition_display }}</span>
+                                                        {% elif every.condition == 'bstock' %}
+                                                            <span class="badge badge-warning">{{ every.get_condition_display }}</span>
+                                                        {% elif every.condition == 'demo_unit' %}
+                                                            <span class="badge badge-info">{{ every.get_condition_display }}</span>
+                                                        {% else %}
+                                                            <span class="badge badge-primary">{{ every.get_condition_display }}</span>
+                                                        {% endif %}
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
                                                         <span class="tb-sub">{{ every.total_stock }}</span>
