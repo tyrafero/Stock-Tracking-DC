@@ -63,6 +63,14 @@ def get_client_ip(request):
     mind = Category.objects.values('stockhistory').count()
     soul = Category.objects.values('group').count()
     
+    # Get transfer alerts for dashboard
+    pending_transfers = StockTransfer.objects.filter(status='pending').select_related('stock', 'from_location', 'to_location')
+    in_transit_transfers = StockTransfer.objects.filter(status='in_transit').select_related('stock', 'from_location', 'to_location')
+    awaiting_collection_transfers = StockTransfer.objects.filter(status='awaiting_collection').select_related('stock', 'from_location', 'to_location')
+    
+    # Get committed stock alerts for dashboard
+    active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock', 'committed_by').order_by('-committed_at')
+    
     context = {
         'count': count,
         'body': body,
@@ -72,7 +80,11 @@ def get_client_ip(request):
         'data': data,
         'issue_data': issue_data,
         'receive_data': receive_data,
-        'label_item': label_item
+        'label_item': label_item,
+        'pending_transfers': pending_transfers,
+        'in_transit_transfers': in_transit_transfers,
+        'awaiting_collection_transfers': awaiting_collection_transfers,
+        'active_commitments': active_commitments,
     }
     return render(request, 'stock/home.html', context)  # ✅ Always return HttpResponse
 
@@ -147,14 +159,212 @@ def live_search(request):
             'id': stock.id,
             'item_name': stock.item_name,
             'category': stock.category.group if stock.category else 'No Category',
-            'quantity': stock.quantity,
+            'quantity': stock.total_across_locations,
             'image_url': stock.image.url if stock.image else None,
-            'low_stock': stock.quantity <= stock.re_order,
+            'low_stock': stock.total_across_locations <= (stock.re_order or 0),
             'condition': stock.condition,
             'condition_display': stock.get_condition_display()
         } for stock in stocks]
     
     return JsonResponse({'suggestions': suggestions})
+
+@login_required
+def transfer_stock(request, pk):
+    """Create a new stock transfer"""
+    stock = get_object_or_404(Stock, id=pk)
+    
+    if request.method == 'POST':
+        form = StockTransferForm(request.POST, stock=stock)
+        if form.is_valid():
+            transfer = form.save(commit=False)
+            transfer.stock = stock
+            transfer.from_location = stock.location
+            transfer.from_aisle = stock.aisle
+            transfer.created_by = request.user
+            transfer.save()
+            
+            # Handle quantity based on transfer type and location-based inventory
+            if transfer.transfer_type == 'restock':
+                # For restock: don't reduce quantity until completion (just move between locations)
+                pass
+            elif transfer.transfer_type == 'customer_collection':
+                # For customer collection: reduce from origin location immediately
+                stock.remove_from_location(transfer.from_location, transfer.quantity)
+            else:
+                # General transfer: reduce from origin location
+                stock.remove_from_location(transfer.from_location, transfer.quantity)
+            
+            # CREATE HISTORY RECORD for transfer initiation
+            from django.utils import timezone
+            StockHistory.objects.create(
+                category=stock.category,
+                item_name=stock.item_name,
+                quantity=stock.total_across_locations,
+                issue_quantity=0,
+                receive_quantity=0,
+                received_by=str(request.user),
+                note=f"Transfer INITIATED: {transfer.quantity} units from {transfer.from_location.name} to {transfer.to_location.name} ({transfer.get_transfer_type_display()})",
+                created_by=str(request.user),
+                last_updated=timezone.now(),
+                timestamp=timezone.now()
+            )
+            
+            messages.success(request, f'Transfer created: {transfer.quantity} units of {stock.item_name} from {transfer.from_location} to {transfer.to_location}')
+            return redirect('stock_detail', pk=stock.pk)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = StockTransferForm(stock=stock)
+    
+    context = {
+        'title': f'Transfer Stock - {stock.item_name}',
+        'stock': stock,
+        'form': form,
+    }
+    return render(request, 'stock/transfer_stock.html', context)
+
+@login_required
+def transfer_list(request):
+    """List all stock transfers"""
+    transfers = StockTransfer.objects.select_related('stock', 'from_location', 'to_location', 'created_by').all()
+    
+    # Filter by status if requested
+    status_filter = request.GET.get('status')
+    if status_filter:
+        transfers = transfers.filter(status=status_filter)
+    
+    context = {
+        'title': 'Stock Transfers',
+        'transfers': transfers,
+        'status_choices': StockTransfer.STATUS_CHOICES,
+        'current_status': status_filter,
+    }
+    return render(request, 'stock/transfer_list.html', context)
+
+@login_required
+def approve_transfer(request, pk):
+    """Approve a pending transfer"""
+    transfer = get_object_or_404(StockTransfer, id=pk)
+    
+    if transfer.can_be_approved():
+        transfer.approve(request.user)
+        
+        # CREATE HISTORY RECORD for approval
+        from django.utils import timezone
+        StockHistory.objects.create(
+            category=transfer.stock.category,
+            item_name=transfer.stock.item_name,
+            quantity=transfer.stock.total_across_locations,
+            issue_quantity=0,
+            receive_quantity=0,
+            received_by=str(request.user),
+            note=f"Transfer APPROVED: {transfer.quantity} units from {transfer.from_location.name} to {transfer.to_location.name} ({transfer.get_transfer_type_display()})",
+            created_by=str(request.user),
+            last_updated=timezone.now(),
+            timestamp=timezone.now()
+        )
+        
+        messages.success(request, f'Transfer approved: {transfer.stock.item_name} from {transfer.from_location} to {transfer.to_location}')
+    else:
+        messages.error(request, 'This transfer cannot be approved.')
+    
+    return redirect('transfer_list')
+
+@login_required
+def complete_transfer(request, pk):
+    """Complete an approved transfer"""
+    transfer = get_object_or_404(StockTransfer, id=pk)
+    
+    if transfer.can_be_completed():
+        transfer.complete(request.user)
+        
+        # CREATE HISTORY RECORD for completion
+        from django.utils import timezone
+        status_text = "COMPLETED" if transfer.status == 'completed' else "AWAITING COLLECTION"
+        StockHistory.objects.create(
+            category=transfer.stock.category,
+            item_name=transfer.stock.item_name,
+            quantity=transfer.stock.total_across_locations,
+            issue_quantity=0,
+            receive_quantity=0,
+            received_by=str(request.user),
+            note=f"Transfer {status_text}: {transfer.quantity} units from {transfer.from_location.name} to {transfer.to_location.name} ({transfer.get_transfer_type_display()})",
+            created_by=str(request.user),
+            last_updated=timezone.now(),
+            timestamp=timezone.now()
+        )
+        
+        messages.success(request, f'Transfer completed: {transfer.stock.item_name} is now at {transfer.to_location}')
+    else:
+        messages.error(request, 'This transfer cannot be completed.')
+    
+    return redirect('transfer_list')
+
+@login_required
+def cancel_transfer(request, pk):
+    """Cancel a transfer and restore stock"""
+    transfer = get_object_or_404(StockTransfer, id=pk)
+    
+    if transfer.status in ['pending', 'in_transit', 'awaiting_collection']:
+        # Restore stock quantity if it was reduced and transfer hasn't been collected
+        if transfer.status != 'completed' and transfer.status != 'collected':
+            # Only restore if quantity was actually reduced (not for restock transfers)
+            if transfer.transfer_type != 'restock':
+                transfer.stock.quantity += transfer.quantity
+                transfer.stock.save()
+        
+        transfer.status = 'cancelled'
+        transfer.save()
+        
+        # CREATE HISTORY RECORD for cancellation
+        from django.utils import timezone
+        StockHistory.objects.create(
+            category=transfer.stock.category,
+            item_name=transfer.stock.item_name,
+            quantity=transfer.stock.total_across_locations,
+            issue_quantity=0,
+            receive_quantity=0,
+            received_by=str(request.user),
+            note=f"Transfer CANCELLED: {transfer.quantity} units from {transfer.from_location.name} to {transfer.to_location.name} ({transfer.get_transfer_type_display()})",
+            created_by=str(request.user),
+            last_updated=timezone.now(),
+            timestamp=timezone.now()
+        )
+        
+        messages.success(request, f'Transfer cancelled: {transfer.quantity} units of {transfer.stock.item_name} restored')
+    else:
+        messages.error(request, 'This transfer cannot be cancelled.')
+    
+    return redirect('transfer_list')
+
+@login_required
+def mark_collected(request, pk):
+    """Mark a customer collection transfer as collected"""
+    transfer = get_object_or_404(StockTransfer, id=pk)
+    
+    if transfer.can_be_collected():
+        transfer.mark_collected(request.user)
+        
+        # CREATE HISTORY RECORD for customer collection
+        from django.utils import timezone
+        StockHistory.objects.create(
+            category=transfer.stock.category,
+            item_name=transfer.stock.item_name,
+            quantity=transfer.stock.total_across_locations,
+            issue_quantity=transfer.quantity,  # Mark as issued quantity since it's collected
+            receive_quantity=0,
+            received_by=str(request.user),
+            note=f"Transfer COLLECTED: {transfer.customer_name} collected {transfer.quantity} units from {transfer.to_location.name}",
+            created_by=str(request.user),
+            last_updated=timezone.now(),
+            timestamp=timezone.now()
+        )
+        
+        messages.success(request, f'Customer collection confirmed: {transfer.customer_name} collected {transfer.quantity} units of {transfer.stock.item_name}')
+    else:
+        messages.error(request, 'This transfer is not awaiting collection.')
+    
+    return redirect('transfer_list')
 
 
 @login_required
@@ -226,7 +436,21 @@ def add_stock(request):
             if not stock.note:
                 stock.note = "Fresh Stock"
             
+            # Get location and aisle from form
+            location = form.cleaned_data.get('location')
+            aisle = form.cleaned_data.get('aisle', '')
+            quantity = form.cleaned_data.get('quantity', 0)
+            
             stock.save()
+            
+            # Create StockLocation record for the new multi-location system
+            if location and quantity > 0:
+                StockLocation.objects.create(
+                    stock=stock,
+                    store=location,
+                    quantity=quantity,
+                    aisle=aisle
+                )
             
             # Debug the saved image
             print("\n=== IMAGE DEBUG ===")
@@ -580,40 +804,66 @@ def stock_detail(request, pk):
 @login_required
 def issue_item(request, pk):
     issue = Stock.objects.get(id=pk)
-    form = IssueForm(request.POST or None, instance=issue)
+    form = IssueForm(request.POST or None, instance=issue, stock=issue)
+    
     if form.is_valid():
         value = form.save(commit=False)
-        value.receive_quantity = 0
-        value.quantity = value.quantity - value.issue_quantity
-        value.issued_by = str(request.user)
-        if value.quantity >= 0:
-            value.save()
-            
-            # CREATE HISTORY RECORD
-            from django.utils import timezone
-            StockHistory.objects.create(
-                category=value.category,
-                item_name=value.item_name,
-                quantity=value.quantity,
-                issue_quantity=value.issue_quantity,
-                receive_quantity=0,
-                issued_by=value.issued_by,
-                note=value.note,
-                created_by=str(request.user),
-                last_updated=timezone.now(),
-                timestamp=timezone.now()
-            )
-            
-            messages.success(request, "Issued Successfully, " + str(value.quantity) + " " + str(value.item_name) + "s now left in Store")
+        issue_quantity = value.issue_quantity
+        issue_location = form.cleaned_data.get('issue_location')
+        
+        # Handle location-based issuing
+        if issue_location:
+            location_stock = issue.get_location_quantity(issue_location)
+            if location_stock >= issue_quantity:
+                # Remove quantity from the specified location
+                success = issue.remove_from_location(issue_location, issue_quantity)
+                if success:
+                    value.receive_quantity = 0
+                    value.issued_by = str(request.user)
+                    value.save()
+                    
+                    # CREATE HISTORY RECORD
+                    from django.utils import timezone
+                    location_note = f"Issued from {issue_location.name}"
+                    full_note = f"{location_note}. {value.note}" if value.note else location_note
+                    
+                    StockHistory.objects.create(
+                        category=value.category,
+                        item_name=value.item_name,
+                        quantity=issue.total_across_locations,  # Updated total
+                        issue_quantity=issue_quantity,
+                        receive_quantity=0,
+                        issued_by=value.issued_by,
+                        note=full_note,
+                        created_by=str(request.user),
+                        last_updated=timezone.now(),
+                        timestamp=timezone.now()
+                    )
+                    
+                    messages.success(request, f"Issued Successfully: {issue_quantity} {issue.item_name}s from {issue_location.name}. Total remaining: {issue.total_across_locations}")
+                else:
+                    messages.error(request, "Error processing issue request")
+            else:
+                messages.error(request, f"Insufficient stock at {issue_location.name}. Available: {location_stock}")
         else:
-            messages.error(request, "Insufficient Stock")
-        return redirect('/stock_detail/' + str(value.id))
+            # If no location specified but we have issue_location form field, this shouldn't happen
+            # Fall back to old behavior for backward compatibility
+            value.receive_quantity = 0
+            value.quantity = value.quantity - value.issue_quantity
+            value.issued_by = str(request.user)
+            if value.quantity >= 0:
+                value.save()
+                messages.success(request, "Issued Successfully")
+            else:
+                messages.error(request, "Insufficient Stock")
+                
+        return redirect('stock_detail', pk=issue.id)
     
     context = {
-        "title": 'Issue ' + str(issue.item_name),
+        "title": f'Issue {issue.item_name}',
         "issue": issue,
         "form": form,
-        "username": 'Issued by: ' + str(request.user),
+        "username": f'Issued by: {request.user}',
     }
     return render(request, "stock/add_stock.html", context)
 
@@ -626,7 +876,7 @@ def receive_item(request, pk):
     print(f"PK received: {pk}")
     
     receive = Stock.objects.get(id=pk)
-    form = ReceiveForm(request.POST or None, instance=receive)
+    form = ReceiveForm(request.POST or None, instance=receive, stock=receive)
     
     if request.method == "POST":
         print(f"POST data: {request.POST}")
@@ -640,22 +890,35 @@ def receive_item(request, pk):
         
         if form.is_valid():
             value = form.save(commit=False)
+            receive_quantity = value.receive_quantity
+            receive_location = form.cleaned_data['receive_location']
+            receive_aisle = form.cleaned_data.get('receive_aisle', '')
+            
+            # Add quantity to the specified location
+            value.add_to_location(receive_location, receive_quantity, receive_aisle)
+            
+            # Update stock metadata
             value.issue_quantity = 0
-            value.quantity = value.quantity + value.receive_quantity
             value.received_by = str(request.user)
             value.edited_by = str(request.user)
             value.save()
             
             # CREATE HISTORY RECORD
             from django.utils import timezone  # Import moved here
+            location_note = f"Received at {receive_location.name}"
+            if receive_aisle:
+                location_note += f" (Aisle: {receive_aisle})"
+            
+            full_note = f"{location_note}. {value.note}" if value.note else location_note
+            
             StockHistory.objects.create(
                 category=value.category,
                 item_name=value.item_name,
-                quantity=value.quantity,
+                quantity=value.total_across_locations,  # Total across all locations
                 issue_quantity=0,
-                receive_quantity=value.receive_quantity,
+                receive_quantity=receive_quantity,
                 received_by=value.received_by,
-                note=value.note,
+                note=full_note,
                 created_by=str(request.user),
                 last_updated=timezone.now(),
                 timestamp=timezone.now()
@@ -663,7 +926,7 @@ def receive_item(request, pk):
             
             messages.success(
                 request,
-                f"Received Successfully, {value.quantity} {value.item_name}s now in Store"
+                f"Received Successfully: {receive_quantity} {value.item_name}s added to {receive_location.name}. Total stock: {value.total_across_locations}"
             )
             return redirect('stock_detail', pk=value.id)
         else:
@@ -676,7 +939,7 @@ def receive_item(request, pk):
         "username": f"Received by: {request.user}",
     }
     print(f"Rendering template with context: {list(context.keys())}")
-    return render(request, "stock/add_stock.html", context)
+    return render(request, "stock/receive_item.html", context)
 
 
 @login_required

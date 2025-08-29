@@ -9,11 +9,13 @@ from registration.forms import RegistrationForm
 class StockCreateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'image']
+        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'image']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter item name'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'location': forms.Select(attrs={'class': 'form-control'}),
+            'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact phone number'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
         }
@@ -30,6 +32,10 @@ class StockCreateForm(forms.ModelForm):
             Row(
                 Column('condition', css_class='form-group col-md-6'),
                 Column('quantity', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('location', css_class='form-group col-md-6'),
+                Column('aisle', css_class='form-group col-md-6'),
             ),
             Row(
                 Column('note', css_class='form-group col-md-12'),
@@ -54,11 +60,13 @@ class StockCreateForm(forms.ModelForm):
 class StockUpdateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'phone_number', 'image', 'note']
+        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'phone_number', 'image', 'note']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'location': forms.Select(attrs={'class': 'form-control'}),
+            'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'note': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Update note'}),
@@ -66,6 +74,11 @@ class StockUpdateForm(forms.ModelForm):
 
 
 class IssueForm(forms.ModelForm):
+    issue_location = forms.ModelChoiceField(
+        queryset=Store.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select the location to issue items from"
+    )
     note = forms.CharField(
         max_length=255,
         required=False,
@@ -79,8 +92,31 @@ class IssueForm(forms.ModelForm):
             'issue_quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        stock = kwargs.pop('stock', None)
+        super().__init__(*args, **kwargs)
+        self.stock = stock
+        
+        if stock:
+            # Only show locations that have stock available
+            stock_locations = stock.locations.filter(quantity__gt=0)
+            self.fields['issue_location'].queryset = Store.objects.filter(
+                id__in=stock_locations.values_list('store_id', flat=True)
+            )
+
 
 class ReceiveForm(forms.ModelForm):
+    receive_location = forms.ModelChoiceField(
+        queryset=Store.objects.filter(is_active=True),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        help_text="Select the location where items are being received"
+    )
+    receive_aisle = forms.CharField(
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
+        help_text="Specific aisle or section within the location"
+    )
     note = forms.CharField(
         max_length=255,
         required=False,
@@ -93,6 +129,19 @@ class ReceiveForm(forms.ModelForm):
         widgets = {
             'receive_quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        stock = kwargs.pop('stock', None)
+        super().__init__(*args, **kwargs)
+        self.stock = stock
+        
+        if stock:
+            # Default to the first location with existing stock, or first active store
+            existing_locations = stock.locations.filter(quantity__gt=0)
+            if existing_locations.exists():
+                self.fields['receive_location'].initial = existing_locations.first().store
+            else:
+                self.fields['receive_location'].initial = Store.objects.filter(is_active=True).first()
 
 class CommitStockForm(forms.ModelForm):
     class Meta:
@@ -140,6 +189,93 @@ class ReorderLevelForm(forms.ModelForm):
         widgets = {
             're_order': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
+
+class StockTransferForm(forms.ModelForm):
+    from_location = forms.ModelChoiceField(
+        queryset=Store.objects.none(),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_from_location'}),
+        help_text="Select the source location to transfer from"
+    )
+
+    class Meta:
+        model = StockTransfer
+        fields = ['from_location', 'quantity', 'to_location', 'to_aisle', 'transfer_type', 'transfer_reason', 'customer_name', 'customer_phone', 'notes']
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'to_location': forms.Select(attrs={'class': 'form-control'}),
+            'to_aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Destination aisle (e.g., A1, B2)'}),
+            'transfer_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_transfer_type'}),
+            'transfer_reason': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Customer collection, Restock'}),
+            'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer name (for collection transfers)'}),
+            'customer_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer phone number'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Additional transfer notes'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        stock = kwargs.pop('stock', None)
+        super().__init__(*args, **kwargs)
+        self.stock = stock
+        
+        # Set up location choices based on stock locations
+        if stock:
+            # Get locations where this stock exists
+            stock_locations = stock.locations.filter(quantity__gt=0)
+            self.fields['from_location'].queryset = Store.objects.filter(
+                id__in=stock_locations.values_list('store_id', flat=True)
+            )
+            
+            # Show all active stores as destination choices
+            self.fields['to_location'].queryset = Store.objects.filter(is_active=True)
+            
+            total_stock = stock.total_across_locations
+            self.fields['quantity'].widget.attrs['max'] = str(total_stock)
+            self.fields['quantity'].help_text = f"Total available: {total_stock}"
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('from_location', css_class='form-group col-md-6'),
+                Column('quantity', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('to_location', css_class='form-group col-md-6'),
+                Column('to_aisle', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('transfer_type', css_class='form-group col-md-12'),
+            ),
+            Row(
+                Column('transfer_reason', css_class='form-group col-md-12'),
+            ),
+            HTML('<div id="customer_fields" style="display: none;">'),
+            Row(
+                Column('customer_name', css_class='form-group col-md-6'),
+                Column('customer_phone', css_class='form-group col-md-6'),
+            ),
+            HTML('</div>'),
+            Row(
+                Column('notes', css_class='form-group col-md-12'),
+            ),
+            Submit('submit', 'Transfer Stock', css_class='btn btn-warning')
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        transfer_type = cleaned_data.get('transfer_type')
+        customer_name = cleaned_data.get('customer_name')
+        
+        # If transfer type is customer collection, customer name is required
+        if transfer_type == 'customer_collection' and not customer_name:
+            raise forms.ValidationError('Customer name is required for customer collection transfers.')
+        
+        return cleaned_data
+
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity')
+        if self.stock and quantity > self.stock.quantity:
+            raise forms.ValidationError(f'Cannot transfer more than {self.stock.quantity} items available.')
+        return quantity
 
 
 class StockSearchForm(forms.ModelForm):

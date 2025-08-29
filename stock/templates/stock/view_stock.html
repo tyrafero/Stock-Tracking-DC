@@ -28,6 +28,7 @@
                                                     <th class="nk-tb-col"><span>STOCK NAME</span></th>
                                                     <th class="nk-tb-col"><span>CATEGORY</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>LOCATION</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>TOTAL STOCK</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>COMMITTED</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>AVAILABLE</span></th>
@@ -81,7 +82,28 @@
                                                         {% endif %}
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
-                                                        <span class="tb-sub">{{ every.total_stock }}</span>
+                                                        <div class="tb-sub">
+                                                            {% if every.locations.exists %}
+                                                                {% for location in every.locations.all %}
+                                                                    {% if location.quantity > 0 %}
+                                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                            <span>
+                                                                                <strong>{{ location.store.name }}</strong>
+                                                                                {% if location.aisle %}
+                                                                                    <small class="text-muted">({{ location.aisle }})</small>
+                                                                                {% endif %}
+                                                                            </span>
+                                                                            <span class="badge badge-dim badge-primary">{{ location.quantity }}</span>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% endfor %}
+                                                            {% else %}
+                                                                <span class="text-muted">Not assigned</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub"><strong>{{ every.total_across_locations }}</strong></span>
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
                                                         <span class="tb-sub text-warning">{{ every.committed_stock }}</span>
@@ -105,6 +127,7 @@
                                                                             <li><a href="{% url 'update_stock' every.id %}"><em class="icon ni ni-edit"></em><span>Edit Product</span></a></li>
                                                                             <li><a href="{% url 'stock_detail' every.id %}"><em class="icon ni ni-eye"></em><span>View Product</span></a></li>
                                                                             <li><a href="{% url 'commit_stock' every.id %}"><em class="icon ni ni-lock"></em><span>Commit Stock</span></a></li>
+                                                                            <li><a href="{% url 'transfer_stock' every.id %}"><em class="icon ni ni-swap"></em><span>Transfer Stock</span></a></li>
                                                                             <li><a href="{% url 're_order' every.id %}"><em class="icon ni ni-activity-round"></em><span>Reorder Level</span></a></li>
                                                                             <li><a id="{{forloop.counter}}"  href="javascript:void(0)"><em class="icon ni ni-trash"></em><span>Remove Product</span></a></li>
                                                                         </ul>

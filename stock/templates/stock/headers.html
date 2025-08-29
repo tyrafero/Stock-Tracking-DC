@@ -214,6 +214,7 @@
                                          `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
                                          `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
                                      }
+                                     <br><small style="color: #8094ae;">Total: ${item.quantity} units</small>
                                  </div>
                              </div>
                              <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
@@ -300,6 +301,12 @@
                                     <a href="/view_history" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-growth-fill"></em></span>
                                         <span class="nk-menu-text">View History</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'transfer_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-swap"></em></span>
+                                        <span class="nk-menu-text">Stock Transfers</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
                                 

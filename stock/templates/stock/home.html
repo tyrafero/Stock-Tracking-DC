@@ -108,10 +108,161 @@
                                 </div><!-- .nk-ecwg -->
                             </div><!-- .card -->
                         </div><!-- .col -->
-
-
-
-
+                    </div><!-- .row -->
+                </div><!-- .nk-block -->
+                
+                <!-- Transfer Alerts Section -->
+                {% if pending_transfers or in_transit_transfers or awaiting_collection_transfers or active_commitments %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Stock Alerts</h5>
+                                <p class="nk-block-des">Items with pending transfers, in transit, or committed to customers</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        <!-- Pending Transfers -->
+                        {% if pending_transfers %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-warning">
+                                                <em class="icon ni ni-clock"></em>
+                                                Pending Approval ({{ pending_transfers.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for transfer in pending_transfers %}
+                                        <div class="alert alert-warning alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ transfer.stock.item_name }}</strong><br>
+                                                <small>{{ transfer.quantity }} units from {{ transfer.from_location.name }} → {{ transfer.to_location.name }}</small><br>
+                                                <small class="text-muted">{{ transfer.get_transfer_type_display }} • Created {{ transfer.created_at|timesince }} ago</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'transfer_list' %}" class="btn btn-xs btn-outline-warning">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- In Transit -->
+                        {% if in_transit_transfers %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-truck"></em>
+                                                In Transit ({{ in_transit_transfers.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for transfer in in_transit_transfers %}
+                                        <div class="alert alert-info alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ transfer.stock.item_name }}</strong><br>
+                                                <small>{{ transfer.quantity }} units from {{ transfer.from_location.name }} → {{ transfer.to_location.name }}</small><br>
+                                                <small class="text-muted">{{ transfer.get_transfer_type_display }} • In transit {{ transfer.approved_at|timesince }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'transfer_list' %}" class="btn btn-xs btn-outline-info">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Awaiting Collection -->
+                        {% if awaiting_collection_transfers %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-success">
+                                                <em class="icon ni ni-user-check"></em>
+                                                Awaiting Collection ({{ awaiting_collection_transfers.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for transfer in awaiting_collection_transfers %}
+                                        <div class="alert alert-success alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ transfer.stock.item_name }}</strong><br>
+                                                <small>{{ transfer.quantity }} units for {{ transfer.customer_name|default:"Customer" }}</small><br>
+                                                <small class="text-muted">At {{ transfer.to_location.name }} • Ready {{ transfer.completed_at|timesince }} ago</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'transfer_list' %}" class="btn btn-xs btn-outline-success">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <!-- Committed Stock -->
+                        {% if active_commitments %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-primary">
+                                                <em class="icon ni ni-user-fill"></em>
+                                                Customer Commitments ({{ active_commitments.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text" style="max-height: 400px; overflow-y: auto;">
+                                        {% for commitment in active_commitments %}
+                                        <div class="alert alert-primary alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ commitment.stock.item_name }}</strong><br>
+                                                <small><strong>Customer:</strong> {{ commitment.customer_name }}</small><br>
+                                                <small><strong>Quantity:</strong> {{ commitment.quantity }} units</small><br>
+                                                <small><strong>Order #:</strong> {{ commitment.customer_order_number }}</small><br>
+                                                <small><strong>Deposit:</strong> ${{ commitment.deposit_amount }}</small><br>
+                                                {% if commitment.customer_phone %}
+                                                <small><strong>Phone:</strong> {{ commitment.customer_phone }}</small><br>
+                                                {% endif %}
+                                                <small class="text-muted">Committed {{ commitment.committed_at|timesince }} ago</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' commitment.stock.pk %}" class="btn btn-xs btn-outline-primary">View Stock</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Charts Section -->
+                <div class="nk-block">
+                    <div class="row g-gs">
                          <div class="col-xxl-6">
                                             <div class="card card-full">
                                                 <div class="nk-ecwg nk-ecwg8 h-100">

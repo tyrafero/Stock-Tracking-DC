@@ -29,6 +29,46 @@
     border-right-color: #1e293b !important;
 }
 
+/* Fix table overflow issues */
+.datatable-init {
+    table-layout: fixed !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+}
+
+.nk-tb-list {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+.nk-tb-col {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    padding: 8px 12px !important;
+}
+
+/* Specific styling for notes column */
+.notes-column {
+    width: 200px !important;
+    min-width: 200px !important;
+    max-width: 200px !important;
+    overflow: hidden !important;
+    position: relative !important;
+}
+
+.notes-text {
+    word-wrap: break-word !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    hyphens: auto !important;
+    max-width: 180px !important;
+    line-height: 1.3 !important;
+    font-size: 12px !important;
+    overflow: hidden !important;
+    display: block !important;
+}
+
 /* 🔥 Simple text color coding for stock operations */
 .row-issue {
     /* No background - just for targeting */
@@ -67,7 +107,8 @@
                             </div>
                         </div>
 
-                        <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                    <div class="table-responsive" style="overflow-x: auto;">
+                        <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false" style="min-width: 1000px;">
                             <thead>
                                 <tr class="nk-tb-item nk-tb-head">
                                     <th class="nk-tb-col"><span>CATEGORY</span></th>
@@ -76,6 +117,7 @@
                                     <th class="nk-tb-col tb-col-md"><span>ISSUE QUANTITY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>RECEIVE QUANTITY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>ISSUED BY / RECEIVED BY</span></th>
+                                    <th class="nk-tb-col tb-col-lg notes-column"><span>NOTES</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
                                 </tr>
                             </thead>
@@ -98,14 +140,12 @@
                                         <span class="tb-sub">{{ total.quantity }}</span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub" 
-                                              {% if total.issue_quantity > 0 %}data-toggle="tooltip" data-placement="top" title="Issued To: {{ total.note|default:'No note provided' }}"{% endif %}>
+                                        <span class="tb-sub">
                                             {{ total.issue_quantity }}
                                         </span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub"
-                                              {% if total.receive_quantity > 0 %}data-toggle="tooltip" data-placement="top" title="Received From: {{ total.note|default:'No note provided' }}"{% endif %}>
+                                        <span class="tb-sub">
                                             {{ total.receive_quantity }}
                                         </span>
                                     </td>
@@ -114,6 +154,11 @@
                                             {% if total.issue_quantity > 0 %}{{ total.issued_by }}{% elif total.receive_quantity > 0 %}{{ total.received_by }}{% else %}{{ total.created_by }}{% endif %}
                                         </span>
                                     </td>
+                                    <td class="nk-tb-col tb-col-lg notes-column">
+                                        <div class="tb-sub notes-text">
+                                            {{ total.note|default:"No notes"|truncatechars:150 }}
+                                        </div>
+                                    </td>
                                     <td class="nk-tb-col tb-col-md">
                                         <span class="tb-sub">{{ total.last_updated }}</span>
                                     </td>
@@ -121,6 +166,7 @@
                                 {% endfor %}
                             </tbody>
                         </table>
+                    </div> <!-- table-responsive -->
                     </div> <!-- nk-block -->
                 </div>
             </div>

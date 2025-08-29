@@ -20,6 +20,7 @@
                             <a href="{% url 'issue_item' detail.id %}"><div class='btn btn-primary'>ISSUE THIS ITEM</div></a>
                             <a href="{% url 'receive_item' detail.id %}"><div class='btn btn-success'>RECEIVE THIS ITEM</div></a>
                             <a href="{% url 'commit_stock' detail.id %}"><div class='btn btn-warning'>COMMIT THIS ITEM</div></a>
+                            <a href="{% url 'transfer_stock' detail.id %}"><div class='btn btn-secondary'>TRANSFER THIS ITEM</div></a>
                         </div>
 
                         <!-- Current Stock Overview -->
@@ -75,7 +76,52 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-1">
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label">Stock Distribution by Location</label>
+                                            <div class="form-control-wrap">
+                                                {% if detail.locations.exists %}
+                                                    <div class="card card-bordered">
+                                                        <div class="card-inner">
+                                                            {% for location in detail.locations.all %}
+                                                                {% if location.quantity > 0 %}
+                                                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                                                        <div>
+                                                                            <h6 class="mb-0">{{ location.store.name }}</h6>
+                                                                            {% if location.aisle %}
+                                                                                <small class="text-muted">Aisle: {{ location.aisle }}</small>
+                                                                            {% endif %}
+                                                                            {% if location.store.location %}
+                                                                                <small class="text-muted d-block">{{ location.store.location }}</small>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                        <div class="text-right">
+                                                                            <span class="badge badge-primary badge-lg">{{ location.quantity }} units</span>
+                                                                            {% if location.is_low_stock %}
+                                                                                <br><small class="text-danger">Low Stock</small>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2">
+                                                                <strong>Total Stock:</strong>
+                                                                <span class="badge badge-success badge-lg">{{ detail.total_across_locations }} units</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="form-control text-muted">No stock assigned to any location</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
                                         <div class="form-group">
                                             <label class="form-label">Reorder Level</label>
                                             <div class="form-control-wrap">
@@ -170,6 +216,7 @@
                                             <th class="nk-tb-col"><span>ORDER NUMBER</span></th>
                                             <th class="nk-tb-col"><span>QTY COMMITTED</span></th>
                                             <th class="nk-tb-col"><span>DEPOSIT PAID</span></th>
+                                            <th class="nk-tb-col"><span>NOTES</span></th>
                                             <th class="nk-tb-col"><span>STATUS</span></th>
                                             <th class="nk-tb-col nk-tb-col-tools"><span>ACTIONS</span></th>
                                         </tr>
@@ -194,6 +241,11 @@
                                             </td>
                                             <td class="nk-tb-col">
                                                 <span class="tb-amount text-success"><strong>${{ commitment.deposit_amount }}</strong></span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub" style="word-wrap: break-word; white-space: normal; max-width: 250px; display: inline-block;">
+                                                    {{ commitment.notes|default:"No notes" }}
+                                                </span>
                                             </td>
                                             <td class="nk-tb-col">
                                                 {% if commitment.is_fulfilled %}

@@ -26,6 +26,7 @@
                                     <th class="nk-tb-col"><span>STOCK NAME</span></th>
                                     <th class="nk-tb-col"><span>CATEGORY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>LOCATION</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>REORDER LEVEL</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>QUANTITY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>TIME STAMP</span></th>
@@ -73,11 +74,32 @@
                                             <span class="badge badge-primary">{{ item.get_condition_display }}</span>
                                         {% endif %}
                                     </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <div class="tb-sub">
+                                            {% if item.locations.exists %}
+                                                {% for location in item.locations.all %}
+                                                    {% if location.quantity > 0 %}
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span>
+                                                                <strong>{{ location.store.name }}</strong>
+                                                                {% if location.aisle %}
+                                                                    <small class="text-muted">({{ location.aisle }})</small>
+                                                                {% endif %}
+                                                            </span>
+                                                            <span class="badge badge-dim badge-primary">{{ location.quantity }}</span>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
                                     <td class="nk-tb-col">
                                         <span class="tb-sub"><a href="{% url 're_order' item.id %}">{{item.re_order}}</a></span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub">{{item.quantity}}</span>
+                                        <span class="tb-sub"><strong>{{item.total_across_locations}}</strong></span>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
                                         <span class="tb-sub">{{item.last_updated}}</span>

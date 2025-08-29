@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from .models import (
     Stock, Category, Country, State, City, Person, Contacts, Product, 
     PurchaseOrder, PurchaseOrderItem, Manufacturer, DeliveryPerson, Store, 
-    PurchaseOrderHistory, CommittedStock
+    PurchaseOrderHistory, CommittedStock, StockTransfer, StockLocation
 )
 from .form import StockCreateForm  # Make sure this is the correct import path
 
@@ -34,13 +34,27 @@ class CommittedStockInline(admin.TabularInline):
     fields = ('quantity', 'customer_order_number', 'deposit_amount', 'customer_name', 'is_fulfilled')
     readonly_fields = ('committed_at',)
 
+# Stock Location Inline for Stock Admin
+class StockLocationInline(admin.TabularInline):
+    model = StockLocation
+    extra = 0
+    fields = ('store', 'quantity', 'aisle', 'last_updated')
+    readonly_fields = ('last_updated',)
+
+# Stock Transfer Inline for Stock Admin
+class StockTransferInline(admin.TabularInline):
+    model = StockTransfer
+    extra = 0
+    fields = ('quantity', 'from_location', 'to_location', 'status', 'created_by')
+    readonly_fields = ('created_by', 'created_at')
+
 # Stock Admin
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['category', 'item_name', 'quantity', 'committed_quantity', 'condition']
+    list_display = ['category', 'item_name', 'quantity', 'committed_quantity', 'condition', 'location', 'aisle']
     form = StockCreateForm
-    list_filter = ['category', 'condition']
-    search_fields = ['category', 'item_name']
-    inlines = [CommittedStockInline]
+    list_filter = ['category', 'condition', 'location']
+    search_fields = ['category', 'item_name', 'location__name', 'aisle']
+    inlines = [StockLocationInline, CommittedStockInline, StockTransferInline]
 
 # CommittedStock Admin
 @admin.register(CommittedStock)
@@ -82,3 +96,18 @@ class DeliveryPersonAdmin(admin.ModelAdmin):
 class StoreAdmin(admin.ModelAdmin):
     list_display = ('name', 'location', 'is_active')
     list_filter = ('is_active',)
+
+# StockLocation Admin
+@admin.register(StockLocation)
+class StockLocationAdmin(admin.ModelAdmin):
+    list_display = ('stock', 'store', 'quantity', 'aisle', 'last_updated')
+    list_filter = ('store', 'last_updated')
+    search_fields = ('stock__item_name', 'store__name')
+
+# StockTransfer Admin
+@admin.register(StockTransfer)
+class StockTransferAdmin(admin.ModelAdmin):
+    list_display = ('stock', 'from_location', 'to_location', 'quantity', 'status', 'created_by', 'created_at')
+    list_filter = ('status', 'from_location', 'to_location', 'created_at')
+    readonly_fields = ('created_at', 'approved_at', 'completed_at')
+    search_fields = ('stock__item_name', 'transfer_reason')

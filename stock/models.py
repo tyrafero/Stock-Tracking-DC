@@ -30,6 +30,8 @@ class Stock(models.Model):
     issued_by = models.CharField(max_length=50, blank=True, null=True)
     committed_quantity = models.IntegerField(default=0, blank=True, null=True)
     condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new')
+    location = models.ForeignKey('Store', on_delete=models.SET_NULL, null=True, blank=True, help_text="Store location where this item is kept")
+    aisle = models.CharField(max_length=50, blank=True, null=True, help_text="Specific aisle or section within the store")
     note = models.CharField(max_length=255, blank=True, null=True)
     phone_number = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=50, blank=True, null=True)
@@ -60,6 +62,43 @@ class Stock(models.Model):
     def is_low_stock(self):
         """Check if stock is below reorder level"""
         return self.available_for_sale <= (self.re_order or 0)
+    
+    @property
+    def total_across_locations(self):
+        """Total stock across all locations"""
+        return self.locations.aggregate(total=models.Sum('quantity'))['total'] or 0
+    
+    def get_location_quantity(self, store):
+        """Get quantity at a specific location"""
+        try:
+            location = self.locations.get(store=store)
+            return location.quantity
+        except StockLocation.DoesNotExist:
+            return 0
+    
+    def add_to_location(self, store, quantity, aisle=None):
+        """Add quantity to a specific location"""
+        location, created = self.locations.get_or_create(
+            store=store,
+            defaults={'quantity': 0, 'aisle': aisle}
+        )
+        location.quantity += quantity
+        if aisle:
+            location.aisle = aisle
+        location.save()
+        return location
+    
+    def remove_from_location(self, store, quantity):
+        """Remove quantity from a specific location"""
+        try:
+            location = self.locations.get(store=store)
+            if location.quantity >= quantity:
+                location.quantity -= quantity
+                location.save()
+                return True
+            return False
+        except StockLocation.DoesNotExist:
+            return False
     
     def __str__(self):
         return f"{self.item_name} ({self.quantity}) - {self.last_updated}"
@@ -108,6 +147,123 @@ class CommittedStock(models.Model):
             total=models.Sum('quantity')
         )['total'] or 0
         self.stock.save(update_fields=['committed_quantity'])
+
+class StockLocation(models.Model):
+    """Track stock quantities at different locations for the same item"""
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='locations')
+    store = models.ForeignKey('Store', on_delete=models.CASCADE)
+    quantity = models.IntegerField(default=0)
+    aisle = models.CharField(max_length=50, blank=True, null=True, help_text="Specific aisle or section within the store")
+    last_updated = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('stock', 'store')
+        ordering = ['-last_updated']
+    
+    def __str__(self):
+        return f"{self.stock.item_name} at {self.store.name}: {self.quantity} units"
+    
+    @property
+    def is_low_stock(self):
+        """Check if this location's stock is below reorder level"""
+        return self.quantity <= (self.stock.re_order or 0)
+
+class StockTransfer(models.Model):
+    """Track stock transfers between different store locations"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('in_transit', 'In Transit'),
+        ('completed', 'Completed'),
+        ('awaiting_collection', 'Awaiting Customer Collection'),
+        ('collected', 'Customer Collected'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    TRANSFER_TYPE_CHOICES = [
+        ('restock', 'Restock'),
+        ('customer_collection', 'Customer Collection'),
+        ('general', 'General Transfer'),
+    ]
+    
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='transfers')
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
+    from_location = models.ForeignKey('Store', on_delete=models.CASCADE, related_name='outgoing_transfers')
+    to_location = models.ForeignKey('Store', on_delete=models.CASCADE, related_name='incoming_transfers')
+    from_aisle = models.CharField(max_length=50, blank=True, null=True)
+    to_aisle = models.CharField(max_length=50, blank=True, null=True)
+    transfer_type = models.CharField(max_length=20, choices=TRANSFER_TYPE_CHOICES, default='general')
+    transfer_reason = models.CharField(max_length=255, help_text="Reason for transfer (e.g., customer collection, restock)")
+    customer_name = models.CharField(max_length=100, blank=True, null=True, help_text="Customer name (for collection transfers)")
+    customer_phone = models.CharField(max_length=50, blank=True, null=True, help_text="Customer contact")
+    notes = models.TextField(blank=True, null=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_transfers')
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_transfers')
+    completed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='completed_transfers')
+    collected_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='collected_transfers')
+    created_at = models.DateTimeField(auto_now_add=True)
+    approved_at = models.DateTimeField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+    collected_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Transfer {self.stock.item_name} ({self.quantity}pcs) from {self.from_location} to {self.to_location}"
+    
+    def can_be_approved(self):
+        return self.status == 'pending'
+    
+    def can_be_completed(self):
+        return self.status in ['pending', 'in_transit']
+    
+    def can_be_collected(self):
+        return self.status == 'awaiting_collection'
+    
+    def approve(self, user):
+        if self.can_be_approved():
+            self.status = 'in_transit'
+            self.approved_by = user
+            self.approved_at = timezone.now()
+            self.save()
+    
+    def complete(self, user):
+        if self.can_be_completed():
+            # Handle different transfer types
+            if self.transfer_type == 'restock':
+                # For restock: move quantity from origin to destination
+                self.stock.remove_from_location(self.from_location, self.quantity)
+                self.stock.add_to_location(self.to_location, self.quantity, self.to_aisle)
+                self.status = 'completed'
+            elif self.transfer_type == 'customer_collection':
+                # For customer collection: quantity already reduced, just update location and wait
+                self.stock.add_to_location(self.to_location, self.quantity, self.to_aisle)
+                self.status = 'awaiting_collection'
+            else:
+                # General transfer: move quantity
+                self.stock.add_to_location(self.to_location, self.quantity, self.to_aisle)
+                self.status = 'completed'
+            
+            self.completed_by = user
+            self.completed_at = timezone.now()
+            self.save()
+    
+    def mark_collected(self, user):
+        """Mark customer collection transfer as collected and reduce stock"""
+        if self.can_be_collected():
+            # Remove the quantity from the destination location (customer has collected)
+            self.stock.remove_from_location(self.to_location, self.quantity)
+            
+            self.status = 'collected'
+            self.collected_by = user
+            self.collected_at = timezone.now()
+            self.save()
+    
+    @property
+    def is_pending_collection(self):
+        return self.status == 'awaiting_collection'
 
 # ----------------------------
 # Location & Person Models
