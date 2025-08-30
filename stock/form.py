@@ -22,6 +22,8 @@ class StockCreateForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Ensure all active stores are available in location dropdown
+        self.fields['location'].queryset = Store.objects.filter(is_active=True)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
@@ -70,6 +72,11 @@ class StockUpdateForm(forms.ModelForm):
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'note': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Update note'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure all active stores are available in location dropdown
+        self.fields['location'].queryset = Store.objects.filter(is_active=True)
 
 
 class IssueForm(forms.ModelForm):
@@ -546,10 +553,11 @@ class DeliveryPersonForm(forms.ModelForm):
 class StoreForm(forms.ModelForm):
     class Meta:
         model = Store
-        fields = ['name', 'location', 'address', 'is_active']
+        fields = ['name', 'location', 'email', 'address', 'is_active']
         widgets = {
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'name': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'sales@example.com'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
@@ -563,8 +571,11 @@ class StoreForm(forms.ModelForm):
                 Column('name', css_class='form-group col-md-6 mb-3'),
                 Column('location', css_class='form-group col-md-6 mb-3'),
             ),
+            Row(
+                Column('email', css_class='form-group col-md-6 mb-3'),
+                Column('is_active', css_class='form-group col-md-6 mb-3'),
+            ),
             Row(Column('address', css_class='form-group col-md-12 mb-3')),
-            Row(Column('is_active', css_class='form-group col-md-12 mb-3')),
             Submit('submit', 'Save Store', css_class='btn btn-primary')
         )
 

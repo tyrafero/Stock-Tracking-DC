@@ -382,6 +382,7 @@ class Store(models.Model):
     name = models.CharField(max_length=200, choices=STORE_CHOICES)
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
+    email = models.EmailField(max_length=255, blank=True, null=True, help_text="Store contact email")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
