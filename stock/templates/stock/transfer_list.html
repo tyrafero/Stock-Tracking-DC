@@ -54,8 +54,12 @@
                                 <tr class="nk-tb-item">
                                     <td class="nk-tb-col">
                                         <div class="tb-product">
-                                            {% if transfer.stock.image %}
-                                            <img src="{{ transfer.stock.image.url }}" alt="{{ transfer.stock.item_name }}" class="thumb">
+                                            {% if transfer.stock.image and transfer.stock.image.url %}
+                                                <img src="{{ transfer.stock.image.url }}" alt="{{ transfer.stock.item_name }}" class="thumb" onerror="this.style.display='none'">
+                                            {% else %}
+                                                <div class="thumb thumb-placeholder">
+                                                    <em class="icon ni ni-img" style="font-size: 20px; color: #ccc;"></em>
+                                                </div>
                                             {% endif %}
                                             <span class="title">
                                                 <a href="{% url 'stock_detail' transfer.stock.id %}">{{ transfer.stock.item_name }}</a>

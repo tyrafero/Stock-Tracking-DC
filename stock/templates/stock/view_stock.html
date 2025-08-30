@@ -56,8 +56,12 @@
                                                     </td>
                                                     <td class="nk-tb-col tb-col-sm">
                                                         <span class="tb-product">
-                                                            {% if every.image %}
-                                                            <img src="{{ every.image.url }}" alt="{{ every.item_name }}" class="thumb">
+                                                            {% if every.image and every.image.url %}
+                                                                <img src="{{ every.image.url }}" alt="{{ every.item_name }}" class="thumb" onerror="this.style.display='none'">
+                                                            {% else %}
+                                                                <div class="thumb thumb-placeholder">
+                                                                    <em class="icon ni ni-img" style="font-size: 20px; color: #ccc;"></em>
+                                                                </div>
                                                             {% endif %}
                                                             {% if every.quantity <= every.re_order %}
                                                             <span style="background: red" class="title"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>

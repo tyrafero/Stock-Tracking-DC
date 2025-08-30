@@ -67,9 +67,31 @@ urlpatterns = [
     path('stores/add/', views.add_store, name='add_store'),
     path('stores/<int:pk>/edit/', views.edit_store, name='edit_store'),
     path('stores/<int:pk>/delete/', views.delete_store, name='delete_store'),
+    
+    path('categories/', views.manage_categories, name='manage_categories'),
+    path('categories/add/', views.add_category, name='add_category'),
+    path('categories/<int:pk>/edit/', views.edit_category, name='edit_category'),
+    path('categories/<int:pk>/delete/', views.delete_category, name='delete_category'),
 
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Always serve media files in development (even when DEBUG=False)
+# This helps with local development when Cloudinary isn't properly configured
+import os
+if not os.environ.get('RAILWAY_ENVIRONMENT'):  # Only for local development
+    from django.views.static import serve
+    from django.urls import re_path
+    
+    def serve_media(request, path):
+        """Serve media files locally during development"""
+        media_root = os.path.join(settings.BASE_DIR, 'media')
+        return serve(request, path, document_root=media_root)
+    
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve_media),
+        re_path(r'^/(?P<path>stock/images/.*)$', serve_media),  # Handle direct stock image paths
+    ]
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

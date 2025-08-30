@@ -9,7 +9,7 @@ from decimal import Decimal
 # ----------------------------
 
 class Category(models.Model):
-    group = models.CharField(max_length=50, blank=True, null=True)
+    group = models.CharField(max_length=50, blank=True, null=True, unique=True)
 
     def __str__(self):
         return self.group
@@ -371,13 +371,21 @@ class DeliveryPerson(models.Model):
         return f"{self.name}, {self.phone_number}"
 
 class Store(models.Model):
-    name = models.CharField(max_length=200)
+    STORE_CHOICES = [
+        ('audio_junction_newcastle', 'Audio Junction Store - Newcastle'),
+        ('digital_cinema_auburn', 'Digital Cinema Store - Auburn'),
+        ('instyle_dural', 'Instyle Store - Dural'),
+        ('silverwater_warehouse', 'Silverwater Warehouse'),
+        ('auburn_warehouse', 'Auburn Warehouse'),
+    ]
+    
+    name = models.CharField(max_length=200, choices=STORE_CHOICES)
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.name} - {self.location}"
+        return f"{self.get_name_display()}"
 
 # ----------------------------
 # Purchase Order Models

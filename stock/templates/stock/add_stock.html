@@ -40,7 +40,135 @@
     </div>
  </div>
 
+<!-- Add Category Modal -->
+<div class="modal fade" id="addCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCategoryForm">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <label for="categoryName">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="group" 
+                               placeholder="Enter category name (e.g., Electronics, Accessories)" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveCategory()">Save Category</button>
+            </div>
+        </div>
+    </div>
+</div>
 
+<script>
+// Add the "+ Add Category" button after the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    var categoryField = document.querySelector('select[name="category"]');
+    if (categoryField) {
+        var categoryDiv = categoryField.closest('.form-group');
+        if (categoryDiv) {
+            var addButton = document.createElement('button');
+            addButton.type = 'button';
+            addButton.className = 'btn btn-sm btn-outline-primary mt-2';
+            addButton.innerHTML = '<i class="icon ni ni-plus"></i> Add Category';
+            addButton.onclick = openAddCategoryModal;
+            categoryDiv.appendChild(addButton);
+        }
+    }
+});
 
+function openAddCategoryModal() {
+    var modal = new bootstrap.Modal(document.getElementById('addCategoryModal'));
+    modal.show();
+}
+
+function saveCategory() {
+    var categoryName = document.getElementById('categoryName').value.trim();
+    if (!categoryName) {
+        showMessage('Please enter a category name', 'error');
+        return;
+    }
+    
+    // Disable button during request
+    var saveBtn = document.querySelector('#addCategoryModal .btn-primary');
+    var originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+    
+    var formData = new FormData(document.getElementById('addCategoryForm'));
+    
+    fetch("{% url 'add_category' %}", {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Close modal
+            var modal = bootstrap.Modal.getInstance(document.getElementById('addCategoryModal'));
+            modal.hide();
+            
+            // Add new option to category select
+            var categorySelect = document.querySelector('select[name="category"]');
+            var newOption = document.createElement('option');
+            newOption.value = data.category.id;
+            newOption.text = data.category.name;
+            newOption.selected = true;
+            categorySelect.appendChild(newOption);
+            
+            // Clear form
+            document.getElementById('categoryName').value = '';
+            
+            // Show success message
+            showMessage(data.message || 'Category added successfully!', 'success');
+        } else {
+            showMessage('Error: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('Error connecting to server. Please try again.', 'error');
+    })
+    .finally(() => {
+        // Re-enable button
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    });
+}
+
+function showMessage(message, type) {
+    // Create alert div
+    var alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-' + (type === 'error' ? 'danger' : 'success') + ' alert-dismissible fade show';
+    alertDiv.innerHTML = message + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+    
+    // Find a container to show the alert
+    var container = document.querySelector('.nk-content-body');
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
+    } else {
+        // Fallback to standard alert
+        alert(message);
+    }
+}
+</script>
 
 {% include 'stock/footers.html' %}

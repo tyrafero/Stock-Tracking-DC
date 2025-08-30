@@ -60,14 +60,13 @@ class StockCreateForm(forms.ModelForm):
 class StockUpdateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'phone_number', 'image', 'note']
+        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'image', 'note']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'location': forms.Select(attrs={'class': 'form-control'}),
             'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
-            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
             'image': forms.FileInput(attrs={'class': 'form-control'}),
             'note': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Update note'}),
         }
@@ -665,3 +664,40 @@ class CustomRegistrationForm(RegistrationForm):
         raise forms.ValidationError(
             "Registration is only allowed with @digitalcinema.com.au emails or approved Gmail accounts."
         )
+
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Category
+        fields = ['group']
+        widgets = {
+            'group': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter category name (e.g., Electronics, Accessories)'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('group', css_class='form-group col-md-12 mb-3'),
+            ),
+            Submit('submit', 'Save Category', css_class='btn btn-primary')
+        )
+
+    def clean_group(self):
+        group = self.cleaned_data.get('group')
+        if group:
+            group = group.strip()
+            # Check if category already exists (case-insensitive)
+            existing = Category.objects.filter(group__iexact=group)
+            if self.instance and self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+            
+            if existing.exists():
+                raise forms.ValidationError(f'Category "{group}" already exists.')
+        
+        return group

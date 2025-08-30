@@ -1631,3 +1631,73 @@ def purchase_order_history(request, pk):
         'history': history,
     }
     return render(request, 'stock/purchase_order_history.html', context)
+
+
+# Category Management Views
+@login_required
+def manage_categories(request):
+    categories = Category.objects.all()
+    context = {'title': 'Manage Categories', 'categories': categories}
+    return render(request, 'stock/manage_categories.html', context)
+
+@login_required
+def add_category(request):
+    if request.method == 'POST':
+        form = CategoryForm(request.POST)
+        if form.is_valid():
+            category = form.save()
+            
+            # Check if this is an AJAX request (for the modal)
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+                return JsonResponse({
+                    'success': True,
+                    'category': {
+                        'id': category.id,
+                        'name': category.group
+                    },
+                    'message': f'Category "{category.group}" added successfully!'
+                })
+            
+            messages.success(request, f'Category "{category.group}" added successfully!')
+            return redirect('manage_categories')
+        else:
+            # Handle AJAX form errors
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', ''):
+                errors = []
+                for field, field_errors in form.errors.items():
+                    for error in field_errors:
+                        errors.append(f'{field}: {error}')
+                
+                return JsonResponse({
+                    'success': False,
+                    'error': '; '.join(errors) if errors else 'Invalid form data'
+                })
+    else:
+        form = CategoryForm()
+    context = {'title': 'Add Category', 'form': form}
+    return render(request, 'stock/add_category.html', context)
+
+@login_required
+def edit_category(request, pk):
+    category = get_object_or_404(Category, pk=pk)
+    if request.method == 'POST':
+        form = CategoryForm(request.POST, instance=category)
+        if form.is_valid():
+            category = form.save()
+            messages.success(request, f'Category "{category.group}" updated successfully!')
+            return redirect('manage_categories')
+    else:
+        form = CategoryForm(instance=category)
+    context = {'title': 'Edit Category', 'form': form}
+    return render(request, 'stock/add_category.html', context)
+
+@login_required
+def delete_category(request, pk):
+    if request.method == 'POST':
+        category = get_object_or_404(Category, pk=pk)
+        if category.stock_set.exists():
+            messages.error(request, f'Cannot delete "{category.group}" as it has associated stock items.')
+        else:
+            category.delete()
+            messages.success(request, f'Category "{category.group}" deleted successfully!')
+    return redirect('manage_categories')
