@@ -1,5 +1,6 @@
 import csv
 import os
+import re
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q
@@ -13,6 +14,61 @@ from django.http import JsonResponse
 from .utils.email_service import send_purchase_order_email_safe
 
 # Create your views here.
+
+def create_flexible_search_query(query_text, search_field):
+    """
+    Create a flexible search Q object that handles partial matches, 
+    different spacing, and hyphenation patterns.
+    
+    For example: "BenQ W2700" can match "w 2700", "2700", "w-2700", etc.
+    """
+    if not query_text or not query_text.strip():
+        return Q()
+    
+    query = query_text.strip()
+    queries = []
+    
+    # Original query (case-insensitive contains)
+    queries.append(Q(**{f"{search_field}__icontains": query}))
+    
+    # Remove special characters and normalize spaces
+    normalized_query = re.sub(r'[^\w\s]', ' ', query)
+    normalized_query = ' '.join(normalized_query.split())  # Normalize whitespace
+    
+    if normalized_query != query:
+        queries.append(Q(**{f"{search_field}__icontains": normalized_query}))
+    
+    # Split query into individual words and search for each
+    words = normalized_query.split()
+    if len(words) > 1:
+        # All words must be present (AND logic)
+        word_queries = Q()
+        for word in words:
+            if len(word) >= 2:  # Only search words with 2+ characters
+                word_queries &= Q(**{f"{search_field}__icontains": word})
+        
+        if word_queries:
+            queries.append(word_queries)
+        
+        # Also try with different separators
+        for separator in ['-', '_', '']:
+            combined = separator.join(words)
+            if combined != query and combined != normalized_query:
+                queries.append(Q(**{f"{search_field}__icontains": combined}))
+    
+    # If query contains numbers, also search for just the numbers
+    numbers = re.findall(r'\d+', query)
+    if numbers:
+        for number in numbers:
+            if len(number) >= 3:  # Only search numbers with 3+ digits
+                queries.append(Q(**{f"{search_field}__icontains": number}))
+    
+    # Combine all queries with OR
+    final_query = Q()
+    for q in queries:
+        final_query |= q
+    
+    return final_query
 
 
 def new_register(request):
@@ -98,7 +154,15 @@ def view_stock(request):
     context = {'everything': everything, 'form': form}
     if request.method == 'POST':
         category = form['category'].value()
-        everything = Stock.objects.filter(item_name__icontains=form['item_name'].value())
+        item_name = form['item_name'].value()
+        
+        # Use flexible search for item names
+        if item_name:
+            item_search_query = create_flexible_search_query(item_name, 'item_name')
+            everything = Stock.objects.filter(item_search_query)
+        else:
+            everything = Stock.objects.all()
+            
         if category != '':
             everything = everything.filter(category_id=category)
 
@@ -121,11 +185,15 @@ def global_search(request):
     results = []
     
     if query:
-        # Search in Stock items
+        # Use flexible search for item names and category names
+        item_search_query = create_flexible_search_query(query, 'item_name')
+        category_search_query = create_flexible_search_query(query, 'category__group')
+        
+        # Combine searches with OR logic
         stocks = Stock.objects.filter(
-            Q(item_name__icontains=query) |
-            Q(category__group__icontains=query)
-        )
+            item_search_query | category_search_query
+        ).select_related('category')
+        
         results = stocks
     else:
         # If no search query, show all stocks
@@ -149,10 +217,13 @@ def live_search(request):
     suggestions = []
     
     if query and len(query) >= 2:  # Only search if query is at least 2 characters
+        # Use flexible search for item names and category names
+        item_search_query = create_flexible_search_query(query, 'item_name')
+        category_search_query = create_flexible_search_query(query, 'category__group')
+        
         # Search in Stock items (limit to 10 results for performance)
         stocks = Stock.objects.filter(
-            Q(item_name__icontains=query) |
-            Q(category__group__icontains=query)
+            item_search_query | category_search_query
         ).select_related('category')[:10]
         
         suggestions = [{

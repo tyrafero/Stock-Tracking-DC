@@ -48,6 +48,82 @@
              box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
          }
          
+         /* Desktop search bar - make it bigger */
+         @media (min-width: 1200px) {
+             .nk-header-search {
+                 flex: 1;
+                 max-width: 500px; /* Increased from default */
+                 margin-left: 2rem;
+                 margin-right: 2rem;
+             }
+             .search-form input {
+                 min-width: 400px; /* Minimum width for desktop */
+             }
+         }
+         
+         /* Mobile search improvements */
+         @media (max-width: 1199.98px) {
+             .nk-header-search {
+                 display: none; /* Hide default search bar on mobile */
+             }
+             .mobile-search-toggle {
+                 display: inline-block !important;
+             }
+             .mobile-search-overlay {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 right: 0;
+                 bottom: 0;
+                 background: rgba(0, 0, 0, 0.5);
+                 z-index: 9999;
+                 display: none;
+             }
+             .mobile-search-container {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 right: 0;
+                 background: white;
+                 z-index: 10000;
+                 padding: 1rem;
+                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                 display: none;
+             }
+             .mobile-search-container.show {
+                 display: block;
+             }
+             .mobile-search-overlay.show {
+                 display: block;
+             }
+             .mobile-search-form {
+                 display: flex;
+                 align-items: center;
+                 gap: 1rem;
+             }
+             .mobile-search-form input {
+                 flex: 1;
+                 padding: 12px 45px 12px 15px;
+                 border: 1px solid #e3e7f1;
+                 border-radius: 8px;
+                 font-size: 16px; /* Prevent zoom on iOS */
+             }
+             .mobile-search-close {
+                 background: none;
+                 border: none;
+                 font-size: 18px;
+                 color: #666;
+                 cursor: pointer;
+             }
+         }
+         
+         /* Hide mobile search toggle on desktop */
+         @media (min-width: 1200px) {
+             .mobile-search-toggle {
+                 display: none !important;
+             }
+         }
+         
          /* Live Search Suggestions */
          .search-suggestions {
              position: absolute;
@@ -244,6 +320,148 @@
              window.goToItem = function(itemId) {
                  window.location.href = `/stock_detail/${itemId}/`;
              };
+
+             // Mobile Search Functionality
+             const mobileSearchBtn = document.getElementById('mobile-search-btn');
+             const mobileSearchContainer = document.getElementById('mobile-search-container');
+             const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+             const mobileSearchClose = document.getElementById('mobile-search-close');
+             const mobileSearchInput = document.getElementById('mobile-search-input');
+             const mobileSearchSuggestions = document.getElementById('mobile-search-suggestions');
+
+             function showMobileSearch() {
+                 mobileSearchContainer.classList.add('show');
+                 mobileSearchOverlay.classList.add('show');
+                 document.body.style.overflow = 'hidden';
+                 setTimeout(() => mobileSearchInput.focus(), 100);
+             }
+
+             function hideMobileSearch() {
+                 mobileSearchContainer.classList.remove('show');
+                 mobileSearchOverlay.classList.remove('show');
+                 document.body.style.overflow = '';
+                 mobileSearchSuggestions.classList.remove('show');
+             }
+
+             if (mobileSearchBtn) {
+                 mobileSearchBtn.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     showMobileSearch();
+                 });
+             }
+
+             if (mobileSearchClose) {
+                 mobileSearchClose.addEventListener('click', hideMobileSearch);
+             }
+
+             if (mobileSearchOverlay) {
+                 mobileSearchOverlay.addEventListener('click', hideMobileSearch);
+             }
+
+             // Mobile search input functionality (similar to desktop)
+             if (mobileSearchInput && mobileSearchSuggestions) {
+                 let mobileSearchTimeout;
+                 let mobileSelectedIndex = -1;
+
+                 mobileSearchInput.addEventListener('input', function(e) {
+                     const query = e.target.value.trim();
+                     clearTimeout(mobileSearchTimeout);
+                     
+                     if (query.length < 2) {
+                         hideMobileSuggestions();
+                         return;
+                     }
+                     
+                     mobileSearchTimeout = setTimeout(function() {
+                         performMobileLiveSearch(query);
+                     }, 300);
+                 });
+
+                 mobileSearchInput.addEventListener('keydown', function(e) {
+                     const suggestions = mobileSearchSuggestions.querySelectorAll('.suggestion-item');
+                     
+                     if (e.key === 'ArrowDown') {
+                         e.preventDefault();
+                         mobileSelectedIndex = Math.min(mobileSelectedIndex + 1, suggestions.length - 1);
+                         updateMobileHighlight(suggestions);
+                     } else if (e.key === 'ArrowUp') {
+                         e.preventDefault();
+                         mobileSelectedIndex = Math.max(mobileSelectedIndex - 1, -1);
+                         updateMobileHighlight(suggestions);
+                     } else if (e.key === 'Enter') {
+                         e.preventDefault();
+                         if (mobileSelectedIndex >= 0 && suggestions[mobileSelectedIndex]) {
+                             suggestions[mobileSelectedIndex].click();
+                         } else {
+                             document.getElementById('mobile-search-form').submit();
+                         }
+                     } else if (e.key === 'Escape') {
+                         hideMobileSearch();
+                     }
+                 });
+
+                 function performMobileLiveSearch(query) {
+                     fetch(`/api/live-search/?q=${encodeURIComponent(query)}`)
+                         .then(response => response.json())
+                         .then(data => {
+                             displayMobileSuggestions(data.suggestions);
+                         })
+                         .catch(error => {
+                             console.error('Mobile search error:', error);
+                             hideMobileSuggestions();
+                         });
+                 }
+
+                 function displayMobileSuggestions(suggestions) {
+                     mobileSelectedIndex = -1;
+                     
+                     if (suggestions.length === 0) {
+                         mobileSearchSuggestions.innerHTML = '<div class="no-suggestions">No items found</div>';
+                     } else {
+                         mobileSearchSuggestions.innerHTML = suggestions.map(item => `
+                             <div class="suggestion-item" data-id="${item.id}" onclick="goToItem(${item.id})">
+                                 ${item.image_url ? 
+                                     `<img src="${item.image_url}" alt="${item.item_name}" class="suggestion-image">` : 
+                                     '<div class="suggestion-image"></div>'
+                                 }
+                                 <div class="suggestion-content">
+                                     <div class="suggestion-title ${item.low_stock ? 'low-stock' : ''}">${item.item_name}</div>
+                                     <div class="suggestion-meta">
+                                         ${item.category}
+                                         ${item.condition === 'new' ? 
+                                             `<span class="badge badge-success" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                             item.condition === 'bstock' ? 
+                                             `<span class="badge badge-warning" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                             item.condition === 'demo_unit' ?
+                                             `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                             `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
+                                         }
+                                         <br><small style="color: #8094ae;">Total: ${item.quantity} units</small>
+                                     </div>
+                                 </div>
+                                 <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
+                             </div>
+                         `).join('');
+                     }
+                     
+                     showMobileSuggestions();
+                 }
+
+                 function updateMobileHighlight(suggestions) {
+                     suggestions.forEach((item, index) => {
+                         item.classList.toggle('highlighted', index === mobileSelectedIndex);
+                     });
+                 }
+
+                 function showMobileSuggestions() {
+                     mobileSearchSuggestions.classList.add('show');
+                 }
+
+                 function hideMobileSuggestions() {
+                     mobileSearchSuggestions.classList.remove('show');
+                     mobileSelectedIndex = -1;
+                 }
+             }
          });
      </script>
 </head>
@@ -431,9 +649,15 @@
                             </div><!-- .nk-header-news -->
                             <div class="nk-header-tools">
                                 <ul class="nk-quick-nav">
-                                    <!-- Quick Access for Purchase Orders -->
+                                    <!-- Mobile Search Toggle (replaces cart on mobile) -->
                                     {% if request.user.is_authenticated %}
-                                    <li class="dropdown">
+                                    <li class="mobile-search-toggle d-xl-none">
+                                        <a href="#" class="nk-quick-nav-icon" id="mobile-search-btn">
+                                            <em class="icon ni ni-search"></em>
+                                        </a>
+                                    </li>
+                                    <!-- Desktop Purchase Orders Dropdown (hidden on mobile) -->
+                                    <li class="dropdown d-none d-xl-block">
                                         <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown">
                                             <em class="icon ni ni-cart"></em>
                                         </a>
@@ -500,6 +724,17 @@
                     </div><!-- .container-fliud -->
                 </div>
                 <!-- main header @e -->
+                
+                <!-- Mobile Search Overlay -->
+                <div class="mobile-search-overlay" id="mobile-search-overlay"></div>
+                <div class="mobile-search-container" id="mobile-search-container">
+                    <form method="GET" action="{% url 'global_search' %}" class="mobile-search-form" id="mobile-search-form">
+                        <input type="text" name="q" class="mobile-search-input" placeholder="Search products..." value="{{ request.GET.q }}" id="mobile-search-input" autocomplete="off">
+                        <button type="button" class="mobile-search-close" id="mobile-search-close">&times;</button>
+                    </form>
+                    <div id="mobile-search-suggestions" class="search-suggestions"></div>
+                </div>
+                
                 <!-- content @s -->
 
                 <!-- content @e -->
