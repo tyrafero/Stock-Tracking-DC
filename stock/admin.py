@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from .models import (
     Stock, Category, Country, State, City, Person, Contacts, Product, 
     PurchaseOrder, PurchaseOrderItem, Manufacturer, DeliveryPerson, Store, 
-    PurchaseOrderHistory, CommittedStock, StockTransfer, StockLocation
+    PurchaseOrderHistory, CommittedStock, StockTransfer, StockLocation, UserRole
 )
 from .form import StockCreateForm  # Make sure this is the correct import path
 
@@ -111,3 +111,10 @@ class StockTransferAdmin(admin.ModelAdmin):
     list_filter = ('status', 'from_location', 'to_location', 'created_at')
     readonly_fields = ('created_at', 'approved_at', 'completed_at')
     search_fields = ('stock__item_name', 'transfer_reason')
+
+# UserRole Admin
+@admin.register(UserRole)
+class UserRoleAdmin(admin.ModelAdmin):
+    list_display = ('user', 'role', 'created_at')
+    list_filter = ('role',)
+    search_fields = ('user__username',)
