@@ -1,0 +1,228 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-lg mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{ title }}</h4>
+                                <p>Receive items from Purchase Orders directly into inventory</p>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: Select Purchase Order -->
+                        <div class="card mb-4">
+                            <div class="card-inner">
+                                <h5 class="card-title">Step 1: Select Purchase Order</h5>
+                                {% crispy po_form %}
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Receive Items (only shown when PO is selected) -->
+                        {% if selected_po %}
+                        <div class="card mb-4">
+                            <div class="card-inner">
+                                <div class="card-title-group align-start mb-3">
+                                    <div class="card-title">
+                                        <h5 class="title">Purchase Order: {{ selected_po.reference_number }}</h5>
+                                        <p class="text-soft">Manufacturer: {{ selected_po.manufacturer.company_name }}</p>
+                                    </div>
+                                    <div class="card-tools">
+                                        <span class="badge badge-pill 
+                                            {% if selected_po.status == 'submitted' %}badge-info
+                                            {% elif selected_po.status == 'sent' %}badge-warning
+                                            {% elif selected_po.status == 'confirmed' %}badge-success
+                                            {% else %}badge-secondary{% endif %}">
+                                            {{ selected_po.status|title }}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <!-- Items to Receive Form -->
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="purchase_order_id" value="{{ selected_po.id }}">
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-12">
+                                            <h6>Items Available for Receiving</h6>
+                                            <div class="alert alert-info">
+                                                <strong>Note:</strong> Items will be added to inventory with the note "Received from PO - {{ selected_po.reference_number }}"
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% for item in selected_po.items.all %}
+                                        {% if item.remaining_quantity > 0 %}
+                                        <div class="card border mb-3">
+                                            <div class="card-inner">
+                                                <div class="row align-items-center">
+                                                    <div class="col-md-3">
+                                                        <h6 class="mb-1">{{ item.product }}</h6>
+                                                        <small class="text-muted">
+                                                            Ordered: {{ item.quantity }} | 
+                                                            Received: {{ item.received_quantity }} | 
+                                                            <strong class="text-warning">Remaining: {{ item.remaining_quantity }}</strong>
+                                                        </small>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-2">
+                                                        <label for="receive_qty_{{ item.id }}" class="form-label">Quantity to Receive</label>
+                                                        <input type="number" 
+                                                               name="receive_qty_{{ item.id }}" 
+                                                               id="receive_qty_{{ item.id }}"
+                                                               class="form-control" 
+                                                               min="0" 
+                                                               max="{{ item.remaining_quantity }}"
+                                                               value="{{ item.remaining_quantity }}"
+                                                               placeholder="0">
+                                                    </div>
+                                                    
+                                                    <div class="col-md-3">
+                                                        <label for="location_{{ item.id }}" class="form-label">Location</label>
+                                                        <select name="location_{{ item.id }}" id="location_{{ item.id }}" class="form-control" required>
+                                                            <option value="">Select Location</option>
+                                                            {% for store in stores %}
+                                                                <option value="{{ store.id }}">{{ store.get_name_display }}</option>
+                                                            {% endfor %}
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-2">
+                                                        <label for="condition_{{ item.id }}" class="form-label">Condition</label>
+                                                        <select name="condition_{{ item.id }}" id="condition_{{ item.id }}" class="form-control">
+                                                            <option value="new" selected>New</option>
+                                                            <option value="demo_unit">Demo Unit</option>
+                                                            <option value="bstock">B-Stock</option>
+                                                            <option value="used">Used</option>
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div class="col-md-2">
+                                                        <label for="aisle_{{ item.id }}" class="form-label">Aisle</label>
+                                                        <input type="text" 
+                                                               name="aisle_{{ item.id }}" 
+                                                               id="aisle_{{ item.id }}"
+                                                               class="form-control" 
+                                                               placeholder="e.g., A1, B2">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    {% empty %}
+                                        <div class="alert alert-success">
+                                            <h6>All Items Received</h6>
+                                            <p>All items from this purchase order have already been received.</p>
+                                        </div>
+                                    {% endfor %}
+
+                                    {% if selected_po.items.all|length > 0 %}
+                                        <div class="form-group mt-4">
+                                            <button type="submit" name="receive_items" class="btn btn-success btn-lg">
+                                                <i class="icon ni ni-check-circle"></i> 
+                                                Receive Selected Items & Add to Inventory
+                                            </button>
+                                            <a href="{% url 'receive_po_items' %}" class="btn btn-secondary ml-2">
+                                                Select Different PO
+                                            </a>
+                                        </div>
+                                    {% endif %}
+                                </form>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Help Section -->
+                        <div class="card">
+                            <div class="card-inner">
+                                <h6 class="card-title">How It Works</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <i class="icon ni ni-check text-success mr-2"></i>
+                                                Select a Purchase Order with pending items
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="icon ni ni-check text-success mr-2"></i>
+                                                Specify quantity, location, and condition for each item
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="icon ni ni-check text-success mr-2"></i>
+                                                Items are automatically added to your inventory
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <ul class="list-unstyled">
+                                            <li class="mb-2">
+                                                <i class="icon ni ni-info text-info mr-2"></i>
+                                                Note field will show "Received from PO - [PO Number]"
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="icon ni ni-info text-info mr-2"></i>
+                                                Purchase Order tracking is automatically updated
+                                            </li>
+                                            <li class="mb-2">
+                                                <i class="icon ni ni-info text-info mr-2"></i>
+                                                Stock history is created for audit trail
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script>
+// Auto-calculate and validate quantities
+document.addEventListener('DOMContentLoaded', function() {
+    // Add validation for quantity fields
+    const quantityInputs = document.querySelectorAll('input[name*="receive_qty_"]');
+    quantityInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            const max = parseInt(this.getAttribute('max'));
+            const value = parseInt(this.value);
+            const itemId = this.name.split('_')[2];
+            const locationSelect = document.getElementById(`location_${itemId}`);
+            
+            if (value > 0) {
+                // Make location required when quantity > 0
+                locationSelect.setAttribute('required', 'required');
+                this.closest('.card').style.borderColor = '#007bff';
+            } else {
+                // Remove required when quantity is 0
+                locationSelect.removeAttribute('required');
+                this.closest('.card').style.borderColor = '';
+            }
+            
+            if (value > max) {
+                this.value = max;
+            }
+        });
+    });
+    
+    // Highlight items to be received
+    const allQuantityInputs = document.querySelectorAll('input[name*="receive_qty_"]');
+    allQuantityInputs.forEach(input => {
+        if (input.value > 0) {
+            input.closest('.card').style.borderColor = '#007bff';
+        }
+    });
+});
+</script>

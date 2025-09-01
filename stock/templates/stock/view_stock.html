@@ -100,7 +100,13 @@
                                                                             <span class="badge badge-dim badge-primary">{{ location.quantity }}</span>
                                                                         </div>
                                                                     {% endif %}
+                                                                {% empty %}
+                                                                    <span class="text-muted">No active locations</span>
                                                                 {% endfor %}
+                                                                {% comment %}Fallback for when locations exist but none have quantity > 0{% endcomment %}
+                                                                {% if not every.locations.all|length > 0 or every.total_across_locations == 0 %}
+                                                                    <span class="text-muted">All locations empty</span>
+                                                                {% endif %}
                                                             {% else %}
                                                                 <span class="text-muted">Not assigned</span>
                                                             {% endif %}

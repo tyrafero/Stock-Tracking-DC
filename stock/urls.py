@@ -72,6 +72,18 @@ urlpatterns = [
     path('categories/add/', views.add_category, name='add_category'),
     path('categories/<int:pk>/edit/', views.edit_category, name='edit_category'),
     path('categories/<int:pk>/delete/', views.delete_category, name='delete_category'),
+    
+    # Access Control URLs
+    path('access-control/', views.manage_users, name='manage_users'),
+    path('access-control/add-user/', views.add_user, name='add_user'),
+    path('access-control/edit-user/<int:pk>/', views.edit_user, name='edit_user'),
+    path('access-control/delete-user/<int:pk>/', views.delete_user, name='delete_user'),
+    
+    # Warehouse URLs
+    path('warehouse/receiving/', views.warehouse_receiving, name='warehouse_receiving'),
+    
+    # Receive PO Items URL
+    path('receive-po-items/', views.receive_po_items, name='receive_po_items'),
 
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

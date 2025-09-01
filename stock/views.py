@@ -1772,3 +1772,290 @@ def delete_category(request, pk):
             category.delete()
             messages.success(request, f'Category "{category.group}" deleted successfully!')
     return redirect('manage_categories')
+
+
+# ----------------------------
+# Access Control Management Views
+# ----------------------------
+
+from .utils.permissions import require_permission, require_any_permission, get_user_role, has_permission
+
+@require_permission('can_manage_access_control')
+def manage_users(request):
+    """Manage users and their roles - Admin only"""
+    form = UserSearchForm(request.GET or None)
+    users = User.objects.select_related('role').all()
+    
+    # Apply filters
+    if form.is_valid():
+        username = form.cleaned_data.get('username')
+        role = form.cleaned_data.get('role')
+        is_active = form.cleaned_data.get('is_active')
+        
+        if username:
+            users = users.filter(username__icontains=username)
+        
+        if role:
+            users = users.filter(role__role=role)
+        
+        if is_active == 'true':
+            users = users.filter(is_active=True)
+        elif is_active == 'false':
+            users = users.filter(is_active=False)
+    
+    # Ensure all users have roles
+    for user in users:
+        if not hasattr(user, 'role'):
+            UserRole.objects.create(user=user, role='sales', created_by=request.user)
+    
+    context = {
+        'title': 'Manage Users & Access Control',
+        'users': users,
+        'form': form,
+    }
+    return render(request, 'stock/manage_users.html', context)
+
+@require_permission('can_manage_access_control')
+def add_user(request):
+    """Add new user - Admin only"""
+    if request.method == 'POST':
+        form = UserRoleForm(request.POST)
+        if form.is_valid():
+            user_role = form.save(created_by=request.user)
+            messages.success(request, f'User "{user_role.user.username}" created successfully with role "{user_role.get_role_display()}"!')
+            return redirect('manage_users')
+    else:
+        form = UserRoleForm()
+    
+    context = {
+        'title': 'Add New User',
+        'form': form,
+    }
+    return render(request, 'stock/add_user.html', context)
+
+@require_permission('can_manage_access_control')
+def edit_user(request, pk):
+    """Edit user and role - Admin only"""
+    user = get_object_or_404(User, pk=pk)
+    user_role = get_user_role(user)
+    
+    if request.method == 'POST':
+        form = UserRoleForm(request.POST, instance=user_role, user_instance=user)
+        if form.is_valid():
+            user_role = form.save(created_by=request.user)
+            messages.success(request, f'User "{user_role.user.username}" updated successfully!')
+            return redirect('manage_users')
+    else:
+        form = UserRoleForm(instance=user_role, user_instance=user)
+    
+    context = {
+        'title': f'Edit User - {user.username}',
+        'form': form,
+        'user': user,
+    }
+    return render(request, 'stock/add_user.html', context)
+
+@require_permission('can_manage_access_control')
+def delete_user(request, pk):
+    """Delete user - Admin only"""
+    if request.method == 'POST':
+        user = get_object_or_404(User, pk=pk)
+        
+        # Prevent deleting superusers and self
+        if user.is_superuser:
+            messages.error(request, 'Cannot delete superuser accounts.')
+        elif user == request.user:
+            messages.error(request, 'Cannot delete your own account.')
+        else:
+            username = user.username
+            user.delete()
+            messages.success(request, f'User "{username}" deleted successfully!')
+    
+    return redirect('manage_users')
+
+@require_permission('can_view_warehouse_receiving')
+def warehouse_receiving(request):
+    """Warehouse receiving view - shows items to be received without amounts"""
+    # Get purchase orders with items that need receiving
+    purchase_orders = PurchaseOrder.objects.filter(
+        status__in=['submitted', 'sent', 'confirmed'],
+        items__received_quantity__lt=models.F('items__quantity')
+    ).select_related('manufacturer', 'delivery_person', 'store').prefetch_related('items').distinct()
+    
+    # Filter out financial information for warehouse users
+    filtered_orders = []
+    for po in purchase_orders:
+        filtered_po = {
+            'id': po.id,
+            'reference_number': po.reference_number,
+            'manufacturer': po.manufacturer,
+            'delivery_person': po.delivery_person,
+            'delivery_type': po.delivery_type,
+            'store': po.store,
+            'status': po.status,
+            'created_at': po.created_at,
+            'updated_at': po.updated_at,
+            'note_for_manufacturer': po.note_for_manufacturer,
+            'items': []
+        }
+        
+        for item in po.items.filter(received_quantity__lt=models.F('quantity')):
+            filtered_item = {
+                'id': item.id,
+                'product': item.product,
+                'quantity': item.quantity,
+                'received_quantity': item.received_quantity,
+                'remaining_quantity': item.remaining_quantity,
+                'associated_order_number': item.associated_order_number,
+            }
+            filtered_po['items'].append(filtered_item)
+        
+        if filtered_po['items']:  # Only include POs with items to receive
+            filtered_orders.append(filtered_po)
+    
+    context = {
+        'title': 'Warehouse - Items to Receive',
+        'purchase_orders': filtered_orders,
+    }
+    return render(request, 'stock/warehouse_receiving.html', context)
+
+@require_any_permission('can_receive_purchase_order', 'can_receive_stock')
+def receive_po_items(request):
+    """Receive PO Items - directly add to inventory under Stock Management"""
+    selected_po = None
+    items_form = None
+    
+    if request.method == 'POST':
+        if 'select_po' in request.POST:
+            # Step 1: Select PO
+            po_form = ReceivePOItemsForm(request.POST)
+            if po_form.is_valid():
+                selected_po = po_form.cleaned_data['purchase_order']
+                # Get items that need receiving
+                items_to_receive = []
+                for item in selected_po.items.all():
+                    if item.remaining_quantity > 0:
+                        items_to_receive.append(item)
+                items_form = ReceiveItemForm(items_to_receive)
+        
+        elif 'receive_items' in request.POST and request.POST.get('purchase_order_id'):
+            # Step 2: Process receiving
+            selected_po = get_object_or_404(PurchaseOrder, id=request.POST.get('purchase_order_id'))
+            # Get items with remaining quantities
+            items_to_receive = []
+            for item in selected_po.items.all():
+                if item.remaining_quantity > 0:
+                    items_to_receive.append(item)
+            
+            received_count = 0
+            
+            for item in items_to_receive:
+                # Get data directly from POST since form might not be properly processing
+                receive_qty = int(request.POST.get(f'receive_qty_{item.id}', '0') or '0')
+                location_id = request.POST.get(f'location_{item.id}')
+                condition = request.POST.get(f'condition_{item.id}', 'new')
+                aisle = request.POST.get(f'aisle_{item.id}', '')
+                
+                if receive_qty > 0 and location_id:
+                    try:
+                        location = Store.objects.get(id=location_id)
+                    except Store.DoesNotExist:
+                        continue
+                    
+                    # Check if stock item already exists
+                    existing_stock = Stock.objects.filter(
+                        item_name=item.product,
+                        condition=condition,
+                        location=location
+                    ).first()
+                    
+                    if existing_stock:
+                        # Add to existing stock
+                        existing_stock.quantity += receive_qty
+                        existing_stock.note = f"Received from PO - {selected_po.reference_number}"
+                        existing_stock.save()
+                        
+                        # Update or create StockLocation record
+                        stock_location, created = StockLocation.objects.get_or_create(
+                            stock=existing_stock,
+                            store=location,
+                            defaults={'quantity': 0, 'aisle': aisle}
+                        )
+                        stock_location.quantity += receive_qty
+                        if aisle:
+                            stock_location.aisle = aisle
+                        stock_location.save()
+                        
+                    else:
+                        # Create new stock entry
+                        # Get or create category for this product
+                        category, _ = Category.objects.get_or_create(
+                            group='PO Items',  # Default category for PO items
+                            defaults={'group': 'PO Items'}
+                        )
+                        
+                        new_stock = Stock.objects.create(
+                            category=category,
+                            item_name=item.product,
+                            condition=condition,
+                            quantity=receive_qty,
+                            location=location,
+                            aisle=aisle,
+                            note=f"Received from PO - {selected_po.reference_number}",
+                            received_by=str(request.user),
+                            issued_by=str(request.user),
+                            re_order=0,
+                        )
+                        
+                        # Create corresponding StockLocation record
+                        StockLocation.objects.create(
+                            stock=new_stock,
+                            store=location,
+                            quantity=receive_qty,
+                            aisle=aisle
+                        )
+                    
+                    # Update PO item received quantity
+                    item.received_quantity += receive_qty
+                    item.save()
+                    
+                    # Create stock history record
+                    StockHistory.objects.create(
+                        category=category if 'category' in locals() else None,
+                        item_name=item.product,
+                        quantity=receive_qty,
+                        issue_quantity=0,
+                        receive_quantity=receive_qty,
+                        received_by=str(request.user),
+                        note=f"Received from PO - {selected_po.reference_number}",
+                        created_by=str(request.user),
+                        last_updated=timezone.now(),
+                        timestamp=timezone.now()
+                    )
+                    
+                    received_count += 1
+                
+                if received_count > 0:
+                    messages.success(
+                        request, 
+                        f'Successfully received {received_count} items from PO {selected_po.reference_number}. '
+                        f'Items have been added to inventory.'
+                    )
+                    return redirect('receive_po_items')
+                else:
+                    messages.warning(request, 'No items were received. Please select quantities and locations.')
+    
+    # Default form for step 1
+    if not selected_po:
+        po_form = ReceivePOItemsForm()
+    else:
+        po_form = ReceivePOItemsForm(initial={'purchase_order': selected_po})
+    
+    context = {
+        'title': 'Receive PO Items',
+        'po_form': po_form,
+        'selected_po': selected_po,
+        'items_form': items_form,
+        'stores': Store.objects.all(),
+    }
+    return render(request, 'stock/receive_po_items.html', context)

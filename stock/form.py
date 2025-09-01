@@ -1,5 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
+from django.contrib.auth.models import User
 from .models import *
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Field, HTML, Submit, Row, Column
@@ -712,3 +713,230 @@ class CategoryForm(forms.ModelForm):
                 raise forms.ValidationError(f'Category "{group}" already exists.')
         
         return group
+
+
+# ----------------------------
+# Access Control Forms
+# ----------------------------
+
+class UserRoleForm(forms.ModelForm):
+    username = forms.CharField(
+        max_length=150,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'})
+    )
+    first_name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'First Name'})
+    )
+    last_name = forms.CharField(
+        max_length=150,
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Last Name'})
+    )
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email'})
+    )
+    password = forms.CharField(
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'placeholder': 'Password'}),
+        required=False,
+        help_text="Leave blank to keep current password when editing"
+    )
+    is_active = forms.BooleanField(
+        required=False,
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    
+    class Meta:
+        model = UserRole
+        fields = ['role']
+        widgets = {
+            'role': forms.Select(attrs={'class': 'form-control'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        self.user_instance = kwargs.pop('user_instance', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.user_instance:
+            self.fields['username'].initial = self.user_instance.username
+            self.fields['first_name'].initial = self.user_instance.first_name
+            self.fields['last_name'].initial = self.user_instance.last_name
+            self.fields['email'].initial = self.user_instance.email
+            self.fields['is_active'].initial = self.user_instance.is_active
+            self.fields['password'].required = False
+            self.fields['password'].help_text = "Leave blank to keep current password"
+        else:
+            self.fields['password'].required = True
+            self.fields['password'].help_text = "Enter a password for the new user"
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('username', css_class='form-group col-md-6 mb-3'),
+                Column('role', css_class='form-group col-md-6 mb-3'),
+            ),
+            Row(
+                Column('first_name', css_class='form-group col-md-6 mb-3'),
+                Column('last_name', css_class='form-group col-md-6 mb-3'),
+            ),
+            Row(
+                Column('email', css_class='form-group col-md-8 mb-3'),
+                Column('is_active', css_class='form-group col-md-4 mb-3'),
+            ),
+            Row(
+                Column('password', css_class='form-group col-md-12 mb-3'),
+            ),
+            Submit('submit', 'Save User', css_class='btn btn-primary')
+        )
+    
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if username:
+            existing_user = User.objects.filter(username=username)
+            if self.user_instance:
+                existing_user = existing_user.exclude(pk=self.user_instance.pk)
+            
+            if existing_user.exists():
+                raise forms.ValidationError('A user with this username already exists.')
+        
+        return username
+    
+    def save(self, commit=True, created_by=None):
+        role = super().save(commit=False)
+        
+        # Handle User creation/update
+        if self.user_instance:
+            user = self.user_instance
+        else:
+            user = User()
+        
+        user.username = self.cleaned_data['username']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.email = self.cleaned_data['email']
+        user.is_active = self.cleaned_data['is_active']
+        
+        password = self.cleaned_data.get('password')
+        if password:
+            user.set_password(password)
+        
+        if commit:
+            user.save()
+            role.user = user
+            if created_by:
+                role.created_by = created_by
+            role.save()
+        
+        return role
+
+class UserSearchForm(forms.Form):
+    username = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Search by username'})
+    )
+    role = forms.ChoiceField(
+        required=False,
+        choices=[('', 'All Roles')] + UserRole.ROLE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    is_active = forms.ChoiceField(
+        required=False,
+        choices=[('', 'All Users'), ('true', 'Active'), ('false', 'Inactive')],
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.layout = Layout(
+            Row(
+                Column('username', css_class='form-group col-md-4'),
+                Column('role', css_class='form-group col-md-4'),
+                Column('is_active', css_class='form-group col-md-4'),
+            ),
+            Submit('search', 'Search', css_class='btn btn-primary')
+        )
+
+class ReceivePOItemsForm(forms.Form):
+    purchase_order = forms.ModelChoiceField(
+        queryset=PurchaseOrder.objects.none(),  # Will be set in __init__
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        empty_label="Select a Purchase Order"
+    )
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Only show POs that have items to receive
+        self.fields['purchase_order'].queryset = PurchaseOrder.objects.filter(
+            status__in=['submitted', 'sent', 'confirmed'],
+            items__received_quantity__lt=models.F('items__quantity')
+        ).select_related('manufacturer').distinct()
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('purchase_order', css_class='form-group col-md-12 mb-3'),
+            ),
+            Submit('select_po', 'Load Items to Receive', css_class='btn btn-primary')
+        )
+
+class ReceiveItemForm(forms.Form):
+    def __init__(self, items, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        for item in items:
+            remaining_qty = item.quantity - item.received_quantity
+            if remaining_qty > 0:
+                # Quantity to receive field
+                self.fields[f'receive_qty_{item.id}'] = forms.IntegerField(
+                    min_value=0,
+                    max_value=remaining_qty,
+                    initial=remaining_qty,
+                    widget=forms.NumberInput(attrs={
+                        'class': 'form-control',
+                        'placeholder': f'Max: {remaining_qty}'
+                    }),
+                    label=f'Receive ({item.product})',
+                    required=False
+                )
+                
+                # Location field
+                self.fields[f'location_{item.id}'] = forms.ModelChoiceField(
+                    queryset=Store.objects.filter(is_active=True),
+                    widget=forms.Select(attrs={'class': 'form-control'}),
+                    label='Location',
+                    required=False
+                )
+                
+                # Condition field
+                self.fields[f'condition_{item.id}'] = forms.ChoiceField(
+                    choices=Stock.CONDITION_CHOICES,
+                    initial='new',
+                    widget=forms.Select(attrs={'class': 'form-control'}),
+                    label='Condition',
+                    required=False
+                )
+                
+                # Aisle field
+                self.fields[f'aisle_{item.id}'] = forms.CharField(
+                    max_length=50,
+                    required=False,
+                    widget=forms.TextInput(attrs={
+                        'class': 'form-control',
+                        'placeholder': 'e.g., A1, B2'
+                    }),
+                    label='Aisle'
+                )
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            HTML('<h5>Items to Receive</h5>'),
+            Submit('receive_items', 'Receive Selected Items', css_class='btn btn-success')
+        )

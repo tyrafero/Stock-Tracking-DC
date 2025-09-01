@@ -5,6 +5,132 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
 
 # ----------------------------
+# User Role & Permission Models
+# ----------------------------
+
+class UserRole(models.Model):
+    ROLE_CHOICES = [
+        ('admin', 'Admin'),
+        ('owner', 'Owner'),
+        ('logistics', 'Logistics'),
+        ('warehouse', 'Warehouse'),
+        ('sales', 'Sales'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='role')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='sales')
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_user_roles')
+    
+    class Meta:
+        verbose_name = 'User Role'
+        verbose_name_plural = 'User Roles'
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_role_display()}"
+    
+    @property
+    def role_permissions(self):
+        """Get permissions for this role"""
+        permissions = {
+            'admin': {
+                'can_manage_users': True,
+                'can_manage_access_control': True,
+                'can_create_purchase_order': True,
+                'can_edit_purchase_order': True,
+                'can_view_purchase_order': True,
+                'can_receive_purchase_order': True,
+                'can_view_purchase_order_amounts': True,
+                'can_create_stock': True,
+                'can_edit_stock': True,
+                'can_view_stock': True,
+                'can_transfer_stock': True,
+                'can_commit_stock': True,
+                'can_fulfill_commitment': True,
+                'can_issue_stock': True,
+                'can_receive_stock': True,
+                'can_view_warehouse_receiving': True,
+            },
+            'owner': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': True,
+                'can_edit_purchase_order': True,
+                'can_view_purchase_order': True,
+                'can_receive_purchase_order': True,
+                'can_view_purchase_order_amounts': True,
+                'can_create_stock': True,
+                'can_edit_stock': True,
+                'can_view_stock': True,
+                'can_transfer_stock': True,
+                'can_commit_stock': True,
+                'can_fulfill_commitment': True,
+                'can_issue_stock': True,
+                'can_receive_stock': True,
+                'can_view_warehouse_receiving': True,
+            },
+            'logistics': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': True,
+                'can_edit_purchase_order': True,
+                'can_view_purchase_order': True,
+                'can_receive_purchase_order': False,
+                'can_view_purchase_order_amounts': True,
+                'can_create_stock': False,
+                'can_edit_stock': False,
+                'can_view_stock': True,
+                'can_transfer_stock': True,  # Can request transfer
+                'can_commit_stock': True,
+                'can_fulfill_commitment': False,
+                'can_issue_stock': True,
+                'can_receive_stock': True,
+                'can_view_warehouse_receiving': False,
+            },
+            'warehouse': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': False,
+                'can_edit_purchase_order': False,
+                'can_view_purchase_order': True,
+                'can_receive_purchase_order': True,
+                'can_view_purchase_order_amounts': False,  # Cannot see amounts
+                'can_create_stock': True,
+                'can_edit_stock': True,
+                'can_view_stock': True,
+                'can_transfer_stock': True,
+                'can_commit_stock': True,
+                'can_fulfill_commitment': False,
+                'can_issue_stock': True,
+                'can_receive_stock': True,
+                'can_view_warehouse_receiving': True,
+            },
+            'sales': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': False,
+                'can_edit_purchase_order': False,
+                'can_view_purchase_order': False,
+                'can_receive_purchase_order': False,
+                'can_view_purchase_order_amounts': False,
+                'can_create_stock': False,
+                'can_edit_stock': False,
+                'can_view_stock': True,
+                'can_transfer_stock': True,  # For customer collections
+                'can_commit_stock': True,
+                'can_fulfill_commitment': True,
+                'can_issue_stock': False,
+                'can_receive_stock': False,
+                'can_view_warehouse_receiving': False,
+            },
+        }
+        return permissions.get(self.role, permissions['sales'])
+    
+    def has_permission(self, permission):
+        """Check if user has a specific permission"""
+        return self.role_permissions.get(permission, False)
+
+# ----------------------------
 # Category & Stock Models
 # ----------------------------
 

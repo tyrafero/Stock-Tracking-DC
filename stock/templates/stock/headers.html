@@ -503,12 +503,14 @@
                                 <li class="nk-menu-heading">
                                     <h6 class="overline-title text-primary-alt">Stock Management</h6>
                                 </li>
+                                {% if user_permissions.can_create_stock %}
                                 <li class="nk-menu-item">
                                     <a href="/add_stock" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-cart-fill"></em></span>
                                         <span class="nk-menu-text">Add Stock</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                {% endif %}
                                 <li class="nk-menu-item">
                                     <a href="/view_stock" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-activity-round-fill"></em></span>
@@ -527,23 +529,45 @@
                                         <span class="nk-menu-text">Stock Transfers</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                {% if user_permissions.can_receive_purchase_order or user_permissions.can_receive_stock %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'receive_po_items' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-inbox"></em></span>
+                                        <span class="nk-menu-text">Receive PO Items</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% if user_role and user_role.role == 'warehouse' %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'warehouse_receiving' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-package"></em></span>
+                                        <span class="nk-menu-text">Items to Receive</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
                                 
                                 <!-- Purchase Orders Section -->
+                                {% if user_permissions.can_view_purchase_order or user_permissions.can_create_purchase_order %}
                                 <li class="nk-menu-heading">
                                     <h6 class="overline-title text-primary-alt">Purchase Orders</h6>
                                 </li>
+                                {% if user_permissions.can_view_purchase_order %}
                                 <li class="nk-menu-item">
                                     <a href="{% url 'purchase_order_list' %}" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-list-check"></em></span>
                                         <span class="nk-menu-text">All Purchase Orders</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% if user_permissions.can_create_purchase_order %}
                                 <li class="nk-menu-item">
                                     <a href="{% url 'create_purchase_order' %}" class="nk-menu-link">
                                         <span class="nk-menu-icon"><em class="icon ni ni-plus-circle"></em></span>
                                         <span class="nk-menu-text">Create Purchase Order</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% endif %}
                                 
                                 <!-- Management Section -->
                                 <li class="nk-menu-heading">
@@ -570,6 +594,18 @@
                                                 <span class="nk-menu-text">Stores</span>
                                             </a>
                                         </li>
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_categories' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Categories</span>
+                                            </a>
+                                        </li>
+                                        {% if user_role and user_role.role == 'admin' %}
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_users' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Access Control</span>
+                                            </a>
+                                        </li>
+                                        {% endif %}
                                     </ul>
                                 </li><!-- .nk-menu-item -->
                                 
@@ -657,6 +693,7 @@
                                         </a>
                                     </li>
                                     <!-- Desktop Purchase Orders Dropdown (hidden on mobile) -->
+                                    {% if user_permissions.can_view_purchase_order or user_permissions.can_create_purchase_order %}
                                     <li class="dropdown d-none d-xl-block">
                                         <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown">
                                             <em class="icon ni ni-cart"></em>
@@ -664,14 +701,19 @@
                                         <div class="dropdown-menu dropdown-menu-md dropdown-menu-right">
                                             <div class="dropdown-inner">
                                                 <ul class="link-list">
+                                                    {% if user_permissions.can_view_purchase_order %}
                                                     <li><a href="{% url 'purchase_order_list' %}"><em class="icon ni ni-list-check"></em><span>All Purchase Orders</span></a></li>
+                                                    {% endif %}
+                                                    {% if user_permissions.can_create_purchase_order %}
                                                     <li><a href="{% url 'create_purchase_order' %}"><em class="icon ni ni-plus-circle"></em><span>Create New PO</span></a></li>
+                                                    {% endif %}
                                                     <li class="divider"></li>
                                                     <li><a href="{% url 'manage_manufacturers' %}"><em class="icon ni ni-building"></em><span>Manage Manufacturers</span></a></li>
                                                 </ul>
                                             </div>
                                         </div>
                                     </li>
+                                    {% endif %}
                                     {% endif %}
                                     
                                     <li class="dropdown user-dropdown">
