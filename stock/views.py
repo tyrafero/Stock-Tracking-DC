@@ -3,7 +3,8 @@ import os
 import re
 from django.conf import settings
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, F
+from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
 from .models import *
@@ -84,11 +85,10 @@ def new_register(request):
 
 @login_required
 def get_client_ip(request):
-    labels = []
-    label_item = []
-    data = []
-    issue_data = []
-    receive_data = []
+    """Main dashboard view that routes to role-specific dashboards"""
+    from .utils.permissions import get_user_role
+    
+    # Track visitor IP (keeping original functionality)
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -102,7 +102,35 @@ def get_client_ip(request):
         pass
     else:
         u.save()
-        # Don't return here - continue to render the template
+    
+    # Route to role-specific dashboard
+    try:
+        user_role = get_user_role(request.user)
+        role_name = user_role.role
+        
+        if role_name in ['admin', 'owner']:
+            return admin_dashboard(request)
+        elif role_name == 'sales':
+            return sales_dashboard(request)
+        elif role_name == 'warehouse':
+            return warehouse_dashboard(request)
+        elif role_name == 'logistics':
+            return logistics_dashboard(request)
+        else:
+            return admin_dashboard(request)  # Default fallback
+            
+    except Exception:
+        return admin_dashboard(request)  # Fallback for users without roles
+
+
+@login_required
+def admin_dashboard(request):
+    """Admin/Owner dashboard with full system overview"""
+    labels = []
+    label_item = []
+    data = []
+    issue_data = []
+    receive_data = []
     
     queryset = Stock.objects.all()
     querys = Category.objects.all()
@@ -119,15 +147,19 @@ def get_client_ip(request):
     mind = Category.objects.values('stockhistory').count()
     soul = Category.objects.values('group').count()
     
-    # Get transfer alerts for dashboard
+    # Get all alerts for admin
     pending_transfers = StockTransfer.objects.filter(status='pending').select_related('stock', 'from_location', 'to_location')
     in_transit_transfers = StockTransfer.objects.filter(status='in_transit').select_related('stock', 'from_location', 'to_location')
     awaiting_collection_transfers = StockTransfer.objects.filter(status='awaiting_collection').select_related('stock', 'from_location', 'to_location')
-    
-    # Get committed stock alerts for dashboard
     active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock', 'committed_by').order_by('-committed_at')
     
+    # Admin-specific metrics
+    low_stock_items = Stock.objects.filter(quantity__lte=models.F('re_order')).count()
+    recent_pos = PurchaseOrder.objects.filter(status__in=['draft', 'submitted']).count()
+    total_stock_value = sum(stock.quantity * 100 for stock in Stock.objects.all())  # Placeholder calculation
+    
     context = {
+        'dashboard_type': 'admin',
         'count': count,
         'body': body,
         'mind': mind,
@@ -141,8 +173,113 @@ def get_client_ip(request):
         'in_transit_transfers': in_transit_transfers,
         'awaiting_collection_transfers': awaiting_collection_transfers,
         'active_commitments': active_commitments,
+        'low_stock_items': low_stock_items,
+        'recent_pos': recent_pos,
+        'total_stock_value': total_stock_value,
     }
-    return render(request, 'stock/home.html', context)  # ✅ Always return HttpResponse
+    return render(request, 'stock/dashboards/admin_dashboard.html', context)
+
+
+@login_required
+def sales_dashboard(request):
+    """Sales dashboard focused on stock availability and customer commitments"""
+    # Available stock for sales
+    available_stock = Stock.objects.filter(quantity__gt=0).order_by('item_name')
+    
+    # Customer commitments
+    active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock').order_by('-committed_at')
+    
+    # Awaiting collection (relevant for sales)
+    awaiting_collection = StockTransfer.objects.filter(
+        status='awaiting_collection', 
+        transfer_type='customer_collection'
+    ).select_related('stock', 'to_location')
+    
+    # Recent sales activity (stock issues)
+    recent_issues = Stock.objects.filter(issue_quantity__gt=0).order_by('-last_updated')[:10]
+    
+    # Sales metrics
+    total_committed = CommittedStock.objects.filter(is_fulfilled=False).count()
+    total_available = available_stock.count()
+    
+    context = {
+        'dashboard_type': 'sales',
+        'available_stock': available_stock[:20],  # Limit for performance
+        'active_commitments': active_commitments[:10],
+        'awaiting_collection': awaiting_collection,
+        'recent_issues': recent_issues,
+        'total_committed': total_committed,
+        'total_available': total_available,
+    }
+    return render(request, 'stock/dashboards/sales_dashboard.html', context)
+
+
+@login_required
+def warehouse_dashboard(request):
+    """Warehouse dashboard focused on receiving, transfers, and location management"""
+    # Pending receiving
+    pending_pos = PurchaseOrder.objects.filter(
+        status__in=['confirmed', 'sent']
+    ).select_related('manufacturer').order_by('-created_at')
+    
+    # Transfers requiring warehouse action
+    pending_transfers = StockTransfer.objects.filter(status='pending').select_related('stock', 'from_location', 'to_location')
+    in_transit_transfers = StockTransfer.objects.filter(status='in_transit').select_related('stock', 'from_location', 'to_location')
+    
+    # Recent receiving activity
+    recent_receiving = PurchaseOrderReceiving.objects.select_related(
+        'purchase_order_item__purchase_order', 'received_by'
+    ).order_by('-received_at')[:10]
+    
+    # Stock by location
+    stock_by_location = {}
+    for location in Store.objects.filter(is_active=True):
+        stock_count = StockLocation.objects.filter(store=location).count()
+        stock_by_location[location.name] = stock_count
+    
+    context = {
+        'dashboard_type': 'warehouse',
+        'pending_pos': pending_pos[:10],
+        'pending_transfers': pending_transfers,
+        'in_transit_transfers': in_transit_transfers,
+        'recent_receiving': recent_receiving,
+        'stock_by_location': stock_by_location,
+    }
+    return render(request, 'stock/dashboards/warehouse_dashboard.html', context)
+
+
+@login_required
+def logistics_dashboard(request):
+    """Logistics dashboard focused on purchase orders and supplier management"""
+    # Purchase order overview
+    draft_pos = PurchaseOrder.objects.filter(status='draft').count()
+    sent_pos = PurchaseOrder.objects.filter(status='sent').count()
+    confirmed_pos = PurchaseOrder.objects.filter(status='confirmed').count()
+    
+    # Recent PO activity
+    recent_pos = PurchaseOrder.objects.select_related('manufacturer').order_by('-created_at')[:10]
+    
+    # Stock forecasting - items approaching reorder level
+    low_stock = Stock.objects.filter(
+        quantity__lte=models.F('re_order'),
+        re_order__gt=0
+    ).order_by('quantity')[:20]
+    
+    # Transfer requests
+    transfer_requests = StockTransfer.objects.filter(
+        status__in=['pending', 'in_transit']
+    ).select_related('stock', 'from_location', 'to_location').order_by('-created_at')
+    
+    context = {
+        'dashboard_type': 'logistics',
+        'draft_pos': draft_pos,
+        'sent_pos': sent_pos,
+        'confirmed_pos': confirmed_pos,
+        'recent_pos': recent_pos,
+        'low_stock': low_stock,
+        'transfer_requests': transfer_requests,
+    }
+    return render(request, 'stock/dashboards/logistics_dashboard.html', context)
 
 
 @login_required

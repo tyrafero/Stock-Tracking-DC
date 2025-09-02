@@ -1,0 +1,362 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+               <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Logistics Dashboard</h3>
+                            <p class="nk-block-des text-soft">Purchase orders, supplier management, and stock forecasting</p>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-more-v"></em></a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        <li class="nk-block-tools-opt"><a href="/purchase-orders/create/" class="btn btn-primary"><em class="icon ni ni-plus"></em><span>New PO</span></a></li>
+                                        <li class="nk-block-tools-opt"><a href="/purchase-orders/" class="btn btn-outline-primary"><em class="icon ni ni-list"></em><span>All POs</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics for Logistics -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Draft POs</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-secondary">{{draft_pos}}</div>
+                                            <div class="info text-soft">Pending creation</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Sent POs</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-warning">{{sent_pos}}</div>
+                                            <div class="info text-soft">Awaiting confirmation</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Confirmed POs</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-success">{{confirmed_pos}}</div>
+                                            <div class="info text-soft">In progress</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Low Stock Items</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-danger">{{low_stock.count}}</div>
+                                            <div class="info text-soft">Need reordering</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Low Stock Alert -->
+                {% if low_stock %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-head-content">
+                            <h5 class="nk-block-title text-danger">Low Stock Alert</h5>
+                            <p class="nk-block-des">Items approaching or below reorder levels</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="nk-tb-list nk-tb-ulist">
+                                <div class="nk-tb-item nk-tb-head">
+                                    <div class="nk-tb-col"><span class="sub-text">Item</span></div>
+                                    <div class="nk-tb-col tb-col-mb"><span class="sub-text">Category</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Current Stock</span></div>
+                                    <div class="nk-tb-col tb-col-lg"><span class="sub-text">Reorder Level</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Location</span></div>
+                                    <div class="nk-tb-col nk-tb-col-tools text-end">Actions</div>
+                                </div>
+                                {% for stock in low_stock %}
+                                <div class="nk-tb-item">
+                                    <div class="nk-tb-col">
+                                        <div class="user-card">
+                                            <div class="user-info">
+                                                <span class="tb-lead">{{ stock.item_name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-mb">
+                                        <span class="tb-amount">{{ stock.category.group|default:"N/A" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-amount text-danger">{{ stock.quantity }} units</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-lg">
+                                        <span class="tb-status">{{ stock.re_order }} units</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ stock.location.name|default:"N/A" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1">
+                                            <li>
+                                                <a href="{% url 'stock_detail' stock.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="View Details">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="/purchase-orders/create/" class="btn btn-trigger btn-icon btn-primary" data-bs-toggle="tooltip" title="Create PO">
+                                                    <em class="icon ni ni-plus"></em>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Transfer Requests -->
+                {% if transfer_requests %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-head-content">
+                            <h5 class="nk-block-title">Stock Transfer Requests</h5>
+                            <p class="nk-block-des">Current transfer activities and requests</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        {% for transfer in transfer_requests|slice:":6" %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title">{{ transfer.stock.item_name }}</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <span class="badge badge-sm badge-dot has-bg badge-{% if transfer.status == 'pending' %}warning{% elif transfer.status == 'in_transit' %}info{% else %}success{% endif %} d-sm-inline-flex">
+                                                {{ transfer.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        <p><strong>Quantity:</strong> {{ transfer.quantity }} units</p>
+                                        <p><strong>From:</strong> {{ transfer.from_location.name }}</p>
+                                        <p><strong>To:</strong> {{ transfer.to_location.name }}</p>
+                                        <p><strong>Type:</strong> {{ transfer.get_transfer_type_display }}</p>
+                                        {% if transfer.transfer_reason %}
+                                        <p><strong>Reason:</strong> {{ transfer.transfer_reason|truncatechars:30 }}</p>
+                                        {% endif %}
+                                        <p><strong>Created:</strong> {{ transfer.created_at|timesince }} ago</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    {% if transfer_requests.count > 6 %}
+                    <div class="text-center mt-3">
+                        <a href="/transfers/" class="btn btn-outline-primary">View All Transfers</a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
+                <!-- Recent Purchase Orders -->
+                {% if recent_pos %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-head-content">
+                            <h5 class="nk-block-title">Recent Purchase Orders</h5>
+                            <p class="nk-block-des">Latest PO activity and status updates</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="nk-tb-list nk-tb-ulist">
+                                <div class="nk-tb-item nk-tb-head">
+                                    <div class="nk-tb-col"><span class="sub-text">PO Reference</span></div>
+                                    <div class="nk-tb-col tb-col-mb"><span class="sub-text">Manufacturer</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Status</span></div>
+                                    <div class="nk-tb-col tb-col-lg"><span class="sub-text">Delivery Type</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Created</span></div>
+                                    <div class="nk-tb-col nk-tb-col-tools text-end">Actions</div>
+                                </div>
+                                {% for po in recent_pos %}
+                                <div class="nk-tb-item">
+                                    <div class="nk-tb-col">
+                                        <div class="user-card">
+                                            <div class="user-info">
+                                                <span class="tb-lead">{{ po.reference_number }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-mb">
+                                        <span class="tb-amount">{{ po.manufacturer.company_name }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="badge badge-sm badge-dot has-bg badge-{% if po.status == 'draft' %}secondary{% elif po.status == 'sent' %}warning{% elif po.status == 'confirmed' %}success{% else %}info{% endif %} d-sm-inline-flex">
+                                            {{ po.get_status_display }}
+                                        </span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-lg">
+                                        <span class="tb-status">{{ po.get_delivery_type_display }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ po.created_at|date:"M d, Y" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1">
+                                            <li>
+                                                <a href="{% url 'purchase_order_detail' po.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="View Details">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                            </li>
+                                            {% if po.status == 'draft' %}
+                                            <li>
+                                                <a href="{% url 'update_purchase_order' po.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Edit PO">
+                                                    <em class="icon ni ni-edit"></em>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            {% if po.status in 'draft,submitted' %}
+                                            <li>
+                                                <a href="{% url 'send_purchase_order_email' po.pk %}" class="btn btn-trigger btn-icon btn-primary" data-bs-toggle="tooltip" title="Send Email">
+                                                    <em class="icon ni ni-mail"></em>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Quick Actions -->
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-head-content">
+                            <h5 class="nk-block-title">Quick Actions</h5>
+                            <p class="nk-block-des">Common logistics operations</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        <div class="col-md-3 col-sm-6">
+                            <a href="/purchase-orders/create/" class="card card-bordered">
+                                <div class="card-inner text-center">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <em class="icon icon-2x ni ni-plus text-primary"></em>
+                                            <h6 class="title mt-2">Create Purchase Order</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6">
+                            <a href="/manufacturers/" class="card card-bordered">
+                                <div class="card-inner text-center">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <em class="icon icon-2x ni ni-building text-info"></em>
+                                            <h6 class="title mt-2">Manage Manufacturers</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6">
+                            <a href="/delivery-persons/" class="card card-bordered">
+                                <div class="card-inner text-center">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <em class="icon icon-2x ni ni-truck text-warning"></em>
+                                            <h6 class="title mt-2">Delivery Persons</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3 col-sm-6">
+                            <a href="/view_stock" class="card card-bordered">
+                                <div class="card-inner text-center">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <em class="icon icon-2x ni ni-package text-success"></em>
+                                            <h6 class="title mt-2">View Stock Levels</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
