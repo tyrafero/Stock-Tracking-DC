@@ -174,6 +174,26 @@
 <div class="nk-content-body">
 <div class="components-preview wide-lg mx-auto">
 
+{% if show_po_selection %}
+<!-- PO Selection Mode -->
+<div class="nk-block-head nk-block-head-sm">
+    <div class="nk-block-head-content">
+        <h3 class="nk-block-title page-title">{{ title }}</h3>
+        <div class="nk-block-des text-soft">
+            <p>Select a Purchase Order to receive items into inventory</p>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-inner">
+        <h5 class="card-title">Step 1: Select Purchase Order</h5>
+        {% load crispy_forms_tags %}
+        {% crispy po_form %}
+    </div>
+</div>
+
+{% else %}
 <!-- Receiving Header -->
 <div class="receiving-header">
     <div class="row align-items-center">
@@ -216,15 +236,25 @@
                     
                     <!-- Common delivery info -->
                     <div class="row mb-4">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             {{ form.delivery_reference.label_tag }}
                             {{ form.delivery_reference }}
                             <small class="form-text text-muted">{{ form.delivery_reference.help_text }}</small>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             {{ form.notes.label_tag }}
                             {{ form.notes }}
                             <small class="form-text text-muted">{{ form.notes.help_text }}</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Inventory Management</label>
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="create_stock" name="create_stock" value="1">
+                                <label class="custom-control-label" for="create_stock">
+                                    Automatically add to Stock Inventory
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">Creates stock entries for immediate use</small>
                         </div>
                     </div>
                     
@@ -469,6 +499,8 @@ document.querySelectorAll('.progress-ring').forEach(ring => {
     animateProgressRing(ring, percentage);
 });
 </script>
+
+{% endif %}
 
 {% for message in messages %}
 <script>

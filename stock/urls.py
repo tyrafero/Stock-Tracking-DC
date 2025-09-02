@@ -82,8 +82,8 @@ urlpatterns = [
     # Warehouse URLs
     path('warehouse/receiving/', views.warehouse_receiving, name='warehouse_receiving'),
     
-    # Receive PO Items URL
-    path('receive-po-items/', views.receive_po_items, name='receive_po_items'),
+    # Receive PO Items URL - Unified interface
+    path('receive-po-items/', views.receive_purchase_order_items, name='receive_po_items'),
     
     # Stock Reservation URLs
     path('stock/<str:pk>/reserve/', views.reserve_stock, name='reserve_stock'),

@@ -1529,8 +1529,29 @@ def send_purchase_order_email(request, pk):
     return redirect('purchase_order_detail', pk=pk)
 
 @login_required
-def receive_purchase_order_items(request, pk):
-    """Main receiving interface - shows all items and allows bulk receiving"""
+def receive_purchase_order_items(request, pk=None):
+    """Unified receiving interface - shows all items and allows bulk receiving"""
+    if pk:
+        # Direct PO access - /purchase-order/2/receive/
+        purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    else:
+        # PO selection mode - /receive-po-items/
+        if request.method == 'POST' and 'select_po' in request.POST:
+            po_form = ReceivePOItemsForm(request.POST)
+            if po_form.is_valid():
+                purchase_order = po_form.cleaned_data['purchase_order']
+                # Redirect to the same URL with PO ID
+                return redirect('receive_purchase_order_items', pk=purchase_order.pk)
+        
+        # Show PO selection form
+        po_form = ReceivePOItemsForm()
+        context = {
+            'title': 'Receive PO Items - Select Purchase Order',
+            'po_form': po_form,
+            'show_po_selection': True,
+        }
+        return render(request, 'stock/receive_purchase_order_items.html', context)
+    
     purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
     
     # Check if PO is in a receivable state
@@ -1558,6 +1579,41 @@ def receive_purchase_order_items(request, pk):
                             received_by=request.user
                         )
                         created_records.append(receiving_record)
+                        
+                        # Also create/update stock entries if "create_stock" option is selected
+                        create_stock = request.POST.get('create_stock', False)
+                        if create_stock:
+                            # Use default store or allow specification per item
+                            default_store = Store.objects.filter(is_active=True).first()
+                            if default_store:
+                                # Check if stock item already exists
+                                existing_stock = Stock.objects.filter(
+                                    item_name=item.product,
+                                    condition='new',  # Default to new condition
+                                    location=default_store
+                                ).first()
+                                
+                                if existing_stock:
+                                    # Add to existing stock
+                                    existing_stock.quantity += item_data['quantity']
+                                    existing_stock.note = f"Received from PO - {purchase_order.reference_number}"
+                                    existing_stock.save()
+                                else:
+                                    # Create new stock entry
+                                    category, _ = Category.objects.get_or_create(
+                                        group='PO Items',
+                                        defaults={'group': 'PO Items'}
+                                    )
+                                    
+                                    Stock.objects.create(
+                                        category=category,
+                                        item_name=item.product,
+                                        quantity=item_data['quantity'],
+                                        location=default_store,
+                                        condition='new',
+                                        note=f"Received from PO - {purchase_order.reference_number}",
+                                        created_by=request.user.username
+                                    )
                     
                     # Create history entry
                     total_items = sum(r.quantity_received for r in created_records)
@@ -2074,8 +2130,9 @@ def warehouse_receiving(request):
     }
     return render(request, 'stock/warehouse_receiving.html', context)
 
-@require_any_permission('can_receive_purchase_order', 'can_receive_stock')
-def receive_po_items(request):
+# DEPRECATED: Use receive_purchase_order_items instead
+# @require_any_permission('can_receive_purchase_order', 'can_receive_stock')
+def receive_po_items_deprecated(request):
     """Receive PO Items - directly add to inventory under Stock Management"""
     selected_po = None
     items_form = None
