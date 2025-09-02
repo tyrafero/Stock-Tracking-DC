@@ -5,7 +5,7 @@ from .models import (
     Stock, Category, Country, State, City, Person, Contacts, Product, 
     PurchaseOrder, PurchaseOrderItem, Manufacturer, DeliveryPerson, Store, 
     PurchaseOrderHistory, CommittedStock, StockTransfer, StockLocation, UserRole,
-    StockReservation
+    StockReservation, StockAudit, StockAuditItem
 )
 from .form import StockCreateForm  # Make sure this is the correct import path
 
@@ -130,3 +130,79 @@ class StockReservationAdmin(admin.ModelAdmin):
     
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('stock', 'reserved_by', 'fulfilled_by', 'cancelled_by')
+
+# Stock Audit Admin
+class StockAuditItemInline(admin.TabularInline):
+    model = StockAuditItem
+    fields = ('stock', 'system_quantity', 'physical_count', 'variance_quantity', 'counted_by', 'variance_reason')
+    readonly_fields = ('variance_quantity',)
+    extra = 0
+
+@admin.register(StockAudit)
+class StockAuditAdmin(admin.ModelAdmin):
+    list_display = ('audit_reference', 'title', 'audit_type', 'status', 'planned_start_date', 'completion_percentage', 'items_with_variances', 'created_by')
+    list_filter = ('audit_type', 'status', 'planned_start_date', 'created_at')
+    search_fields = ('audit_reference', 'title', 'description')
+    readonly_fields = ('total_items_planned', 'total_items_counted', 'items_with_variances', 'total_variance_value', 'completion_percentage', 'created_at', 'updated_at')
+    filter_horizontal = ('audit_locations', 'audit_categories', 'assigned_auditors')
+    inlines = [StockAuditItemInline]
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('audit_reference', 'title', 'description', 'audit_type', 'status')
+        }),
+        ('Scope', {
+            'fields': ('audit_locations', 'audit_categories')
+        }),
+        ('Schedule', {
+            'fields': ('planned_start_date', 'planned_end_date', 'actual_start_date', 'actual_end_date')
+        }),
+        ('Personnel', {
+            'fields': ('created_by', 'assigned_auditors', 'approved_by')
+        }),
+        ('Results Summary', {
+            'fields': ('total_items_planned', 'total_items_counted', 'items_with_variances', 'total_variance_value', 'completion_percentage'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by', 'approved_by')
+
+@admin.register(StockAuditItem)
+class StockAuditItemAdmin(admin.ModelAdmin):
+    list_display = ('audit', 'stock', 'system_quantity', 'physical_count', 'variance_quantity', 'variance_percentage', 'counted_by', 'adjustment_applied')
+    list_filter = ('audit__status', 'variance_reason', 'adjustment_applied', 'count_date')
+    search_fields = ('audit__audit_reference', 'stock__item_name')
+    readonly_fields = ('variance_quantity', 'variance_percentage', 'count_date', 'adjustment_date')
+    
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('audit', 'stock')
+        }),
+        ('System Data', {
+            'fields': ('system_quantity', 'committed_quantity', 'reserved_quantity')
+        }),
+        ('Physical Count', {
+            'fields': ('physical_count', 'variance_quantity', 'variance_percentage', 'counted_by', 'count_date')
+        }),
+        ('Variance Analysis', {
+            'fields': ('variance_reason', 'variance_notes'),
+            'classes': ('collapse',)
+        }),
+        ('Adjustment', {
+            'fields': ('adjustment_applied', 'adjustment_date'),
+            'classes': ('collapse',)
+        }),
+        ('Location Info', {
+            'fields': ('audit_location', 'audit_aisle'),
+            'classes': ('collapse',)
+        })
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('audit', 'stock', 'counted_by')

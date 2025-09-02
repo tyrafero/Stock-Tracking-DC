@@ -535,6 +535,12 @@
                                         <span class="nk-menu-text">Stock Reservations</span>
                                     </a>
                                 </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'audit_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-clipboard"></em></span>
+                                        <span class="nk-menu-text">Stock Audits</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
                                 {% if user_permissions.can_receive_purchase_order or user_permissions.can_receive_stock %}
                                 <li class="nk-menu-item">
                                     <a href="{% url 'receive_po_items' %}" class="nk-menu-link">

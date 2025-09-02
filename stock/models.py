@@ -394,6 +394,263 @@ class StockReservation(models.Model):
         delta = self.expires_at - timezone.now()
         return max(0, delta.days)
 
+
+class StockAudit(models.Model):
+    """Track stock audit sessions and overall audit management"""
+    STATUS_CHOICES = [
+        ('planned', 'Planned'),
+        ('in_progress', 'In Progress'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+        ('approved', 'Approved'),
+    ]
+    
+    AUDIT_TYPE_CHOICES = [
+        ('full', 'Full Stock Audit'),
+        ('partial', 'Partial Audit'),
+        ('cycle', 'Cycle Count'),
+        ('location', 'Location Audit'),
+        ('category', 'Category Audit'),
+        ('spot_check', 'Spot Check'),
+    ]
+    
+    # Keep backwards compatibility
+    AUDIT_STATUS_CHOICES = STATUS_CHOICES
+    
+    audit_reference = models.CharField(max_length=100, unique=True, help_text="Unique audit reference number")
+    audit_type = models.CharField(max_length=20, choices=AUDIT_TYPE_CHOICES, default='full')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planned')
+    
+    # Audit scope
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    audit_locations = models.ManyToManyField('Store', blank=True, help_text="Locations to be audited")
+    audit_categories = models.ManyToManyField('Category', blank=True, help_text="Categories to be audited")
+    
+    # Dates
+    planned_start_date = models.DateField()
+    planned_end_date = models.DateField()
+    actual_start_date = models.DateTimeField(blank=True, null=True)
+    actual_end_date = models.DateTimeField(blank=True, null=True)
+    
+    # Personnel
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_audits')
+    assigned_auditors = models.ManyToManyField(User, related_name='assigned_audits', blank=True)
+    approved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='approved_audits')
+    
+    # Audit results summary
+    total_items_planned = models.IntegerField(default=0)
+    total_items_counted = models.IntegerField(default=0)
+    items_with_variances = models.IntegerField(default=0)
+    total_variance_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Stock Audit'
+        verbose_name_plural = 'Stock Audits'
+    
+    def __str__(self):
+        return f"{self.audit_reference} - {self.title} ({self.get_status_display()})"
+    
+    def can_start(self):
+        """Check if audit can be started"""
+        return self.status == 'planned'
+    
+    def can_complete(self):
+        """Check if audit can be completed"""
+        return self.status == 'in_progress' and self.audit_items.exists()
+    
+    def start_audit(self, user):
+        """Start the audit session"""
+        if self.can_start():
+            from django.utils import timezone
+            self.status = 'in_progress'
+            self.actual_start_date = timezone.now()
+            self.save()
+            return True
+        return False
+    
+    def complete_audit(self, user):
+        """Complete the audit session"""
+        if self.can_complete():
+            from django.utils import timezone
+            self.status = 'completed'
+            self.actual_end_date = timezone.now()
+            self._calculate_audit_summary()
+            self.save()
+            return True
+        return False
+    
+    def approve_audit(self, user):
+        """Approve audit and apply adjustments"""
+        if self.status == 'completed':
+            self.status = 'approved'
+            self.approved_by = user
+            self.save()
+            self._apply_audit_adjustments()
+            return True
+        return False
+    
+    def _calculate_audit_summary(self):
+        """Calculate audit summary statistics"""
+        audit_items = self.audit_items.all()
+        self.total_items_planned = audit_items.count()
+        self.total_items_counted = audit_items.filter(physical_count__isnull=False).count()
+        self.items_with_variances = audit_items.exclude(variance_quantity=0).count()
+        
+        # Calculate total variance value (placeholder - would need item costs)
+        total_variance = sum(
+            abs(item.variance_quantity) * 10  # Placeholder cost calculation
+            for item in audit_items 
+            if item.variance_quantity != 0
+        )
+        self.total_variance_value = total_variance
+    
+    def _apply_audit_adjustments(self):
+        """Apply audit adjustments to stock quantities"""
+        for audit_item in self.audit_items.exclude(variance_quantity=0):
+            stock = audit_item.stock
+            if audit_item.adjustment_applied:
+                continue
+                
+            # Apply the adjustment
+            from django.utils import timezone
+            stock.quantity = audit_item.physical_count
+            stock.last_updated = timezone.now()
+            stock.save()
+            
+            # Mark adjustment as applied
+            audit_item.adjustment_applied = True
+            audit_item.adjustment_date = timezone.now()
+            audit_item.save()
+    
+    def update_statistics(self):
+        """Update audit statistics based on current audit items"""
+        # Count items that have been counted
+        counted_items = self.audit_items.filter(physical_count__isnull=False)
+        self.total_items_counted = counted_items.count()
+        
+        # Count items with variances (physical count != system quantity)
+        variance_items = counted_items.exclude(variance_quantity=0)
+        self.items_with_variances = variance_items.count()
+        
+        # Calculate total variance value (absolute value of all variances)
+        from django.db.models import Sum, Case, When, IntegerField, F
+        from decimal import Decimal
+        
+        total_variance = counted_items.aggregate(
+            total_variance=Sum(
+                Case(
+                    When(variance_quantity__gt=0, then=F('variance_quantity')),
+                    When(variance_quantity__lt=0, then=F('variance_quantity') * -1),
+                    default=0,
+                    output_field=IntegerField()
+                )
+            )
+        )['total_variance'] or 0
+        
+        self.total_variance_value = Decimal(str(total_variance))
+        self.save()
+    
+    @property
+    def completion_percentage(self):
+        """Calculate audit completion percentage"""
+        if self.total_items_planned == 0:
+            return 0
+        return round((self.total_items_counted / self.total_items_planned) * 100, 1)
+    
+    @property 
+    def has_variances(self):
+        """Check if audit has any variances"""
+        return self.items_with_variances > 0
+
+
+class StockAuditItem(models.Model):
+    """Individual stock items within an audit"""
+    VARIANCE_REASON_CHOICES = [
+        ('shrinkage', 'Shrinkage'),
+        ('damage', 'Damage/Loss'),
+        ('theft', 'Theft'),
+        ('counting_error', 'Counting Error'),
+        ('system_error', 'System Error'),
+        ('transfer_unrecorded', 'Transfer Not Recorded'),
+        ('receiving_error', 'Receiving Error'),
+        ('other', 'Other'),
+    ]
+    
+    audit = models.ForeignKey('StockAudit', on_delete=models.CASCADE, related_name='audit_items')
+    stock = models.ForeignKey('Stock', on_delete=models.CASCADE, related_name='audit_items')
+    
+    # System quantities at audit time
+    system_quantity = models.IntegerField(help_text="System quantity at time of audit")
+    committed_quantity = models.IntegerField(default=0, help_text="Committed quantity at time of audit")
+    reserved_quantity = models.IntegerField(default=0, help_text="Reserved quantity at time of audit")
+    
+    # Audit counts
+    physical_count = models.IntegerField(null=True, blank=True, help_text="Physical count during audit")
+    variance_quantity = models.IntegerField(default=0, help_text="Variance (Physical - System)")
+    
+    # Audit details
+    counted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='counted_items')
+    count_date = models.DateTimeField(null=True, blank=True)
+    
+    # Variance analysis
+    variance_reason = models.CharField(max_length=30, choices=VARIANCE_REASON_CHOICES, blank=True, null=True)
+    variance_notes = models.TextField(blank=True, null=True)
+    
+    # Adjustment tracking
+    adjustment_applied = models.BooleanField(default=False)
+    adjustment_date = models.DateTimeField(null=True, blank=True)
+    
+    # Location info at time of audit
+    audit_location = models.CharField(max_length=100, blank=True, null=True)
+    audit_aisle = models.CharField(max_length=50, blank=True, null=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['stock__item_name']
+        unique_together = ['audit', 'stock']
+        verbose_name = 'Audit Item'
+        verbose_name_plural = 'Audit Items'
+    
+    def __str__(self):
+        return f"{self.audit.audit_reference} - {self.stock.item_name}"
+    
+    def save(self, *args, **kwargs):
+        # Calculate variance when physical count is entered
+        if self.physical_count is not None:
+            self.variance_quantity = self.physical_count - self.system_quantity
+            
+            if not self.count_date:
+                from django.utils import timezone
+                self.count_date = timezone.now()
+        
+        super().save(*args, **kwargs)
+    
+    @property
+    def has_variance(self):
+        """Check if item has variance"""
+        return self.variance_quantity != 0
+    
+    @property
+    def variance_percentage(self):
+        """Calculate variance percentage"""
+        if self.system_quantity == 0:
+            return 100 if self.physical_count > 0 else 0
+        return round((self.variance_quantity / self.system_quantity) * 100, 2)
+    
+    @property
+    def is_counted(self):
+        """Check if item has been physically counted"""
+        return self.physical_count is not None
+
+
 class StockLocation(models.Model):
     """Track stock quantities at different locations for the same item"""
     stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='locations')

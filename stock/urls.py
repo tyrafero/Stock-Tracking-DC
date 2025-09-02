@@ -93,6 +93,16 @@ urlpatterns = [
     path('reservations/<int:pk>/cancel/', views.cancel_reservation, name='cancel_reservation'),
     path('reservations/<int:pk>/fulfill/', views.fulfill_reservation, name='fulfill_reservation'),
     path('reservations/expire/', views.expire_reservations, name='expire_reservations'),
+    
+    # Stock Audit URLs
+    path('audits/', views.audit_list, name='audit_list'),
+    path('audits/<int:audit_id>/', views.audit_detail, name='audit_detail'),
+    path('audits/create/', views.create_audit, name='create_audit'),
+    path('audits/<int:audit_id>/start/', views.start_audit, name='start_audit'),
+    path('audits/<int:audit_id>/count/', views.count_items, name='count_items'),
+    path('audits/<int:audit_id>/count/<int:item_id>/', views.count_single_item, name='count_single_item'),
+    path('audits/<int:audit_id>/complete/', views.complete_audit, name='complete_audit'),
+    path('audits/<int:audit_id>/approve/', views.approve_audit, name='approve_audit'),
 
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

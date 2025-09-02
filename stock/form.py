@@ -1091,3 +1091,133 @@ class StockReservationUpdateForm(forms.ModelForm):
         if commit:
             reservation.save()
         return reservation
+
+
+# ----------------------------
+# Stock Audit Forms
+# ----------------------------
+
+class StockAuditForm(forms.ModelForm):
+    class Meta:
+        model = StockAudit
+        fields = ['audit_reference', 'title', 'description', 'audit_type', 'planned_start_date', 
+                 'planned_end_date', 'audit_locations', 'audit_categories', 'assigned_auditors']
+        widgets = {
+            'audit_reference': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'AUD-2024-001'}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Quarterly Stock Audit'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Description of audit scope and purpose'}),
+            'audit_type': forms.Select(attrs={'class': 'form-control'}),
+            'planned_start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'planned_end_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'audit_locations': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+            'audit_categories': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+            'assigned_auditors': forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        self.user = user
+        
+        # Generate default audit reference if creating new audit
+        if not self.instance.pk:
+            from django.utils import timezone
+            import uuid
+            year = timezone.now().year
+            ref = f"AUD-{year}-{str(uuid.uuid4())[:8].upper()}"
+            self.fields['audit_reference'].initial = ref
+
+    def clean_planned_end_date(self):
+        start_date = self.cleaned_data.get('planned_start_date')
+        end_date = self.cleaned_data.get('planned_end_date')
+        
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError("End date must be after start date.")
+        
+        return end_date
+
+
+class StockAuditItemForm(forms.ModelForm):
+    class Meta:
+        model = StockAuditItem
+        fields = ['physical_count', 'variance_reason', 'variance_notes', 'audit_location', 'audit_aisle']
+        widgets = {
+            'physical_count': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
+            'variance_reason': forms.Select(attrs={'class': 'form-control'}),
+            'variance_notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Additional notes about variance'}),
+            'audit_location': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Physical location during count'}),
+            'audit_aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle/section'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # If this is an existing audit item, show current system quantities as reference
+        if self.instance and self.instance.pk:
+            system_qty = self.instance.system_quantity
+            self.fields['physical_count'].help_text = f"System quantity: {system_qty}"
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Calculate variance when saving
+        if instance.physical_count is not None:
+            instance.variance_quantity = instance.physical_count - instance.system_quantity
+            
+        if commit:
+            instance.save()
+        return instance
+
+
+class AuditItemBulkCountForm(forms.Form):
+    """Form for bulk counting multiple items in an audit"""
+    audit_items = forms.ModelMultipleChoiceField(
+        queryset=StockAuditItem.objects.none(),
+        widget=forms.CheckboxSelectMultiple(attrs={'class': 'form-check-input'}),
+        required=False
+    )
+    
+    def __init__(self, *args, **kwargs):
+        audit = kwargs.pop('audit', None)
+        super().__init__(*args, **kwargs)
+        
+        if audit:
+            # Only show items that haven't been counted yet
+            uncounted_items = audit.audit_items.filter(physical_count__isnull=True)
+            self.fields['audit_items'].queryset = uncounted_items
+            
+            # Dynamically create fields for each audit item
+            for item in uncounted_items:
+                if item.stock and item.stock.item_name:  # Ensure item and stock exist
+                    field_name = f'count_{item.id}'
+                    self.fields[field_name] = forms.IntegerField(
+                        required=False,
+                        min_value=0,
+                        widget=forms.NumberInput(attrs={
+                            'class': 'form-control', 
+                            'placeholder': f'Count for {item.stock.item_name}'
+                        }),
+                        label=f'{item.stock.item_name} (System: {item.system_quantity})'
+                    )
+    
+    def save(self, audit, counted_by):
+        """Save the bulk counts to audit items"""
+        from django.utils import timezone
+        updated_items = []
+        
+        for field_name, value in self.cleaned_data.items():
+            if field_name and field_name.startswith('count_') and value is not None:
+                item_id_str = field_name.replace('count_', '')
+                if item_id_str.isdigit():  # Ensure we have a valid numeric ID
+                    try:
+                        audit_item = audit.audit_items.get(id=int(item_id_str))
+                        audit_item.physical_count = value
+                        audit_item.variance_quantity = value - audit_item.system_quantity
+                        audit_item.counted_by = counted_by
+                        audit_item.count_date = timezone.now()
+                        audit_item.save()
+                        updated_items.append(audit_item)
+                    except (StockAuditItem.DoesNotExist, ValueError):
+                        continue
+        
+        return updated_items

@@ -2441,3 +2441,309 @@ def expire_reservations(request):
         messages.info(request, 'No overdue reservations found.')
     
     return redirect('reservation_list')
+
+
+# ----------------------------
+# Stock Audit Views
+# ----------------------------
+
+@login_required
+def audit_list(request):
+    """Display list of all stock audits"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to view audits.')
+        return redirect('/')
+    
+    audits = StockAudit.objects.all().select_related('created_by', 'approved_by')
+    
+    # Filter by status if requested
+    status_filter = request.GET.get('status')
+    if status_filter and status_filter != 'all':
+        audits = audits.filter(status=status_filter)
+    
+    # Filter by audit type if requested
+    type_filter = request.GET.get('audit_type')
+    if type_filter and type_filter != 'all':
+        audits = audits.filter(audit_type=type_filter)
+    
+    context = {
+        'title': 'Stock Audits',
+        'audits': audits,
+        'status_filter': status_filter or 'all',
+        'type_filter': type_filter or 'all',
+        'status_choices': StockAudit.STATUS_CHOICES,
+        'type_choices': StockAudit.AUDIT_TYPE_CHOICES,
+    }
+    return render(request, 'stock/audit_list.html', context)
+
+
+@login_required
+def audit_detail(request, audit_id):
+    """Display detailed view of a specific audit"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to view audits.')
+        return redirect('/')
+    
+    audit = get_object_or_404(StockAudit, pk=audit_id)
+    audit_items = audit.audit_items.select_related('stock', 'counted_by').order_by('stock__item_name')
+    
+    context = {
+        'title': f'Audit: {audit.audit_reference}',
+        'audit': audit,
+        'audit_items': audit_items,
+    }
+    return render(request, 'stock/audit_detail.html', context)
+
+
+@login_required
+def create_audit(request):
+    """Create a new stock audit"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_access_control'):
+        messages.error(request, 'You do not have permission to create audits.')
+        return redirect('/')
+    
+    if request.method == 'POST':
+        form = StockAuditForm(request.POST, user=request.user)
+        if form.is_valid():
+            audit = form.save(commit=False)
+            audit.created_by = request.user
+            audit.save()
+            form.save_m2m()  # Save many-to-many relationships
+            
+            # Create audit items based on selected criteria
+            create_audit_items(audit)
+            
+            messages.success(request, f'Stock audit "{audit.title}" created successfully.')
+            return redirect('audit_detail', audit_id=audit.pk)
+    else:
+        form = StockAuditForm(user=request.user)
+    
+    context = {
+        'title': 'Create Stock Audit',
+        'form': form,
+    }
+    return render(request, 'stock/create_audit.html', context)
+
+
+def create_audit_items(audit):
+    """Create audit items based on audit criteria"""
+    stock_queryset = Stock.objects.filter(quantity__gt=0)
+    
+    # Filter by locations if specified
+    if audit.audit_locations.exists():
+        stock_queryset = stock_queryset.filter(location__in=audit.audit_locations.all())
+    
+    # Filter by categories if specified
+    if audit.audit_categories.exists():
+        stock_queryset = stock_queryset.filter(category__in=audit.audit_categories.all())
+    
+    audit_items = []
+    for stock in stock_queryset:
+        audit_item = StockAuditItem(
+            audit=audit,
+            stock=stock,
+            system_quantity=stock.quantity,
+            committed_quantity=stock.committed_quantity or 0,
+            reserved_quantity=stock.reserved_quantity or 0,
+        )
+        audit_items.append(audit_item)
+    
+    # Bulk create audit items
+    StockAuditItem.objects.bulk_create(audit_items)
+    
+    # Update audit totals
+    audit.total_items_planned = len(audit_items)
+    audit.save()
+
+
+@login_required
+def start_audit(request, audit_id):
+    """Start an audit by changing its status to in_progress"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_access_control'):
+        messages.error(request, 'You do not have permission to start audits.')
+        return redirect('/')
+    
+    audit = get_object_or_404(StockAudit, pk=audit_id)
+    
+    if audit.status != 'planned':
+        messages.error(request, f'Cannot start audit. Current status: {audit.get_status_display()}')
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    # Start the audit
+    from django.utils import timezone
+    audit.status = 'in_progress'
+    audit.actual_start_date = timezone.now()
+    audit.save()
+    
+    messages.success(request, f'Audit "{audit.title}" has been started.')
+    return redirect('audit_detail', audit_id=audit.pk)
+
+
+@login_required
+def count_items(request, audit_id):
+    """Bulk counting form for audit items"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to count items.')
+        return redirect('/')
+    
+    audit = get_object_or_404(StockAudit, pk=audit_id)
+    
+    if audit.status != 'in_progress':
+        messages.error(request, 'Audit must be in progress to count items.')
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    if request.method == 'POST':
+        form = AuditItemBulkCountForm(request.POST, audit=audit)
+        if form.is_valid():
+            updated_items = form.save(audit, request.user)
+            
+            # Update audit statistics
+            audit.update_statistics()
+            
+            messages.success(request, f'Updated counts for {len(updated_items)} items.')
+            return redirect('audit_detail', audit_id=audit.pk)
+    else:
+        form = AuditItemBulkCountForm(audit=audit)
+    
+    context = {
+        'title': f'Count Items: {audit.audit_reference}',
+        'audit': audit,
+        'form': form,
+        'uncounted_items': audit.audit_items.filter(physical_count__isnull=True).count(),
+    }
+    return render(request, 'stock/count_items.html', context)
+
+
+@login_required
+def count_single_item(request, audit_id, item_id):
+    """Count a single audit item"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to count items.')
+        return redirect('/')
+    
+    audit = get_object_or_404(StockAudit, pk=audit_id)
+    audit_item = get_object_or_404(StockAuditItem, pk=item_id, audit=audit)
+    
+    if audit.status != 'in_progress':
+        messages.error(request, 'Audit must be in progress to count items.')
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    if request.method == 'POST':
+        form = StockAuditItemForm(request.POST, instance=audit_item)
+        if form.is_valid():
+            audit_item = form.save(commit=False)
+            audit_item.counted_by = request.user
+            from django.utils import timezone
+            audit_item.count_date = timezone.now()
+            audit_item.save()
+            
+            # Update audit statistics
+            audit.update_statistics()
+            
+            messages.success(request, f'Updated count for {audit_item.stock.item_name}.')
+            return redirect('audit_detail', audit_id=audit.pk)
+    else:
+        form = StockAuditItemForm(instance=audit_item)
+    
+    context = {
+        'title': f'Count Item: {audit_item.stock.item_name}',
+        'audit': audit,
+        'audit_item': audit_item,
+        'form': form,
+    }
+    return render(request, 'stock/count_single_item.html', context)
+
+
+@login_required
+def complete_audit(request, audit_id):
+    """Complete an audit"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_access_control'):
+        messages.error(request, 'You do not have permission to complete audits.')
+        return redirect('/')
+    
+    audit = get_object_or_404(StockAudit, pk=audit_id)
+    
+    if audit.status != 'in_progress':
+        messages.error(request, 'Only in-progress audits can be completed.')
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    # Check if all items have been counted
+    uncounted_items = audit.audit_items.filter(physical_count__isnull=True).count()
+    if uncounted_items > 0:
+        messages.warning(
+            request, 
+            f'Audit has {uncounted_items} uncounted items. Complete all counts before finishing the audit.'
+        )
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    # Complete the audit
+    from django.utils import timezone
+    audit.status = 'completed'
+    audit.actual_end_date = timezone.now()
+    audit.update_statistics()
+    audit.save()
+    
+    messages.success(request, f'Audit "{audit.title}" has been completed.')
+    return redirect('audit_detail', audit_id=audit.pk)
+
+
+@login_required
+def approve_audit(request, audit_id):
+    """Approve a completed audit and apply adjustments"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_access_control'):
+        messages.error(request, 'You do not have permission to approve audits.')
+        return redirect('/')
+    
+    audit = get_object_or_404(StockAudit, pk=audit_id)
+    
+    if audit.status != 'completed':
+        messages.error(request, 'Only completed audits can be approved.')
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    if request.method == 'POST':
+        # Apply stock adjustments for items with variances
+        variance_items = audit.audit_items.exclude(variance_quantity=0)
+        adjustments_applied = 0
+        
+        for item in variance_items:
+            if not item.adjustment_applied:
+                # Apply the adjustment to actual stock
+                stock = item.stock
+                stock.quantity = item.physical_count
+                stock.save()
+                
+                # Mark adjustment as applied
+                from django.utils import timezone
+                item.adjustment_applied = True
+                item.adjustment_date = timezone.now()
+                item.save()
+                
+                adjustments_applied += 1
+        
+        # Approve the audit
+        audit.status = 'approved'
+        audit.approved_by = request.user
+        audit.save()
+        
+        messages.success(
+            request, 
+            f'Audit approved. Applied {adjustments_applied} stock adjustments.'
+        )
+        return redirect('audit_detail', audit_id=audit.pk)
+    
+    # Show confirmation page
+    variance_items = audit.audit_items.exclude(variance_quantity=0)
+    context = {
+        'title': f'Approve Audit: {audit.audit_reference}',
+        'audit': audit,
+        'variance_items': variance_items,
+    }
+    return render(request, 'stock/approve_audit.html', context)
