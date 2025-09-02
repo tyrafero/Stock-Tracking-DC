@@ -1,0 +1,161 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Stock Reservations</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Manage temporary stock reservations</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-more-v"></em></a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        {% if user_permissions.can_manage_access_control %}
+                                        <li class="nk-block-tools-opt">
+                                            <a href="{% url 'expire_reservations' %}" class="btn btn-outline-warning">
+                                                <em class="icon ni ni-clock"></em><span>Expire Overdue</span>
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <form method="get" class="form-inline">
+                                <div class="form-group mr-3">
+                                    <label for="status" class="mr-2">Status:</label>
+                                    <select name="status" id="status" class="form-control" onchange="this.form.submit()">
+                                        <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                        <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
+                                        <option value="fulfilled" {% if status_filter == 'fulfilled' %}selected{% endif %}>Fulfilled</option>
+                                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                        <option value="all" {% if status_filter == 'all' %}selected{% endif %}>All</option>
+                                    </select>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reservations Table -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            {% if reservations %}
+                            <div class="nk-tb-list nk-tb-ulist">
+                                <div class="nk-tb-item nk-tb-head">
+                                    <div class="nk-tb-col"><span class="sub-text">Stock Item</span></div>
+                                    <div class="nk-tb-col tb-col-mb"><span class="sub-text">Customer</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Quantity</span></div>
+                                    <div class="nk-tb-col tb-col-lg"><span class="sub-text">Type</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Status</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Expires</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Reserved By</span></div>
+                                    <div class="nk-tb-col nk-tb-col-tools text-end">Actions</div>
+                                </div>
+                                {% for reservation in reservations %}
+                                <div class="nk-tb-item">
+                                    <div class="nk-tb-col">
+                                        <div class="user-card">
+                                            <div class="user-info">
+                                                <span class="tb-lead">{{ reservation.stock.item_name }}</span>
+                                                <span class="tb-sub">{{ reservation.stock.category.group|default:"N/A" }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-mb">
+                                        <span class="tb-amount">{{ reservation.customer_name|default:"No Customer" }}</span>
+                                        {% if reservation.reference_number %}
+                                        <span class="tb-sub">Ref: {{ reservation.reference_number }}</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-amount">{{ reservation.quantity }} units</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-lg">
+                                        <span class="tb-status">{{ reservation.get_reservation_type_display }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="badge badge-sm badge-dot has-bg badge-{% if reservation.status == 'active' %}success{% elif reservation.status == 'expired' %}warning{% elif reservation.status == 'fulfilled' %}info{% else %}secondary{% endif %} d-sm-inline-flex">
+                                            {{ reservation.get_status_display }}
+                                        </span>
+                                        {% if reservation.status == 'active' and reservation.days_until_expiry <= 1 %}
+                                        <span class="tb-sub text-danger">Expires soon!</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ reservation.expires_at|date:"M d, Y H:i" }}</span>
+                                        {% if reservation.status == 'active' %}
+                                        <span class="tb-sub">{{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ reservation.reserved_by.username }}</span>
+                                        <span class="tb-sub">{{ reservation.reserved_at|date:"M d, Y" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1">
+                                            <li>
+                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="View Details">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                            </li>
+                                            {% if reservation.status == 'active' %}
+                                            <li>
+                                                <a href="{% url 'update_reservation' reservation.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Update">
+                                                    <em class="icon ni ni-edit"></em>
+                                                </a>
+                                            </li>
+                                            {% if user_permissions.can_commit_stock %}
+                                            <li>
+                                                <a href="{% url 'fulfill_reservation' reservation.pk %}" class="btn btn-trigger btn-icon btn-success" data-bs-toggle="tooltip" title="Fulfill">
+                                                    <em class="icon ni ni-check"></em>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            <li>
+                                                <a href="{% url 'cancel_reservation' reservation.pk %}" class="btn btn-trigger btn-icon btn-danger" data-bs-toggle="tooltip" title="Cancel">
+                                                    <em class="icon ni ni-cross"></em>
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div class="text-center py-4">
+                                <div class="user-avatar lg bg-light">
+                                    <em class="icon ni ni-package"></em>
+                                </div>
+                                <h5 class="mt-3">No Reservations Found</h5>
+                                <p class="text-soft">No stock reservations match the current filter criteria.</p>
+                                <a href="{% url 'view_stock' %}" class="btn btn-primary">View Stock</a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

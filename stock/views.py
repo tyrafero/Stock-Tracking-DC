@@ -189,6 +189,13 @@ def sales_dashboard(request):
     # Customer commitments
     active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock').order_by('-committed_at')
     
+    # Active reservations (relevant for sales)
+    from django.utils import timezone
+    active_reservations = StockReservation.objects.filter(
+        status='active', 
+        expires_at__gt=timezone.now()
+    ).select_related('stock', 'reserved_by').order_by('-reserved_at')
+    
     # Awaiting collection (relevant for sales)
     awaiting_collection = StockTransfer.objects.filter(
         status='awaiting_collection', 
@@ -200,15 +207,18 @@ def sales_dashboard(request):
     
     # Sales metrics
     total_committed = CommittedStock.objects.filter(is_fulfilled=False).count()
+    total_reserved = active_reservations.count()
     total_available = available_stock.count()
     
     context = {
         'dashboard_type': 'sales',
         'available_stock': available_stock[:20],  # Limit for performance
         'active_commitments': active_commitments[:10],
+        'active_reservations': active_reservations[:10],
         'awaiting_collection': awaiting_collection,
         'recent_issues': recent_issues,
         'total_committed': total_committed,
+        'total_reserved': total_reserved,
         'total_available': total_available,
     }
     return render(request, 'stock/dashboards/sales_dashboard.html', context)
@@ -2196,3 +2206,226 @@ def receive_po_items(request):
         'stores': Store.objects.all(),
     }
     return render(request, 'stock/receive_po_items.html', context)
+
+
+# ===================================
+# STOCK RESERVATION VIEWS
+# ===================================
+
+@login_required
+def reserve_stock(request, pk):
+    """Create a new stock reservation"""
+    stock = get_object_or_404(Stock, pk=pk)
+    
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('/')
+    
+    if request.method == 'POST':
+        form = StockReservationForm(stock=stock, data=request.POST)
+        if form.is_valid():
+            reservation = form.save(reserved_by=request.user)
+            messages.success(
+                request, 
+                f'Successfully reserved {reservation.quantity} units of {stock.item_name} '
+                f'until {reservation.expires_at.strftime("%Y-%m-%d %H:%M")}'
+            )
+            return redirect('stock_detail', pk=stock.pk)
+    else:
+        form = StockReservationForm(stock=stock)
+    
+    context = {
+        'title': f'Reserve Stock: {stock.item_name}',
+        'stock': stock,
+        'form': form,
+    }
+    return render(request, 'stock/reserve_stock.html', context)
+
+
+@login_required
+def reservation_list(request):
+    """List all stock reservations with filtering"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('/')
+    
+    # Filter reservations based on status
+    status_filter = request.GET.get('status', 'active')
+    reservations = StockReservation.objects.select_related('stock', 'reserved_by').order_by('-reserved_at')
+    
+    if status_filter and status_filter != 'all':
+        reservations = reservations.filter(status=status_filter)
+    
+    # Handle expired reservations
+    from django.utils import timezone
+    expired_reservations = reservations.filter(status='active', expires_at__lt=timezone.now())
+    for reservation in expired_reservations:
+        reservation.expire()
+    
+    context = {
+        'title': 'Stock Reservations',
+        'reservations': reservations[:50],  # Limit for performance
+        'status_filter': status_filter,
+    }
+    return render(request, 'stock/reservation_list.html', context)
+
+
+@login_required
+def reservation_detail(request, pk):
+    """View details of a specific reservation"""
+    reservation = get_object_or_404(StockReservation, pk=pk)
+    
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('/')
+    
+    context = {
+        'title': f'Reservation: {reservation.stock.item_name}',
+        'reservation': reservation,
+    }
+    return render(request, 'stock/reservation_detail.html', context)
+
+
+@login_required
+def update_reservation(request, pk):
+    """Update an existing stock reservation"""
+    reservation = get_object_or_404(StockReservation, pk=pk)
+    
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('/')
+    
+    # Check if reservation can be updated
+    if reservation.status not in ['active', 'expired']:
+        messages.error(request, 'This reservation cannot be updated.')
+        return redirect('reservation_detail', pk=pk)
+    
+    if request.method == 'POST':
+        form = StockReservationUpdateForm(instance=reservation, data=request.POST)
+        if form.is_valid():
+            reservation = form.save()
+            messages.success(request, 'Reservation updated successfully.')
+            return redirect('reservation_detail', pk=pk)
+    else:
+        form = StockReservationUpdateForm(instance=reservation)
+    
+    context = {
+        'title': f'Update Reservation: {reservation.stock.item_name}',
+        'reservation': reservation,
+        'form': form,
+    }
+    return render(request, 'stock/update_reservation.html', context)
+
+
+@login_required
+def cancel_reservation(request, pk):
+    """Cancel a stock reservation"""
+    reservation = get_object_or_404(StockReservation, pk=pk)
+    
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_stock'):
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('/')
+    
+    if not reservation.can_be_cancelled():
+        messages.error(request, 'This reservation cannot be cancelled.')
+        return redirect('reservation_detail', pk=pk)
+    
+    if request.method == 'POST':
+        if reservation.cancel(request.user):
+            messages.success(request, 'Reservation cancelled successfully.')
+        else:
+            messages.error(request, 'Failed to cancel reservation.')
+        return redirect('reservation_list')
+    
+    context = {
+        'title': f'Cancel Reservation: {reservation.stock.item_name}',
+        'reservation': reservation,
+    }
+    return render(request, 'stock/cancel_reservation.html', context)
+
+
+@login_required
+def fulfill_reservation(request, pk):
+    """Convert reservation to commitment or complete sale"""
+    reservation = get_object_or_404(StockReservation, pk=pk)
+    
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_commit_stock'):
+        messages.error(request, 'You do not have permission to fulfill reservations.')
+        return redirect('/')
+    
+    if not reservation.can_be_fulfilled():
+        messages.error(request, 'This reservation cannot be fulfilled.')
+        return redirect('reservation_detail', pk=pk)
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'commit':
+            # Convert to commitment (redirect to commit stock page)
+            reservation.fulfill(request.user)
+            messages.success(request, 'Reservation fulfilled. Please create customer commitment.')
+            return redirect('commit_stock', pk=reservation.stock.pk)
+        
+        elif action == 'complete':
+            # Complete as sale (fulfill and issue stock)
+            if reservation.fulfill(request.user):
+                # Issue the stock
+                stock = reservation.stock
+                if stock.quantity >= reservation.quantity:
+                    stock.issue_quantity = (stock.issue_quantity or 0) + reservation.quantity
+                    stock.quantity -= reservation.quantity
+                    stock.issued_by = request.user.username
+                    stock.save()
+                    
+                    messages.success(
+                        request, 
+                        f'Reservation fulfilled and {reservation.quantity} units issued to {reservation.customer_name or "customer"}.'
+                    )
+                else:
+                    messages.error(request, 'Insufficient stock to complete the sale.')
+            else:
+                messages.error(request, 'Failed to fulfill reservation.')
+        
+        return redirect('reservation_list')
+    
+    context = {
+        'title': f'Fulfill Reservation: {reservation.stock.item_name}',
+        'reservation': reservation,
+    }
+    return render(request, 'stock/fulfill_reservation.html', context)
+
+
+@login_required
+def expire_reservations(request):
+    """Manually expire all overdue reservations (admin function)"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_access_control'):
+        messages.error(request, 'You do not have permission to perform this action.')
+        return redirect('/')
+    
+    from django.utils import timezone
+    expired_count = 0
+    
+    # Find and expire overdue reservations
+    overdue_reservations = StockReservation.objects.filter(
+        status='active',
+        expires_at__lt=timezone.now()
+    )
+    
+    for reservation in overdue_reservations:
+        if reservation.expire():
+            expired_count += 1
+    
+    if expired_count > 0:
+        messages.success(request, f'Expired {expired_count} overdue reservations.')
+    else:
+        messages.info(request, 'No overdue reservations found.')
+    
+    return redirect('reservation_list')

@@ -5,6 +5,8 @@ from .models import *
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Field, HTML, Submit, Row, Column
 from registration.forms import RegistrationForm
+from django.utils import timezone
+from datetime import timedelta
 
 
 class StockCreateForm(forms.ModelForm):
@@ -940,3 +942,152 @@ class ReceiveItemForm(forms.Form):
             HTML('<h5>Items to Receive</h5>'),
             Submit('receive_items', 'Receive Selected Items', css_class='btn btn-success')
         )
+
+
+class StockReservationForm(forms.ModelForm):
+    """Form for creating stock reservations"""
+    
+    duration_days = forms.IntegerField(
+        initial=7,
+        min_value=1,
+        max_value=90,
+        help_text="Number of days to hold this reservation",
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = StockReservation
+        fields = [
+            'quantity', 'reservation_type', 'customer_name', 
+            'customer_phone', 'customer_email', 'reference_number',
+            'reason', 'notes'
+        ]
+        widgets = {
+            'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
+            'reservation_type': forms.Select(attrs={'class': 'form-control'}),
+            'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer name (optional)'}),
+            'customer_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Phone number (optional)'}),
+            'customer_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email address (optional)'}),
+            'reference_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Quote #, Order #, etc. (optional)'}),
+            'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Reason for reservation'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Additional notes (optional)'}),
+        }
+    
+    def __init__(self, stock=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.stock = stock
+        
+        if stock:
+            # Set max quantity based on available stock
+            available = stock.available_for_sale
+            self.fields['quantity'].widget.attrs['max'] = available
+            self.fields['quantity'].help_text = f"Maximum available: {available} units"
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('quantity', css_class='form-group col-md-4 mb-0'),
+                Column('reservation_type', css_class='form-group col-md-4 mb-0'),
+                Column('duration_days', css_class='form-group col-md-4 mb-0'),
+                css_class='form-row'
+            ),
+            Row(
+                Column('customer_name', css_class='form-group col-md-6 mb-0'),
+                Column('customer_phone', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            Row(
+                Column('customer_email', css_class='form-group col-md-6 mb-0'),
+                Column('reference_number', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            'reason',
+            'notes',
+            Submit('create_reservation', 'Create Reservation', css_class='btn btn-warning')
+        )
+    
+    def clean_quantity(self):
+        quantity = self.cleaned_data.get('quantity')
+        if self.stock and quantity:
+            available = self.stock.available_for_sale
+            if quantity > available:
+                raise forms.ValidationError(f'Only {available} units available for reservation.')
+        return quantity
+    
+    def save(self, commit=True, reserved_by=None):
+        reservation = super().save(commit=False)
+        if reserved_by:
+            reservation.reserved_by = reserved_by
+        if self.stock:
+            reservation.stock = self.stock
+        
+        # Calculate expiry date
+        duration = self.cleaned_data.get('duration_days', 7)
+        reservation.expires_at = timezone.now() + timedelta(days=duration)
+        
+        if commit:
+            reservation.save()
+        return reservation
+
+
+class StockReservationUpdateForm(forms.ModelForm):
+    """Form for updating existing stock reservations"""
+    
+    extend_days = forms.IntegerField(
+        initial=0,
+        min_value=0,
+        max_value=30,
+        required=False,
+        help_text="Extend reservation by additional days",
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+    
+    class Meta:
+        model = StockReservation
+        fields = [
+            'customer_name', 'customer_phone', 'customer_email', 
+            'reference_number', 'reason', 'notes'
+        ]
+        widgets = {
+            'customer_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'customer_phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'customer_email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'reference_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'reason': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('customer_name', css_class='form-group col-md-6 mb-0'),
+                Column('customer_phone', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            Row(
+                Column('customer_email', css_class='form-group col-md-6 mb-0'),
+                Column('reference_number', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            'reason',
+            'notes',
+            'extend_days',
+            Submit('update_reservation', 'Update Reservation', css_class='btn btn-primary')
+        )
+    
+    def save(self, commit=True):
+        reservation = super().save(commit=False)
+        
+        # Extend expiry if requested
+        extend_days = self.cleaned_data.get('extend_days', 0)
+        if extend_days > 0:
+            reservation.expires_at = reservation.expires_at + timedelta(days=extend_days)
+        
+        if commit:
+            reservation.save()
+        return reservation

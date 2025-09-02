@@ -180,9 +180,18 @@ class Stock(models.Model):
         return self.committed_quantity or 0
     
     @property
+    def reserved_quantity(self):
+        """Total reserved stock (active reservations)"""
+        from django.utils import timezone
+        return self.reservations.filter(
+            status='active',
+            expires_at__gt=timezone.now()
+        ).aggregate(total=models.Sum('quantity'))['total'] or 0
+    
+    @property
     def available_for_sale(self):
-        """Available stock for sale (total - committed)"""
-        return self.total_stock - self.committed_stock
+        """Available stock for sale (total - committed - reserved)"""
+        return self.total_stock - self.committed_stock - self.reserved_quantity
     
     @property
     def is_low_stock(self):
@@ -273,6 +282,117 @@ class CommittedStock(models.Model):
             total=models.Sum('quantity')
         )['total'] or 0
         self.stock.save(update_fields=['committed_quantity'])
+
+
+class StockReservation(models.Model):
+    """Track temporary stock reservations without deposits"""
+    RESERVATION_TYPE_CHOICES = [
+        ('quote', 'Quote/Estimate'),
+        ('hold', 'Customer Hold'),
+        ('inspection', 'Customer Inspection'),
+        ('transfer_prep', 'Transfer Preparation'),
+        ('maintenance', 'Maintenance/Repair'),
+        ('other', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('expired', 'Expired'),
+        ('fulfilled', 'Fulfilled'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    stock = models.ForeignKey(Stock, on_delete=models.CASCADE, related_name='reservations')
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
+    reservation_type = models.CharField(max_length=20, choices=RESERVATION_TYPE_CHOICES, default='hold')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    # Customer/Contact info (optional)
+    customer_name = models.CharField(max_length=100, blank=True, null=True)
+    customer_phone = models.CharField(max_length=50, blank=True, null=True)
+    customer_email = models.EmailField(blank=True, null=True)
+    reference_number = models.CharField(max_length=100, blank=True, null=True, help_text="Quote number, order reference, etc.")
+    
+    # Reservation details
+    reason = models.TextField(help_text="Reason for reservation")
+    notes = models.TextField(blank=True, null=True)
+    
+    # Timing
+    reserved_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_reservations')
+    reserved_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(help_text="When this reservation expires")
+    fulfilled_at = models.DateTimeField(blank=True, null=True)
+    cancelled_at = models.DateTimeField(blank=True, null=True)
+    
+    # Tracking
+    fulfilled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='fulfilled_reservations')
+    cancelled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='cancelled_reservations')
+    
+    class Meta:
+        ordering = ['-reserved_at']
+        verbose_name = 'Stock Reservation'
+        verbose_name_plural = 'Stock Reservations'
+    
+    def __str__(self):
+        return f"{self.stock.item_name} - {self.quantity}pcs ({self.get_status_display()}) - {self.customer_name or 'No Customer'}"
+    
+    def is_active(self):
+        """Check if reservation is currently active"""
+        from django.utils import timezone
+        return self.status == 'active' and self.expires_at > timezone.now()
+    
+    def is_expired(self):
+        """Check if reservation has expired"""
+        from django.utils import timezone
+        return self.expires_at <= timezone.now() and self.status == 'active'
+    
+    def can_be_fulfilled(self):
+        """Check if reservation can be converted to commitment/sale"""
+        return self.status == 'active'
+    
+    def can_be_cancelled(self):
+        """Check if reservation can be cancelled"""
+        return self.status in ['active', 'expired']
+    
+    def expire(self):
+        """Mark reservation as expired"""
+        if self.status == 'active':
+            from django.utils import timezone
+            self.status = 'expired'
+            self.save()
+            return True
+        return False
+    
+    def fulfill(self, user):
+        """Mark reservation as fulfilled"""
+        if self.can_be_fulfilled():
+            from django.utils import timezone
+            self.status = 'fulfilled'
+            self.fulfilled_at = timezone.now()
+            self.fulfilled_by = user
+            self.save()
+            return True
+        return False
+    
+    def cancel(self, user):
+        """Cancel the reservation"""
+        if self.can_be_cancelled():
+            from django.utils import timezone
+            self.status = 'cancelled'
+            self.cancelled_at = timezone.now()
+            self.cancelled_by = user
+            self.save()
+            return True
+        return False
+    
+    @property
+    def days_until_expiry(self):
+        """Get days until expiry"""
+        from django.utils import timezone
+        if self.status != 'active':
+            return 0
+        delta = self.expires_at - timezone.now()
+        return max(0, delta.days)
 
 class StockLocation(models.Model):
     """Track stock quantities at different locations for the same item"""

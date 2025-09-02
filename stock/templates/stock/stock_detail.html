@@ -20,6 +20,7 @@
                             <a href="{% url 'issue_item' detail.id %}"><div class='btn btn-primary'>ISSUE THIS ITEM</div></a>
                             <a href="{% url 'receive_item' detail.id %}"><div class='btn btn-success'>RECEIVE THIS ITEM</div></a>
                             <a href="{% url 'commit_stock' detail.id %}"><div class='btn btn-warning'>COMMIT THIS ITEM</div></a>
+                            <a href="{% url 'reserve_stock' detail.id %}"><div class='btn btn-info'>RESERVE THIS ITEM</div></a>
                             <a href="{% url 'transfer_stock' detail.id %}"><div class='btn btn-secondary'>TRANSFER THIS ITEM</div></a>
                         </div>
 
@@ -49,6 +50,14 @@
                                             <label class="form-label">Committed</label>
                                             <div class="form-control-wrap">
                                                 <div class="form-control text-warning"><strong>{{ detail.committed_stock }}</strong></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Reserved</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control text-info"><strong>{{ detail.reserved_quantity }}</strong></div>
                                             </div>
                                         </div>
                                     </div>

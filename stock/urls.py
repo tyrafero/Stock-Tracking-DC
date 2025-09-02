@@ -84,6 +84,15 @@ urlpatterns = [
     
     # Receive PO Items URL
     path('receive-po-items/', views.receive_po_items, name='receive_po_items'),
+    
+    # Stock Reservation URLs
+    path('stock/<str:pk>/reserve/', views.reserve_stock, name='reserve_stock'),
+    path('reservations/', views.reservation_list, name='reservation_list'),
+    path('reservations/<int:pk>/', views.reservation_detail, name='reservation_detail'),
+    path('reservations/<int:pk>/update/', views.update_reservation, name='update_reservation'),
+    path('reservations/<int:pk>/cancel/', views.cancel_reservation, name='cancel_reservation'),
+    path('reservations/<int:pk>/fulfill/', views.fulfill_reservation, name='fulfill_reservation'),
+    path('reservations/expire/', views.expire_reservations, name='expire_reservations'),
 
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from .models import (
     Stock, Category, Country, State, City, Person, Contacts, Product, 
     PurchaseOrder, PurchaseOrderItem, Manufacturer, DeliveryPerson, Store, 
-    PurchaseOrderHistory, CommittedStock, StockTransfer, StockLocation, UserRole
+    PurchaseOrderHistory, CommittedStock, StockTransfer, StockLocation, UserRole,
+    StockReservation
 )
 from .form import StockCreateForm  # Make sure this is the correct import path
 
@@ -118,3 +119,14 @@ class UserRoleAdmin(admin.ModelAdmin):
     list_display = ('user', 'role', 'created_at')
     list_filter = ('role',)
     search_fields = ('user__username',)
+
+# StockReservation Admin
+@admin.register(StockReservation)
+class StockReservationAdmin(admin.ModelAdmin):
+    list_display = ('stock', 'quantity', 'customer_name', 'reservation_type', 'status', 'expires_at', 'reserved_by', 'reserved_at')
+    list_filter = ('status', 'reservation_type', 'expires_at', 'reserved_at')
+    search_fields = ('stock__item_name', 'customer_name', 'reference_number')
+    readonly_fields = ('reserved_at', 'fulfilled_at', 'cancelled_at')
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('stock', 'reserved_by', 'fulfilled_by', 'cancelled_by')

@@ -63,7 +63,25 @@
                             </div>
                         </div>
 
-                        <div class="col-xxl-4 col-sm-6">
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Stock Reservations</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-info">{{total_reserved}}</div>
+                                            <div class="info text-soft">Items reserved</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
                             <div class="card">
                                 <div class="nk-ecwg nk-ecwg6">
                                     <div class="card-inner">
@@ -73,7 +91,7 @@
                                             </div>
                                         </div>
                                         <div class="data">
-                                            <div class="amount text-info">{{awaiting_collection.count}}</div>
+                                            <div class="amount text-primary">{{awaiting_collection.count}}</div>
                                             <div class="info text-soft">Customer pickups</div>
                                         </div>
                                     </div>
@@ -174,6 +192,63 @@
                 </div>
                 {% endif %}
 
+                <!-- Active Reservations -->
+                {% if active_reservations %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Active Stock Reservations</h5>
+                                <p class="nk-block-des">Temporary holds on stock items</p>
+                            </div>
+                            <div class="nk-block-head-content">
+                                <a href="{% url 'reservation_list' %}" class="btn btn-outline-primary">View All Reservations</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        {% for reservation in active_reservations %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title">{{ reservation.stock.item_name }}</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <span class="badge badge-sm badge-dot has-bg badge-info d-sm-inline-flex">
+                                                {{ reservation.get_reservation_type_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        <p><strong>Customer:</strong> {{ reservation.customer_name|default:"No Customer" }}</p>
+                                        <p><strong>Quantity:</strong> {{ reservation.quantity }} units</p>
+                                        {% if reservation.reference_number %}
+                                        <p><strong>Reference:</strong> {{ reservation.reference_number }}</p>
+                                        {% endif %}
+                                        <p><strong>Expires:</strong> {{ reservation.expires_at|date:"M d, Y H:i" }}</p>
+                                        <p><strong>Days Left:</strong> 
+                                            <span class="{% if reservation.days_until_expiry <= 1 %}text-danger{% endif %}">
+                                                {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="card-tools">
+                                        <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-sm btn-primary">View Details</a>
+                                        {% if user_permissions.can_commit_stock %}
+                                        <a href="{% url 'fulfill_reservation' reservation.pk %}" class="btn btn-sm btn-success">Fulfill</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- Available Stock Overview -->
                 <div class="nk-block">
                     <div class="nk-block-head nk-block-head-sm">
@@ -230,7 +305,12 @@
                                                 </a>
                                             </li>
                                             <li>
-                                                <a href="{% url 'commit_stock' stock.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Reserve for Customer">
+                                                <a href="{% url 'reserve_stock' stock.pk %}" class="btn btn-trigger btn-icon btn-info" data-bs-toggle="tooltip" title="Reserve Stock">
+                                                    <em class="icon ni ni-clock"></em>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{% url 'commit_stock' stock.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Commit for Customer">
                                                     <em class="icon ni ni-user-add"></em>
                                                 </a>
                                             </li>
