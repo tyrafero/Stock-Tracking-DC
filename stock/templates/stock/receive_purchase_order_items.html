@@ -200,7 +200,10 @@
         <div class="col-md-8">
             <h3 class="mb-2">📦 Receive Items</h3>
             <p class="mb-1 opacity-75">{{ purchase_order.reference_number }} - {{ purchase_order.manufacturer.company_name }}</p>
-            <p class="mb-0 opacity-75">Status: {{ purchase_order.get_status_display }}</p>
+            <p class="mb-1 opacity-75">Status: {{ purchase_order.get_status_display }}</p>
+            {% if purchase_order.store %}
+            <p class="mb-0 opacity-75">🏪 Delivery Location: <strong>{{ purchase_order.store.name }}</strong></p>
+            {% endif %}
         </div>
         <div class="col-md-4">
             <div class="receiving-stats">
@@ -249,12 +252,18 @@
                         <div class="col-md-4">
                             <label class="form-label">Inventory Management</label>
                             <div class="custom-control custom-checkbox">
-                                <input type="checkbox" class="custom-control-input" id="create_stock" name="create_stock" value="1">
+                                <input type="checkbox" class="custom-control-input" id="create_stock" name="create_stock" value="1" checked>
                                 <label class="custom-control-label" for="create_stock">
-                                    Automatically add to Stock Inventory
+                                    Add to Stock Inventory
                                 </label>
                             </div>
-                            <small class="form-text text-muted">Creates stock entries for immediate use</small>
+                            <small class="form-text text-muted">
+                                {% if purchase_order.store %}
+                                    Creates stock at <strong>{{ purchase_order.store.name }}</strong>
+                                {% else %}
+                                    Creates stock entries for immediate use
+                                {% endif %}
+                            </small>
                         </div>
                     </div>
                     

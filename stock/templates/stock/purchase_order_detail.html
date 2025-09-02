@@ -303,8 +303,12 @@ Receive Items
 <div class="col-md-6">
 <p><strong>Delivery Type:</strong> {{ purchase_order.get_delivery_type_display }}</p>
 {% if purchase_order.store %}
-<p><strong>Store:</strong> {{ purchase_order.store.name }}</p>
-<p><strong>Location:</strong> {{ purchase_order.store.location }}</p>
+<p><strong>🏪 Delivery Location:</strong> <span class="badge badge-primary">{{ purchase_order.store.name }}</span></p>
+<p><strong>Address:</strong> {{ purchase_order.store.location }}</p>
+<small class="text-muted">Items will be automatically added to this location's inventory when received</small>
+{% else %}
+<p class="text-warning"><strong>⚠️ No delivery location specified</strong></p>
+<small class="text-muted">Please set a delivery location before receiving items</small>
 {% endif %}
 </div>
 </div>

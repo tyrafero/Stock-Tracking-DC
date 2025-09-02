@@ -348,7 +348,11 @@ class PurchaseOrderForm(forms.ModelForm):
                 css_class='card card-inner mb-4'
             ),
         )
-        self.fields['store'].required = False
+        # Make delivery location required and rename label
+        self.fields['store'].required = True
+        self.fields['store'].label = 'Delivery Location'
+        self.fields['store'].help_text = 'Where items will be delivered and added to inventory'
+        self.fields['store'].queryset = Store.objects.filter(is_active=True)
 
 
 class PurchaseOrderItemForm(forms.ModelForm):

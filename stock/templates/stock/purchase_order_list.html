@@ -75,6 +75,11 @@
                                         </div>
                                         <div class="nk-tb-col tb-col-mb">
                                             <span class="tb-amount">{{ purchase_order.manufacturer.company_name }}</span>
+                                            {% if purchase_order.store %}
+                                            <span class="tb-sub">🏪 {{ purchase_order.store.name }}</span>
+                                            {% else %}
+                                            <span class="tb-sub text-warning">⚠️ No delivery location</span>
+                                            {% endif %}
                                         </div>
                                         <div class="nk-tb-col tb-col-md">
                                             <span class="badge badge-sm 

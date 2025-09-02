@@ -914,7 +914,14 @@ class PurchaseOrder(models.Model):
     manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE)
     delivery_person = models.ForeignKey(DeliveryPerson, on_delete=models.CASCADE)
     delivery_type = models.CharField(max_length=20, choices=DELIVERY_CHOICES, default='store')
-    store = models.ForeignKey(Store, on_delete=models.SET_NULL, null=True, blank=True)
+    store = models.ForeignKey(
+        Store, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=False,
+        help_text='Delivery location where items will be received and added to inventory',
+        verbose_name='Delivery Location'
+    )
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)

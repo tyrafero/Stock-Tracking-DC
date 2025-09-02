@@ -1583,36 +1583,57 @@ def receive_purchase_order_items(request, pk=None):
                         # Also create/update stock entries if "create_stock" option is selected
                         create_stock = request.POST.get('create_stock', False)
                         if create_stock:
-                            # Use default store or allow specification per item
-                            default_store = Store.objects.filter(is_active=True).first()
-                            if default_store:
-                                # Check if stock item already exists
+                            # Use PO's designated delivery location
+                            delivery_location = purchase_order.store
+                            if not delivery_location:
+                                # Fallback to first active store if no delivery location set
+                                delivery_location = Store.objects.filter(is_active=True).first()
+                            
+                            if delivery_location:
+                                # Check if stock item already exists at delivery location
                                 existing_stock = Stock.objects.filter(
                                     item_name=item.product,
                                     condition='new',  # Default to new condition
-                                    location=default_store
+                                    location=delivery_location
                                 ).first()
                                 
                                 if existing_stock:
                                     # Add to existing stock
                                     existing_stock.quantity += item_data['quantity']
-                                    existing_stock.note = f"Received from PO - {purchase_order.reference_number}"
+                                    existing_stock.note = f"Received from PO - {purchase_order.reference_number} at {delivery_location.name}"
                                     existing_stock.save()
+                                    
+                                    # Update or create StockLocation record
+                                    stock_location, created = StockLocation.objects.get_or_create(
+                                        stock=existing_stock,
+                                        store=delivery_location,
+                                        defaults={'quantity': 0}
+                                    )
+                                    stock_location.quantity += item_data['quantity']
+                                    stock_location.save()
+                                    
                                 else:
-                                    # Create new stock entry
+                                    # Create new stock entry at delivery location
                                     category, _ = Category.objects.get_or_create(
                                         group='PO Items',
                                         defaults={'group': 'PO Items'}
                                     )
                                     
-                                    Stock.objects.create(
+                                    new_stock = Stock.objects.create(
                                         category=category,
                                         item_name=item.product,
                                         quantity=item_data['quantity'],
-                                        location=default_store,
+                                        location=delivery_location,
                                         condition='new',
-                                        note=f"Received from PO - {purchase_order.reference_number}",
+                                        note=f"Received from PO - {purchase_order.reference_number} at {delivery_location.name}",
                                         created_by=request.user.username
+                                    )
+                                    
+                                    # Create StockLocation record
+                                    StockLocation.objects.create(
+                                        stock=new_stock,
+                                        store=delivery_location,
+                                        quantity=item_data['quantity']
                                     )
                     
                     # Create history entry
@@ -1627,10 +1648,12 @@ def receive_purchase_order_items(request, pk=None):
                         created_by=request.user
                     )
                     
-                    messages.success(
-                        request, 
-                        f'Successfully received {total_items} items across {len(created_records)} products!'
-                    )
+                    # Enhanced success message
+                    success_message = f'Successfully received {total_items} items across {len(created_records)} products!'
+                    if request.POST.get('create_stock', False) and purchase_order.store:
+                        success_message += f' Stock has been added to {purchase_order.store.name} inventory.'
+                    
+                    messages.success(request, success_message)
                     return redirect('receive_purchase_order_items', pk=pk)
                     
             except Exception as e:
