@@ -174,6 +174,47 @@
                             </div>
                         </div>
                         {% endif %}
+
+                        {% if active_reservations %}
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-clock"></em>
+                                                Stock Reservations ({{ active_reservations.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text" style="max-height: 400px; overflow-y: auto;">
+                                        {% for reservation in active_reservations|slice:":5" %}
+                                        <div class="alert alert-info alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ reservation.stock.item_name }}</strong><br>
+                                                <small><strong>Customer:</strong> {{ reservation.customer_name|default:"No Customer" }}</small><br>
+                                                <small><strong>Quantity:</strong> {{ reservation.quantity }} units</small><br>
+                                                <small><strong>Type:</strong> {{ reservation.get_reservation_type_display }}</small><br>
+                                                <small><strong>Expires:</strong> {{ reservation.expires_at|date:"M d, Y" }}</small><br>
+                                                <small class="{% if reservation.days_until_expiry <= 1 %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left
+                                                </small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-xs btn-outline-info">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if active_reservations.count > 5 %}
+                                        <div class="text-center mt-2">
+                                            <a href="{% url 'reservation_list' %}" class="btn btn-sm btn-outline-info">View All Reservations</a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}

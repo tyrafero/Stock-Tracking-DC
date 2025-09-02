@@ -153,6 +153,13 @@ def admin_dashboard(request):
     awaiting_collection_transfers = StockTransfer.objects.filter(status='awaiting_collection').select_related('stock', 'from_location', 'to_location')
     active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock', 'committed_by').order_by('-committed_at')
     
+    # Add active reservations for admin
+    from django.utils import timezone
+    active_reservations = StockReservation.objects.filter(
+        status='active', 
+        expires_at__gt=timezone.now()
+    ).select_related('stock', 'reserved_by').order_by('-reserved_at')
+    
     # Admin-specific metrics
     low_stock_items = Stock.objects.filter(quantity__lte=models.F('re_order')).count()
     recent_pos = PurchaseOrder.objects.filter(status__in=['draft', 'submitted']).count()
@@ -173,6 +180,7 @@ def admin_dashboard(request):
         'in_transit_transfers': in_transit_transfers,
         'awaiting_collection_transfers': awaiting_collection_transfers,
         'active_commitments': active_commitments,
+        'active_reservations': active_reservations,
         'low_stock_items': low_stock_items,
         'recent_pos': recent_pos,
         'total_stock_value': total_stock_value,
@@ -2252,12 +2260,16 @@ def reservation_list(request):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('/')
     
-    # Filter reservations based on status
+    # Filter reservations based on status and stock
     status_filter = request.GET.get('status', 'active')
+    stock_filter = request.GET.get('stock')
     reservations = StockReservation.objects.select_related('stock', 'reserved_by').order_by('-reserved_at')
     
     if status_filter and status_filter != 'all':
         reservations = reservations.filter(status=status_filter)
+    
+    if stock_filter:
+        reservations = reservations.filter(stock_id=stock_filter)
     
     # Handle expired reservations
     from django.utils import timezone

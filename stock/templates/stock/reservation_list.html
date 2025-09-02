@@ -111,25 +111,25 @@
                                     <div class="nk-tb-col nk-tb-col-tools">
                                         <ul class="nk-tb-actions gx-1">
                                             <li>
-                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="View Details">
+                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-trigger btn-icon" data-toggle="tooltip" title="View Details">
                                                     <em class="icon ni ni-eye"></em>
                                                 </a>
                                             </li>
                                             {% if reservation.status == 'active' %}
                                             <li>
-                                                <a href="{% url 'update_reservation' reservation.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Update">
+                                                <a href="{% url 'update_reservation' reservation.pk %}" class="btn btn-trigger btn-icon" data-toggle="tooltip" title="Update">
                                                     <em class="icon ni ni-edit"></em>
                                                 </a>
                                             </li>
                                             {% if user_permissions.can_commit_stock %}
                                             <li>
-                                                <a href="{% url 'fulfill_reservation' reservation.pk %}" class="btn btn-trigger btn-icon btn-success" data-bs-toggle="tooltip" title="Fulfill">
+                                                <a href="{% url 'fulfill_reservation' reservation.pk %}" class="btn btn-trigger btn-icon btn-success" data-toggle="tooltip" title="Fulfill">
                                                     <em class="icon ni ni-check"></em>
                                                 </a>
                                             </li>
                                             {% endif %}
                                             <li>
-                                                <a href="{% url 'cancel_reservation' reservation.pk %}" class="btn btn-trigger btn-icon btn-danger" data-bs-toggle="tooltip" title="Cancel">
+                                                <a href="{% url 'cancel_reservation' reservation.pk %}" class="btn btn-trigger btn-icon btn-danger" data-toggle="tooltip" title="Cancel">
                                                     <em class="icon ni ni-cross"></em>
                                                 </a>
                                             </li>

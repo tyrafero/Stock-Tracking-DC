@@ -1,0 +1,65 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Cancel Reservation</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Cancel reservation for: <strong>{{ reservation.stock.item_name }}</strong></p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-outline-primary">
+                                <em class="icon ni ni-arrow-left"></em><span>Back to Reservation</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confirmation -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <h5 class="card-title text-danger">Confirm Cancellation</h5>
+                            </div>
+                            
+                            <div class="alert alert-warning">
+                                <div class="alert-text">
+                                    <h6>Are you sure you want to cancel this reservation?</h6>
+                                    <p><strong>Stock Item:</strong> {{ reservation.stock.item_name }}</p>
+                                    <p><strong>Customer:</strong> {{ reservation.customer_name|default:"No Customer" }}</p>
+                                    <p><strong>Quantity:</strong> {{ reservation.quantity }} units</p>
+                                    <p><strong>Reserved On:</strong> {{ reservation.reserved_at|date:"M d, Y H:i" }}</p>
+                                    {% if reservation.reason %}
+                                    <p><strong>Reason:</strong> {{ reservation.reason }}</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <form method="post">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-danger">
+                                        <em class="icon ni ni-cross"></em> Yes, Cancel Reservation
+                                    </button>
+                                    <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-outline-gray ml-2">
+                                        <em class="icon ni ni-arrow-left"></em> No, Go Back
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

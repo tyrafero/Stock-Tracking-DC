@@ -300,6 +300,125 @@
                             </div>
                         </div>
                         {% endif %}
+
+                        <!-- Stock Reservations -->
+                        {% if detail.reservations.all %}
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="card-title-group mb-3">
+                                    <div class="card-title">
+                                        <h5 class="card-title">Stock Reservations</h5>
+                                    </div>
+                                    <div class="card-tools">
+                                        <a href="{% url 'reservation_list' %}?stock={{ detail.pk }}" class="btn btn-outline-primary btn-sm">View All</a>
+                                    </div>
+                                </div>
+                                <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                                    <thead>
+                                        <tr class="nk-tb-item nk-tb-head">
+                                            <th class="nk-tb-col"><span>RESERVED DATE</span></th>
+                                            <th class="nk-tb-col"><span>CUSTOMER</span></th>
+                                            <th class="nk-tb-col"><span>TYPE</span></th>
+                                            <th class="nk-tb-col"><span>QUANTITY</span></th>
+                                            <th class="nk-tb-col"><span>EXPIRES</span></th>
+                                            <th class="nk-tb-col"><span>STATUS</span></th>
+                                            <th class="nk-tb-col"><span>REASON</span></th>
+                                            <th class="nk-tb-col nk-tb-col-tools"><span>ACTIONS</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for reservation in detail.reservations.all|slice:":10" %}
+                                        <tr class="nk-tb-item">
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">{{ reservation.reserved_at|date:"M d, Y" }}</span>
+                                                <br><small class="text-muted">by {{ reservation.reserved_by.username }}</small>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead">{{ reservation.customer_name|default:"No Customer" }}</span>
+                                                {% if reservation.customer_phone %}
+                                                    <br><small class="text-muted">{{ reservation.customer_phone }}</small>
+                                                {% endif %}
+                                                {% if reservation.reference_number %}
+                                                    <br><small class="text-muted">Ref: {{ reservation.reference_number }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="badge badge-sm badge-dot has-bg badge-info">{{ reservation.get_reservation_type_display }}</span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead text-info"><strong>{{ reservation.quantity }}</strong></span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub {% if reservation.days_until_expiry <= 1 and reservation.status == 'active' %}text-danger{% endif %}">
+                                                    {{ reservation.expires_at|date:"M d, Y H:i" }}
+                                                </span>
+                                                {% if reservation.status == 'active' %}
+                                                    <br><small class="{% if reservation.days_until_expiry <= 1 %}text-danger{% else %}text-muted{% endif %}">
+                                                        {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left
+                                                    </small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="badge badge-sm badge-dot has-bg badge-{% if reservation.status == 'active' %}success{% elif reservation.status == 'expired' %}warning{% elif reservation.status == 'fulfilled' %}info{% else %}secondary{% endif %} d-sm-inline-flex">
+                                                    {{ reservation.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub" style="word-wrap: break-word; white-space: normal; max-width: 200px; display: inline-block;">
+                                                    {{ reservation.reason|truncatechars:50 }}
+                                                </span>
+                                            </td>
+                                            <td class="nk-tb-col nk-tb-col-tools">
+                                                {% if reservation.status == 'active' %}
+                                                <div class="dropdown">
+                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                        <em class="icon ni ni-more-h"></em>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <ul class="link-list-opt no-bdr">
+                                                            <li>
+                                                                <a href="{% url 'reservation_detail' reservation.pk %}">
+                                                                    <em class="icon ni ni-eye"></em>
+                                                                    <span>View Details</span>
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a href="{% url 'update_reservation' reservation.pk %}">
+                                                                    <em class="icon ni ni-edit"></em>
+                                                                    <span>Update</span>
+                                                                </a>
+                                                            </li>
+                                                            {% if user_permissions.can_commit_stock %}
+                                                            <li>
+                                                                <a href="{% url 'fulfill_reservation' reservation.pk %}">
+                                                                    <em class="icon ni ni-check-circle"></em>
+                                                                    <span>Fulfill</span>
+                                                                </a>
+                                                            </li>
+                                                            {% endif %}
+                                                            <li>
+                                                                <a href="{% url 'cancel_reservation' reservation.pk %}" 
+                                                                   onclick="return confirm('Cancel this reservation?')">
+                                                                    <em class="icon ni ni-cross-circle"></em>
+                                                                    <span>Cancel</span>
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-icon btn-trigger">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
                         
                     </div>
                 </div>
