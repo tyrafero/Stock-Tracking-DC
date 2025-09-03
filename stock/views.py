@@ -1590,20 +1590,24 @@ def receive_purchase_order_items(request, pk=None):
                                 delivery_location = Store.objects.filter(is_active=True).first()
                             
                             if delivery_location:
-                                # Check if stock item already exists at delivery location
+                                # Check if stock item already exists (regardless of location)
                                 existing_stock = Stock.objects.filter(
                                     item_name=item.product,
-                                    condition='new',  # Default to new condition
-                                    location=delivery_location
+                                    condition='new'  # Default to new condition
                                 ).first()
                                 
                                 if existing_stock:
-                                    # Add to existing stock
+                                    # Add to existing stock total quantity
                                     existing_stock.quantity += item_data['quantity']
-                                    existing_stock.note = f"Received from PO - {purchase_order.reference_number} at {delivery_location.name}"
+                                    
+                                    # Set primary location if not set
+                                    if not existing_stock.location:
+                                        existing_stock.location = delivery_location
+                                    
+                                    existing_stock.note = f"Received from PO - {purchase_order.reference_number}"
                                     existing_stock.save()
                                     
-                                    # Update or create StockLocation record
+                                    # Update or create StockLocation record for the specific store
                                     stock_location, created = StockLocation.objects.get_or_create(
                                         stock=existing_stock,
                                         store=delivery_location,
@@ -1625,7 +1629,7 @@ def receive_purchase_order_items(request, pk=None):
                                         quantity=item_data['quantity'],
                                         location=delivery_location,
                                         condition='new',
-                                        note=f"Received from PO - {purchase_order.reference_number} at {delivery_location.name}",
+                                        note=f"Received from PO - {purchase_order.reference_number}",
                                         created_by=request.user.username
                                     )
                                     
@@ -2197,20 +2201,24 @@ def receive_po_items_deprecated(request):
                     except Store.DoesNotExist:
                         continue
                     
-                    # Check if stock item already exists
+                    # Check if stock item already exists (regardless of location)
                     existing_stock = Stock.objects.filter(
                         item_name=item.product,
-                        condition=condition,
-                        location=location
+                        condition=condition
                     ).first()
                     
                     if existing_stock:
-                        # Add to existing stock
+                        # Add to existing stock total quantity
                         existing_stock.quantity += receive_qty
+                        
+                        # Set primary location if not set
+                        if not existing_stock.location:
+                            existing_stock.location = location
+                        
                         existing_stock.note = f"Received from PO - {selected_po.reference_number}"
                         existing_stock.save()
                         
-                        # Update or create StockLocation record
+                        # Update or create StockLocation record for the specific store
                         stock_location, created = StockLocation.objects.get_or_create(
                             stock=existing_stock,
                             store=location,
