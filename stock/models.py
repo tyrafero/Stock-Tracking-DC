@@ -318,6 +318,9 @@ class StockHistory(models.Model):
     re_order = models.IntegerField(default=0, blank=True, null=True)
     last_updated = models.DateTimeField(null=True)
     timestamp = models.DateTimeField(null=True)
+    
+    class Meta:
+        ordering = ['-timestamp', '-last_updated']  # Latest timestamp first, then last_updated as fallback
 
 class CommittedStock(models.Model):
     """Track individual stock commitments with deposit and order details"""

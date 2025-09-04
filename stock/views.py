@@ -1660,6 +1660,19 @@ def receive_purchase_order_items(request, pk=None):
                                     stock_location.quantity += item_data['quantity']
                                     stock_location.save()
                                     
+                                    # Create StockHistory record for PO receiving (existing stock)
+                                    StockHistory.objects.create(
+                                        category=existing_stock.category,
+                                        item_name=existing_stock.item_name,
+                                        quantity=existing_stock.quantity,  # Total quantity after addition
+                                        receive_quantity=item_data['quantity'],  # Amount received
+                                        received_by=request.user.username,
+                                        note=f"Received from PO - {purchase_order.reference_number} | Delivery Ref: {item_data.get('delivery_reference', 'N/A')} | Added to existing stock",
+                                        created_by=request.user.username,
+                                        last_updated=timezone.now(),
+                                        timestamp=timezone.now()
+                                    )
+                                    
                                 else:
                                     # Create new stock entry at delivery location
                                     category, _ = Category.objects.get_or_create(
@@ -1682,6 +1695,19 @@ def receive_purchase_order_items(request, pk=None):
                                         stock=new_stock,
                                         store=delivery_location,
                                         quantity=item_data['quantity']
+                                    )
+                                    
+                                    # Create StockHistory record for PO receiving
+                                    StockHistory.objects.create(
+                                        category=category,
+                                        item_name=item.product,
+                                        quantity=item_data['quantity'],
+                                        receive_quantity=item_data['quantity'],
+                                        received_by=request.user.username,
+                                        note=f"Received from PO - {purchase_order.reference_number} | Delivery Ref: {item_data.get('delivery_reference', 'N/A')}",
+                                        created_by=request.user.username,
+                                        last_updated=timezone.now(),
+                                        timestamp=timezone.now()
                                     )
                     
                     # Create history entry
@@ -2273,6 +2299,19 @@ def receive_po_items_deprecated(request):
                             stock_location.aisle = aisle
                         stock_location.save()
                         
+                        # Create StockHistory record for PO receiving (existing stock)
+                        StockHistory.objects.create(
+                            category=existing_stock.category,
+                            item_name=existing_stock.item_name,
+                            quantity=existing_stock.quantity,  # Total quantity after addition
+                            receive_quantity=receive_qty,  # Amount received
+                            received_by=request.user.username,
+                            note=f"Received from PO - {selected_po.reference_number} | Added to existing stock",
+                            created_by=request.user.username,
+                            last_updated=timezone.now(),
+                            timestamp=timezone.now()
+                        )
+                        
                     else:
                         # Create new stock entry
                         # Get or create category for this product
@@ -2301,24 +2340,25 @@ def receive_po_items_deprecated(request):
                             quantity=receive_qty,
                             aisle=aisle
                         )
+                        
+                        # Create StockHistory record for PO receiving (new stock)
+                        StockHistory.objects.create(
+                            category=category,
+                            item_name=item.product,
+                            quantity=receive_qty,
+                            receive_quantity=receive_qty,
+                            received_by=request.user.username,
+                            note=f"Received from PO - {selected_po.reference_number} | New stock created",
+                            created_by=request.user.username,
+                            last_updated=timezone.now(),
+                            timestamp=timezone.now()
+                        )
                     
                     # Update PO item received quantity
                     item.received_quantity += receive_qty
                     item.save()
                     
-                    # Create stock history record
-                    StockHistory.objects.create(
-                        category=category if 'category' in locals() else None,
-                        item_name=item.product,
-                        quantity=receive_qty,
-                        issue_quantity=0,
-                        receive_quantity=receive_qty,
-                        received_by=str(request.user),
-                        note=f"Received from PO - {selected_po.reference_number}",
-                        created_by=str(request.user),
-                        last_updated=timezone.now(),
-                        timestamp=timezone.now()
-                    )
+                    # StockHistory creation is now handled above for both existing and new stock cases
                     
                     received_count += 1
                 
