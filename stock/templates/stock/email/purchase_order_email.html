@@ -127,7 +127,7 @@
             <div>
                 <h3>{{ company_name|default:"Your Company Name" }}</h3>
                 {% if purchase_order.creating_store %}
-                <p><strong>Ordered by:</strong> {{ purchase_order.creating_store.get_name_display }}</p>
+                <p><strong>Ordered by:</strong> {{ purchase_order.creating_store.name }}</p>
                 {% endif %}
                 <p>Date: {{ purchase_order.created_at|date:"F d, Y" }}</p>
                 {% if purchase_order.submitted_at %}
@@ -136,7 +136,7 @@
             </div>
             {% if purchase_order.creating_store.logo %}
             <div style="flex-shrink: 0;">
-                <img src="{{ purchase_order.creating_store.logo.url }}" alt="{{ purchase_order.creating_store.get_name_display }} Logo" 
+                <img src="{{ purchase_order.creating_store.logo.url }}" alt="{{ purchase_order.creating_store.name }} Logo" 
                      style="max-height: 80px; max-width: 200px; object-fit: contain;">
             </div>
             {% endif %}

@@ -1,9 +1,6 @@
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
 
 # BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -37,8 +34,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'crispy_forms',
     'crispy_bootstrap4',
-    'cloudinary_storage',
-    'cloudinary',
     'stock',
 ]
 
@@ -113,26 +108,9 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-# CLOUDINARY CONFIGURATION - Always configure
-cloudinary.config(
-    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.getenv('CLOUDINARY_API_KEY'),
-    api_secret=os.getenv('CLOUDINARY_API_SECRET'),
-    secure=True
-)
-
-# MEDIA FILES - CONDITIONAL CONFIGURATION
-if DEBUG:
-    # Development - Use local media files
-    print("Using LOCAL media storage")  # Debug print
-    MEDIA_URL = '/media/'
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    # Don't set DEFAULT_FILE_STORAGE - let Django use default
-else:
-    # Production - Use Cloudinary
-    print("Using CLOUDINARY media storage")  # Debug print
-    DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
-    # Don't set MEDIA_URL/MEDIA_ROOT for Cloudinary
+# MEDIA FILES - Use local storage for all environments
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # CRISPY FORMS
 CRISPY_TEMPLATE_PACK = 'bootstrap4'

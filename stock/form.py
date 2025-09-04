@@ -572,7 +572,7 @@ class StoreForm(forms.ModelForm):
         model = Store
         fields = ['name', 'designation', 'location', 'email', 'address', 'logo', 'is_active']
         widgets = {
-            'name': forms.Select(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter store or warehouse name'}),
             'designation': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'sales@example.com'}),

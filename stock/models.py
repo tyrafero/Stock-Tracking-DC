@@ -203,6 +203,7 @@ class Stock(models.Model):
         """Total stock across all locations"""
         return self.locations.aggregate(total=models.Sum('quantity'))['total'] or 0
     
+    
     def get_location_quantity(self, store):
         """Get quantity at a specific location"""
         try:
@@ -874,20 +875,12 @@ class DeliveryPerson(models.Model):
         return f"{self.name}, {self.phone_number}"
 
 class Store(models.Model):
-    STORE_CHOICES = [
-        ('audio_junction_newcastle', 'Audio Junction Store - Newcastle'),
-        ('digital_cinema_auburn', 'Digital Cinema Store - Auburn'),
-        ('instyle_dural', 'Instyle Store - Dural'),
-        ('silverwater_warehouse', 'Silverwater Warehouse'),
-        ('auburn_warehouse', 'Auburn Warehouse'),
-    ]
-    
     DESIGNATION_CHOICES = [
         ('store', 'Store'),
         ('warehouse', 'Warehouse'),
     ]
     
-    name = models.CharField(max_length=200, choices=STORE_CHOICES)
+    name = models.CharField(max_length=200, help_text="Store or warehouse name")
     designation = models.CharField(max_length=20, choices=DESIGNATION_CHOICES, default='store', help_text="Designate as Store or Warehouse")
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
@@ -895,8 +888,9 @@ class Store(models.Model):
     logo = models.ImageField(upload_to='store_logos/', null=True, blank=True, help_text="Business logo for this store/warehouse")
     is_active = models.BooleanField(default=True)
 
+
     def __str__(self):
-        return f"{self.get_name_display()}"
+        return f"{self.name}"
 
 # ----------------------------
 # Purchase Order Models
