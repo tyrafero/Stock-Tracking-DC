@@ -298,6 +298,9 @@ class Stock(models.Model):
         except StockLocation.DoesNotExist:
             return False
     
+    class Meta:
+        ordering = ['-last_updated']
+
     def __str__(self):
         return f"{self.item_name} ({self.quantity}) - {self.last_updated}"
 
@@ -1045,6 +1048,9 @@ class PurchaseOrder(models.Model):
     def grand_total(self):
         return self.subtotal_after_discount + self.gst_amount
 
+    class Meta:
+        ordering = ['-created_at']
+    
     def __str__(self):
         return f"{self.reference_number} - {self.manufacturer.company_name}"
 

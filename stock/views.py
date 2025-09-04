@@ -170,14 +170,14 @@ def admin_dashboard(request):
     pending_transfers = StockTransfer.objects.filter(status='pending').select_related('stock', 'from_location', 'to_location')
     in_transit_transfers = StockTransfer.objects.filter(status='in_transit').select_related('stock', 'from_location', 'to_location')
     awaiting_collection_transfers = StockTransfer.objects.filter(status='awaiting_collection').select_related('stock', 'from_location', 'to_location')
-    active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock', 'committed_by').order_by('-committed_at')
+    active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock', 'committed_by')  # Uses model default ordering
     
     # Add active reservations for admin
     from django.utils import timezone
     active_reservations = StockReservation.objects.filter(
         status='active', 
         expires_at__gt=timezone.now()
-    ).select_related('stock', 'reserved_by').order_by('-reserved_at')
+    ).select_related('stock', 'reserved_by')  # Uses model default ordering
     
     # Admin-specific metrics
     low_stock_items = Stock.objects.filter(quantity__lte=models.F('re_order')).count()
@@ -210,18 +210,18 @@ def admin_dashboard(request):
 @login_required
 def sales_dashboard(request):
     """Sales dashboard focused on stock availability and customer commitments"""
-    # Available stock for sales
-    available_stock = Stock.objects.filter(quantity__gt=0).order_by('item_name')
+    # Available stock for sales  
+    available_stock = Stock.objects.filter(quantity__gt=0)  # Uses model default ordering (-last_updated)
     
     # Customer commitments
-    active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock').order_by('-committed_at')
+    active_commitments = CommittedStock.objects.filter(is_fulfilled=False).select_related('stock')  # Uses model default ordering
     
     # Active reservations (relevant for sales)
     from django.utils import timezone
     active_reservations = StockReservation.objects.filter(
         status='active', 
         expires_at__gt=timezone.now()
-    ).select_related('stock', 'reserved_by').order_by('-reserved_at')
+    ).select_related('stock', 'reserved_by')  # Uses model default ordering
     
     # Awaiting collection (relevant for sales)
     awaiting_collection = StockTransfer.objects.filter(
@@ -230,7 +230,7 @@ def sales_dashboard(request):
     ).select_related('stock', 'to_location')
     
     # Recent sales activity (stock issues)
-    recent_issues = Stock.objects.filter(issue_quantity__gt=0).order_by('-last_updated')[:10]
+    recent_issues = Stock.objects.filter(issue_quantity__gt=0)[:10]  # Uses model default ordering
     
     # Sales metrics
     total_committed = CommittedStock.objects.filter(is_fulfilled=False).count()
@@ -257,7 +257,7 @@ def warehouse_dashboard(request):
     # Pending receiving
     pending_pos = PurchaseOrder.objects.filter(
         status__in=['confirmed', 'sent']
-    ).select_related('manufacturer').order_by('-created_at')
+    ).select_related('manufacturer')  # Uses model default ordering
     
     # Transfers requiring warehouse action
     pending_transfers = StockTransfer.objects.filter(status='pending').select_related('stock', 'from_location', 'to_location')
@@ -294,7 +294,7 @@ def logistics_dashboard(request):
     confirmed_pos = PurchaseOrder.objects.filter(status='confirmed').count()
     
     # Recent PO activity
-    recent_pos = PurchaseOrder.objects.select_related('manufacturer').order_by('-created_at')[:10]
+    recent_pos = PurchaseOrder.objects.select_related('manufacturer')[:10]  # Uses model default ordering
     
     # Stock forecasting - items approaching reorder level
     low_stock = Stock.objects.filter(
@@ -305,7 +305,7 @@ def logistics_dashboard(request):
     # Transfer requests
     transfer_requests = StockTransfer.objects.filter(
         status__in=['pending', 'in_transit']
-    ).select_related('stock', 'from_location', 'to_location').order_by('-created_at')
+    ).select_related('stock', 'from_location', 'to_location')  # Uses model default ordering
     
     context = {
         'dashboard_type': 'logistics',
@@ -1061,7 +1061,7 @@ def stock_detail(request, pk):
     # Get commitments for this stock
     commitments = CommittedStock.objects.filter(
         stock=detail
-    ).order_by('-committed_at')
+    )  # Uses model default ordering
     
     context = {
         'detail': detail,
@@ -2395,7 +2395,7 @@ def reservation_list(request):
     # Filter reservations based on status and stock
     status_filter = request.GET.get('status', 'active')
     stock_filter = request.GET.get('stock')
-    reservations = StockReservation.objects.select_related('stock', 'reserved_by').order_by('-reserved_at')
+    reservations = StockReservation.objects.select_related('stock', 'reserved_by')  # Uses model default ordering
     
     if status_filter and status_filter != 'all':
         reservations = reservations.filter(status=status_filter)
