@@ -953,6 +953,17 @@ class Store(models.Model):
     logo = models.ImageField(upload_to='store_logos/', null=True, blank=True, help_text="Business logo for this store/warehouse")
     is_active = models.BooleanField(default=True)
 
+    @property
+    def initials(self):
+        """Generate initials from store name (e.g. 'Audio Junction' -> 'AJ')"""
+        words = self.name.strip().replace('-', ' ').split()  # Handle hyphens as word separators
+        if not words:
+            return 'ST'  # Default fallback
+        # Filter out empty words and single characters like '-'
+        meaningful_words = [word for word in words if len(word) > 1]
+        if not meaningful_words:
+            return 'ST'  # Fallback if no meaningful words
+        return ''.join(word[0].upper() for word in meaningful_words)[:3]  # Max 3 letters
 
     def __str__(self):
         return f"{self.name}"
@@ -1009,11 +1020,27 @@ class PurchaseOrder(models.Model):
         if not self.reference_number:
             from datetime import datetime
             year = datetime.now().year
+            
+            # Get store initials (use creating_store if available, otherwise store)
+            store = self.creating_store or self.store
+            store_initials = store.initials if store else 'ST'
+            
+            # Find the last PO with the same store initials for this year
             last_po = PurchaseOrder.objects.filter(
-                reference_number__startswith=f'PO-{year}-'
+                reference_number__startswith=f'PO-{store_initials}-'
             ).order_by('-id').first()
-            new_number = 1 if not last_po else int(last_po.reference_number.split('-')[-1]) + 1
-            self.reference_number = f'PO-{year}-{new_number:03d}'
+            
+            # Extract number and increment
+            new_number = 1
+            if last_po:
+                try:
+                    # Extract number from format like 'PO-AJ-001'
+                    last_number = int(last_po.reference_number.split('-')[-1])
+                    new_number = last_number + 1
+                except (ValueError, IndexError):
+                    new_number = 1
+            
+            self.reference_number = f'PO-{store_initials}-{new_number:03d}'
         super().save(*args, **kwargs)
 
     @property
