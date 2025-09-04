@@ -16,6 +16,19 @@ from .utils.email_service import send_purchase_order_email_safe
 
 # Create your views here.
 
+@login_required
+def pending_approval(request):
+    """Show pending approval screen for users waiting for admin approval"""
+    user_role = getattr(request.user, 'role', None)
+    if not user_role or user_role.role != 'pending':
+        return redirect('/')  # Redirect to home if not pending
+    
+    context = {
+        'title': 'Account Pending Approval',
+        'user': request.user,
+    }
+    return render(request, 'stock/pending_approval.html', context)
+
 def create_flexible_search_query(query_text, search_field):
     """
     Create a flexible search Q object that handles partial matches, 
@@ -87,6 +100,12 @@ def new_register(request):
 def get_client_ip(request):
     """Main dashboard view that routes to role-specific dashboards"""
     from .utils.permissions import get_user_role
+    
+    # Check if user is authenticated and pending approval
+    if request.user.is_authenticated:
+        user_role = getattr(request.user, 'role', None)
+        if user_role and user_role.role == 'pending':
+            return redirect('pending_approval')
     
     # Track visitor IP (keeping original functionality)
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

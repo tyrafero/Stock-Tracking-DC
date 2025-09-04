@@ -1,0 +1,108 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en" class="js">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Account Pending Approval</title>
+    <link rel="stylesheet" href="{% static 'css/dashlite.css' %}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'css/theme.css' %}">
+</head>
+
+<body class="nk-body bg-lighter npc-general has-sidebar ">
+    <div class="nk-app-root">
+        <div class="nk-main ">
+            <div class="nk-content ">
+                <div class="container-fluid">
+                    <div class="nk-content-inner">
+                        <div class="nk-content-body">
+                            <div class="components-preview wide-md mx-auto">
+                                <div class="nk-block nk-block-lg">
+                                    <div class="row justify-content-center">
+                                        <div class="col-lg-6 col-md-8">
+                                            <div class="card card-bordered">
+                                                <div class="card-inner text-center">
+                                                    <div class="nk-block-head">
+                                                        <div class="nk-block-head-content">
+                                                            <div class="mb-4">
+                                                                <em class="icon ni ni-clock" style="font-size: 4rem; color: #ffc107;"></em>
+                                                            </div>
+                                                            <h3 class="nk-block-title">Account Pending Approval</h3>
+                                                            <p class="nk-block-des">
+                                                                Your account has been created successfully, but it needs approval from an administrator before you can access the system.
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="alert alert-warning" role="alert">
+                                                        <div class="alert-cta flex-wrap flex-md-nowrap">
+                                                            <div class="alert-text">
+                                                                <h6>What happens next?</h6>
+                                                                <p>An administrator will review your account request and assign you the appropriate access level. You'll receive an email notification once your account has been approved.</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="nk-block">
+                                                        <div class="card bg-light">
+                                                            <div class="card-inner">
+                                                                <h6 class="text-base">Account Information</h6>
+                                                                <ul class="list-group list-group-flush">
+                                                                    <li class="list-group-item bg-transparent px-0">
+                                                                        <strong>Username:</strong> {{ user.username }}
+                                                                    </li>
+                                                                    <li class="list-group-item bg-transparent px-0">
+                                                                        <strong>Email:</strong> {{ user.email }}
+                                                                    </li>
+                                                                    <li class="list-group-item bg-transparent px-0">
+                                                                        <strong>Registration Date:</strong> {{ user.date_joined|date:"F d, Y g:i A" }}
+                                                                    </li>
+                                                                    <li class="list-group-item bg-transparent px-0">
+                                                                        <strong>Status:</strong> <span class="badge badge-warning">Pending Approval</span>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="nk-block">
+                                                        <div class="row g-3">
+                                                            <div class="col-6">
+                                                                <form method="post" action="{% url 'auth_logout' %}">
+                                                                    {% csrf_token %}
+                                                                    <button type="submit" class="btn btn-outline-primary btn-block">
+                                                                        <em class="icon ni ni-signout"></em>
+                                                                        <span>Sign Out</span>
+                                                                    </button>
+                                                                </form>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <a href="mailto:admin@yourcompany.com" class="btn btn-primary btn-block">
+                                                                    <em class="icon ni ni-emails"></em>
+                                                                    <span>Contact Admin</span>
+                                                                </a>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="{% static 'js/bundle.js' %}"></script>
+    <script src="{% static 'js/scripts.js' %}"></script>
+</body>
+
+</html>

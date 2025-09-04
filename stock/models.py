@@ -10,6 +10,7 @@ from decimal import Decimal
 
 class UserRole(models.Model):
     ROLE_CHOICES = [
+        ('pending', 'Pending Approval'),
         ('admin', 'Admin'),
         ('owner', 'Owner'),
         ('logistics', 'Logistics'),
@@ -18,7 +19,7 @@ class UserRole(models.Model):
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='role')
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='sales')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='pending')
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='created_user_roles')
     
@@ -33,6 +34,24 @@ class UserRole(models.Model):
     def role_permissions(self):
         """Get permissions for this role"""
         permissions = {
+            'pending': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': False,
+                'can_edit_purchase_order': False,
+                'can_view_purchase_order': False,
+                'can_receive_purchase_order': False,
+                'can_view_purchase_order_amounts': False,
+                'can_create_stock': False,
+                'can_edit_stock': False,
+                'can_view_stock': False,
+                'can_transfer_stock': False,
+                'can_commit_stock': False,
+                'can_fulfill_commitment': False,
+                'can_issue_stock': False,
+                'can_receive_stock': False,
+                'can_view_warehouse_receiving': False,
+            },
             'admin': {
                 'can_manage_users': True,
                 'can_manage_access_control': True,

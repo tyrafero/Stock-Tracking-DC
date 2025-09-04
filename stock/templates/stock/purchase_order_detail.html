@@ -325,11 +325,15 @@ Receive Items
 <tr>
 <th>Product Name</th>
 <th>Order #</th>
+{% if user_permissions.can_view_purchase_order_amounts %}
 <th>Price Inc</th>
 <th>Price Exc</th>
+{% endif %}
 <th>Qty</th>
+{% if user_permissions.can_view_purchase_order_amounts %}
 <th>Discount %</th>
 <th>Subtotal Exc</th>
+{% endif %}
 {% if purchase_order.status in 'sent,confirmed,completed' %}
 <th>Receiving Status</th>
 {% endif %}
@@ -352,11 +356,15 @@ style="width: {% if item.quantity > 0 %}{% widthratio item.total_received_quanti
 {% endif %}
 </td>
 <td>{{ item.associated_order_number|default:"-" }}</td>
+{% if user_permissions.can_view_purchase_order_amounts %}
 <td>${{ item.price_inc }}</td>
 <td class="text-primary">${{ item.price_exc }}</td>
+{% endif %}
 <td>{{ item.quantity }}</td>
+{% if user_permissions.can_view_purchase_order_amounts %}
 <td>{{ item.discount_percent }}%</td>
 <td class="text-success">${{ item.subtotal_exc }}</td>
+{% endif %}
 {% if purchase_order.status in 'sent,confirmed,completed' %}
 <td class="receiving-status">
 <span class="receiving-badge {{ item.receiving_status|default:'not-received' }}">
@@ -460,6 +468,7 @@ Complete
 </div>
 
 <!-- Purchase Order Totals -->
+{% if user_permissions.can_view_purchase_order_amounts %}
 <div class="card mt-auto">
 <div class="card-inner">
 <div class="totals-section">
@@ -490,6 +499,7 @@ Complete
 </div>
 </div>
 </div>
+{% endif %}
 
 </div> <!-- end sidebar -->
 </div>

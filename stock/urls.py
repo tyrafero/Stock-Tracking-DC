@@ -38,6 +38,7 @@ urlpatterns = [
     path('scrumboard_view', views.scrum_view, name='scrumboard_view'),
     path('contacts', views.contact, name='contacts'),
     path('debug/', views.debug_info, name='debug_info'),
+    path('pending-approval/', views.pending_approval, name='pending_approval'),
     path('purchase-orders/', views.purchase_order_list, name='purchase_order_list'),
     path('purchase-orders/create/', views.create_purchase_order, name='create_purchase_order'),
     path('purchase-orders/<int:pk>/', views.purchase_order_detail, name='purchase_order_detail'),
