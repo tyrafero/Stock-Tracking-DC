@@ -15,6 +15,8 @@ class UserRole(models.Model):
         ('owner', 'Owner'),
         ('logistics', 'Logistics'),
         ('warehouse', 'Warehouse'),
+        ('stocktake_manager', 'Stock Take Manager'),
+        ('warehouse_boy', 'Warehouse Boy'),
         ('sales', 'Sales'),
     ]
     
@@ -142,12 +144,53 @@ class UserRole(models.Model):
                 'can_receive_stock': False,
                 'can_view_warehouse_receiving': False,
             },
+            'stocktake_manager': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': False,
+                'can_edit_purchase_order': False,
+                'can_view_purchase_order': True,
+                'can_receive_purchase_order': True,
+                'can_view_purchase_order_amounts': False,  # Cannot see amounts
+                'can_create_stock': True,
+                'can_edit_stock': True,
+                'can_view_stock': True,
+                'can_transfer_stock': True,
+                'can_commit_stock': True,
+                'can_fulfill_commitment': False,
+                'can_issue_stock': True,
+                'can_receive_stock': True,
+                'can_view_warehouse_receiving': True,
+            },
+            'warehouse_boy': {
+                'can_manage_users': False,
+                'can_manage_access_control': False,
+                'can_create_purchase_order': False,
+                'can_edit_purchase_order': False,
+                'can_view_purchase_order': False,
+                'can_receive_purchase_order': False,
+                'can_view_purchase_order_amounts': False,
+                'can_create_stock': False,
+                'can_edit_stock': False,
+                'can_view_stock': True,  # Can view stock
+                'can_transfer_stock': False,  # Can see transfers but can't action
+                'can_commit_stock': False,
+                'can_fulfill_commitment': False,
+                'can_issue_stock': False,
+                'can_receive_stock': False,
+                'can_view_warehouse_receiving': False,
+            },
         }
         return permissions.get(self.role, permissions['sales'])
     
     def has_permission(self, permission):
         """Check if user has a specific permission"""
         return self.role_permissions.get(permission, False)
+    
+    def can_view_prices(self):
+        """Check if user can view price information - only Admin, Owner, Sales, Logistics"""
+        price_viewing_roles = ['admin', 'owner', 'sales', 'logistics']
+        return self.role in price_viewing_roles
 
 # ----------------------------
 # Category & Stock Models

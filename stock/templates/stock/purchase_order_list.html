@@ -60,7 +60,9 @@
                                         <div class="nk-tb-col tb-col-md"><span class="sub-text">Status</span></div>
                                         <div class="nk-tb-col tb-col-lg"><span class="sub-text">Created Date</span></div>
                                         <div class="nk-tb-col nk-tb-col-tools" style="width: auto;">
-                                            <span class="sub-text">Total Amount / Actions</span>
+                                            <span class="sub-text">
+                                                {% if can_view_prices %}Total Amount / {% endif %}Actions
+                                            </span>
                                         </div>
                                     </div>
 
@@ -98,9 +100,11 @@
                                         </div>
                                         <div class="nk-tb-col nk-tb-col-tools" style="width: auto;">
                                             <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between">
+                                                {% if can_view_prices %}
                                                 <div class="tb-amount mb-2 mb-sm-0">
                                                     <strong>${{ purchase_order.grand_total|floatformat:2 }}</strong>
                                                 </div>
+                                                {% endif %}
                                                 <ul class="nk-tb-actions gx-1">
                                                     <li>
                                                         <div class="drodown">

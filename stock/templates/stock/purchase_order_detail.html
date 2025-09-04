@@ -325,12 +325,12 @@ Receive Items
 <tr>
 <th>Product Name</th>
 <th>Order #</th>
-{% if user_permissions.can_view_purchase_order_amounts %}
+{% if can_view_prices %}
 <th>Price Inc</th>
 <th>Price Exc</th>
 {% endif %}
 <th>Qty</th>
-{% if user_permissions.can_view_purchase_order_amounts %}
+{% if can_view_prices %}
 <th>Discount %</th>
 <th>Subtotal Exc</th>
 {% endif %}
@@ -356,12 +356,12 @@ style="width: {% if item.quantity > 0 %}{% widthratio item.total_received_quanti
 {% endif %}
 </td>
 <td>{{ item.associated_order_number|default:"-" }}</td>
-{% if user_permissions.can_view_purchase_order_amounts %}
+{% if can_view_prices %}
 <td>${{ item.price_inc }}</td>
 <td class="text-primary">${{ item.price_exc }}</td>
 {% endif %}
 <td>{{ item.quantity }}</td>
-{% if user_permissions.can_view_purchase_order_amounts %}
+{% if can_view_prices %}
 <td>{{ item.discount_percent }}%</td>
 <td class="text-success">${{ item.subtotal_exc }}</td>
 {% endif %}
@@ -468,7 +468,7 @@ Complete
 </div>
 
 <!-- Purchase Order Totals -->
-{% if user_permissions.can_view_purchase_order_amounts %}
+{% if can_view_prices %}
 <div class="card mt-auto">
 <div class="card-inner">
 <div class="totals-section">

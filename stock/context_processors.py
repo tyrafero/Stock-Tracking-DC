@@ -8,6 +8,7 @@ def user_role(request):
             return {
                 'user_role': role,
                 'user_permissions': role.role_permissions,
+                'can_view_prices': role.can_view_prices(),
             }
         except Exception:
             return {'user_role': None, 'user_permissions': {}}

@@ -581,8 +581,8 @@
                                 {% endif %}
                                 {% endif %}
                                 
-                                <!-- Management Section - Hide from Warehouse users -->
-                                {% if user_role and user_role.role != 'warehouse' %}
+                                <!-- Management Section - Hide from Warehouse, Stock Take Managers, and Warehouse Boys -->
+                                {% if user_role and user_role.role not in 'warehouse,stocktake_manager,warehouse_boy' %}
                                 <li class="nk-menu-heading">
                                     <h6 class="overline-title text-primary-alt">Management</h6>
                                 </li>
@@ -722,7 +722,7 @@
                                                     <li><a href="{% url 'create_purchase_order' %}"><em class="icon ni ni-plus-circle"></em><span>Create New PO</span></a></li>
                                                     {% endif %}
                                                     <li class="divider"></li>
-                                                    {% if user_role and user_role.role != 'warehouse' %}
+                                                    {% if user_role and user_role.role not in 'warehouse,stocktake_manager,warehouse_boy' %}
                                                     <li><a href="{% url 'manage_manufacturers' %}"><em class="icon ni ni-building"></em><span>Manage Manufacturers</span></a></li>
                                                     {% endif %}
                                                 </ul>
