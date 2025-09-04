@@ -134,12 +134,20 @@
                                                                     <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown"><em class="icon ni ni-more-h"></em></a>
                                                                     <div class="dropdown-menu dropdown-menu-right">
                                                                         <ul class="link-list-opt no-bdr">
+                                                                            {% if user_permissions.can_edit_stock %}
                                                                             <li><a href="{% url 'update_stock' every.id %}"><em class="icon ni ni-edit"></em><span>Edit Product</span></a></li>
+                                                                            {% endif %}
                                                                             <li><a href="{% url 'stock_detail' every.id %}"><em class="icon ni ni-eye"></em><span>View Product</span></a></li>
+                                                                            {% if user_permissions.can_commit_stock %}
                                                                             <li><a href="{% url 'commit_stock' every.id %}"><em class="icon ni ni-lock"></em><span>Commit Stock</span></a></li>
+                                                                            {% endif %}
+                                                                            {% if user_permissions.can_transfer_stock %}
                                                                             <li><a href="{% url 'transfer_stock' every.id %}"><em class="icon ni ni-swap"></em><span>Transfer Stock</span></a></li>
+                                                                            {% endif %}
+                                                                            {% if user_permissions.can_edit_stock %}
                                                                             <li><a href="{% url 're_order' every.id %}"><em class="icon ni ni-activity-round"></em><span>Reorder Level</span></a></li>
                                                                             <li><a id="{{forloop.counter}}"  href="javascript:void(0)"><em class="icon ni ni-trash"></em><span>Remove Product</span></a></li>
+                                                                            {% endif %}
                                                                         </ul>
                                                                     </div>
                                                                 </div>

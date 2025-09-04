@@ -14,12 +14,14 @@
                         <div class="nk-block-head-content">
                             <div class="toggle-wrap nk-block-tools-toggle">
                                 <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-more-v"></em></a>
+                                {% if user_role and user_role.role != 'warehouse_boy' %}
                                 <div class="toggle-expand-content" data-content="pageMenu">
                                     <ul class="nk-block-tools g-3">
                                         <li class="nk-block-tools-opt"><a href="/warehouse/receiving/" class="btn btn-primary"><em class="icon ni ni-package"></em><span>Receiving</span></a></li>
                                         <li class="nk-block-tools-opt"><a href="/transfers/" class="btn btn-outline-primary"><em class="icon ni ni-truck"></em><span>Transfers</span></a></li>
                                     </ul>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -151,6 +153,7 @@
                                         <span class="tb-status">{{ transfer.created_at|timesince }} ago</span>
                                     </div>
                                     <div class="nk-tb-col nk-tb-col-tools">
+                                        {% if user_permissions.can_transfer_stock %}
                                         <ul class="nk-tb-actions gx-1">
                                             <li>
                                                 <a href="{% url 'approve_transfer' transfer.pk %}" class="btn btn-trigger btn-icon btn-success" data-bs-toggle="tooltip" title="Approve">
@@ -163,6 +166,9 @@
                                                 </a>
                                             </li>
                                         </ul>
+                                        {% else %}
+                                        <span class="text-muted">View Only</span>
+                                        {% endif %}
                                     </div>
                                 </div>
                                 {% endfor %}
@@ -203,7 +209,11 @@
                                         <p><strong>In Transit:</strong> {{ transfer.approved_at|timesince }}</p>
                                     </div>
                                     <div class="card-tools">
+                                        {% if user_permissions.can_transfer_stock %}
                                         <a href="{% url 'complete_transfer' transfer.pk %}" class="btn btn-sm btn-success">Complete Transfer</a>
+                                        {% else %}
+                                        <span class="badge badge-info">View Only</span>
+                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -264,11 +274,13 @@
                                                     <em class="icon ni ni-eye"></em>
                                                 </a>
                                             </li>
+                                            {% if user_permissions.can_receive_purchase_order %}
                                             <li>
                                                 <a href="{% url 'receive_purchase_order_items' po.pk %}" class="btn btn-trigger btn-icon btn-success" data-bs-toggle="tooltip" title="Receive Items">
                                                     <em class="icon ni ni-package"></em>
                                                 </a>
                                             </li>
+                                            {% endif %}
                                         </ul>
                                     </div>
                                 </div>

@@ -134,51 +134,53 @@
                                                     </a>
                                                     <div class="dropdown-menu dropdown-menu-right">
                                                         <ul class="link-list-opt no-bdr">
-                                                            {% if transfer.status == 'pending' %}
-                                                                <li>
-                                                                    <a href="{% url 'approve_transfer' transfer.id %}" 
-                                                                       onclick="return confirm('Approve this transfer?')">
-                                                                        <em class="icon ni ni-check-circle"></em>
-                                                                        <span>Approve Transfer</span>
-                                                                    </a>
-                                                                </li>
-                                                                <li>
-                                                                    <a href="{% url 'cancel_transfer' transfer.id %}" 
-                                                                       onclick="return confirm('Cancel this transfer? Stock will be restored.')">
-                                                                        <em class="icon ni ni-cross-circle"></em>
-                                                                        <span>Cancel Transfer</span>
-                                                                    </a>
-                                                                </li>
-                                                            {% elif transfer.status == 'in_transit' %}
-                                                                <li>
-                                                                    <a href="{% url 'complete_transfer' transfer.id %}" 
-                                                                       onclick="return confirm('Complete this transfer? Item will be moved to destination.')">
-                                                                        <em class="icon ni ni-check-thick"></em>
-                                                                        <span>Complete Transfer</span>
-                                                                    </a>
-                                                                </li>
-                                                                <li>
-                                                                    <a href="{% url 'cancel_transfer' transfer.id %}" 
-                                                                       onclick="return confirm('Cancel this transfer? Stock will be restored.')">
-                                                                        <em class="icon ni ni-cross-circle"></em>
-                                                                        <span>Cancel Transfer</span>
-                                                                    </a>
-                                                                </li>
-                                                            {% elif transfer.status == 'awaiting_collection' %}
-                                                                <li>
-                                                                    <a href="{% url 'mark_collected' transfer.id %}" 
-                                                                       onclick="return confirm('Mark as collected? This will reduce stock quantity.')">
-                                                                        <em class="icon ni ni-user-check"></em>
-                                                                        <span>Mark as Collected</span>
-                                                                    </a>
-                                                                </li>
-                                                                <li>
-                                                                    <a href="{% url 'cancel_transfer' transfer.id %}" 
-                                                                       onclick="return confirm('Cancel this transfer? Stock will be restored.')">
-                                                                        <em class="icon ni ni-cross-circle"></em>
-                                                                        <span>Cancel Transfer</span>
-                                                                    </a>
-                                                                </li>
+                                                            {% if user_permissions.can_transfer_stock %}
+                                                                {% if transfer.status == 'pending' %}
+                                                                    <li>
+                                                                        <a href="{% url 'approve_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Approve this transfer?')">
+                                                                            <em class="icon ni ni-check-circle"></em>
+                                                                            <span>Approve Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    <li>
+                                                                        <a href="{% url 'cancel_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Cancel this transfer? Stock will be restored.')">
+                                                                            <em class="icon ni ni-cross-circle"></em>
+                                                                            <span>Cancel Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                {% elif transfer.status == 'in_transit' %}
+                                                                    <li>
+                                                                        <a href="{% url 'complete_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Complete this transfer? Item will be moved to destination.')">
+                                                                            <em class="icon ni ni-check-thick"></em>
+                                                                            <span>Complete Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    <li>
+                                                                        <a href="{% url 'cancel_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Cancel this transfer? Stock will be restored.')">
+                                                                            <em class="icon ni ni-cross-circle"></em>
+                                                                            <span>Cancel Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                {% elif transfer.status == 'awaiting_collection' %}
+                                                                    <li>
+                                                                        <a href="{% url 'mark_collected' transfer.id %}" 
+                                                                           onclick="return confirm('Mark as collected? This will reduce stock quantity.')">
+                                                                            <em class="icon ni ni-user-check"></em>
+                                                                            <span>Mark as Collected</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    <li>
+                                                                        <a href="{% url 'cancel_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Cancel this transfer? Stock will be restored.')">
+                                                                            <em class="icon ni ni-cross-circle"></em>
+                                                                            <span>Cancel Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                {% endif %}
                                                             {% endif %}
                                                             <li>
                                                                 <a href="{% url 'stock_detail' transfer.stock.id %}">
