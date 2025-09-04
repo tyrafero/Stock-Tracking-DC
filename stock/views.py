@@ -416,6 +416,12 @@ def live_search(request):
 @login_required
 def transfer_stock(request, pk):
     """Create a new stock transfer"""
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_transfer_stock'):
+        messages.error(request, 'You do not have permission to transfer stock.')
+        return redirect('/')
+        
     stock = get_object_or_404(Stock, id=pk)
     
     if request.method == 'POST':
@@ -647,6 +653,12 @@ def scrum_view(request):
 
 @login_required
 def add_stock(request):
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_create_stock'):
+        messages.error(request, 'You do not have permission to add stock.')
+        return redirect('/')
+        
     title = 'Add Stock'
     if request.method == 'POST':
         print("\n=== ADD STOCK DEBUG ===")
@@ -776,6 +788,12 @@ def debug_info(request):
 
 @login_required
 def update_stock(request, pk):
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_edit_stock'):
+        messages.error(request, 'You do not have permission to edit stock.')
+        return redirect('/')
+        
     title = 'Update Stock'
     update = Stock.objects.get(id=pk)
     old_quantity = update.quantity  # Store old quantity
@@ -847,6 +865,12 @@ def update_stock(request, pk):
 @login_required
 def issue_stock(request, pk):
     """Handle stock issuing with notes"""
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_issue_stock'):
+        messages.error(request, 'You do not have permission to issue stock.')
+        return redirect('/')
+        
     stock = Stock.objects.get(id=pk)
     
     if request.method == 'POST':
@@ -889,6 +913,12 @@ def issue_stock(request, pk):
 @login_required
 def receive_stock(request, pk):
     """Handle stock receiving with notes"""
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_receive_stock'):
+        messages.error(request, 'You do not have permission to receive stock.')
+        return redirect('/')
+        
     stock = Stock.objects.get(id=pk)
     
     if request.method == 'POST':
@@ -928,6 +958,12 @@ def receive_stock(request, pk):
 @login_required
 def commit_stock(request, pk):
     """Handle stock commitment with customer deposit and order details"""
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_commit_stock'):
+        messages.error(request, 'You do not have permission to commit stock.')
+        return redirect('/')
+        
     stock = Stock.objects.get(id=pk)
     
     if request.method == 'POST':
@@ -1025,6 +1061,12 @@ def cancel_commitment(request, pk):
 
 @login_required
 def delete_stock(request, pk):
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_edit_stock'):
+        messages.error(request, 'You do not have permission to delete stock.')
+        return redirect('/')
+        
     # Get stock item before deleting to create history record
     stock_item = Stock.objects.get(id=pk)
     
@@ -1073,6 +1115,12 @@ def stock_detail(request, pk):
 
 @login_required
 def issue_item(request, pk):
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_issue_stock'):
+        messages.error(request, 'You do not have permission to issue stock.')
+        return redirect('/')
+        
     issue = Stock.objects.get(id=pk)
     form = IssueForm(request.POST or None, instance=issue, stock=issue)
     
@@ -1145,6 +1193,12 @@ def receive_item(request, pk):
     print(f"Request path: {request.path}")
     print(f"PK received: {pk}")
     
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_receive_stock'):
+        messages.error(request, 'You do not have permission to receive stock.')
+        return redirect('/')
+    
     receive = Stock.objects.get(id=pk)
     form = ReceiveForm(request.POST or None, instance=receive, stock=receive)
     
@@ -1214,6 +1268,12 @@ def receive_item(request, pk):
 
 @login_required
 def re_order(request, pk):
+    # Check permissions
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_edit_stock'):
+        messages.error(request, 'You do not have permission to modify stock settings.')
+        return redirect('/')
+        
     order = Stock.objects.get(id=pk)
     form = ReorderLevelForm(request.POST or None, instance=order)
     if form.is_valid():
@@ -2399,8 +2459,8 @@ def reserve_stock(request, pk):
     
     # Check permissions
     from .utils.permissions import has_permission
-    if not has_permission(request.user, 'can_view_stock'):
-        messages.error(request, 'You do not have permission to access this page.')
+    if not has_permission(request.user, 'can_commit_stock'):
+        messages.error(request, 'You do not have permission to reserve stock.')
         return redirect('/')
     
     if request.method == 'POST':
