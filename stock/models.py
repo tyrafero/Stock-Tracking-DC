@@ -882,10 +882,17 @@ class Store(models.Model):
         ('auburn_warehouse', 'Auburn Warehouse'),
     ]
     
+    DESIGNATION_CHOICES = [
+        ('store', 'Store'),
+        ('warehouse', 'Warehouse'),
+    ]
+    
     name = models.CharField(max_length=200, choices=STORE_CHOICES)
+    designation = models.CharField(max_length=20, choices=DESIGNATION_CHOICES, default='store', help_text="Designate as Store or Warehouse")
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
     email = models.EmailField(max_length=255, blank=True, null=True, help_text="Store contact email")
+    logo = models.ImageField(upload_to='store_logos/', null=True, blank=True, help_text="Business logo for this store/warehouse")
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
@@ -914,11 +921,21 @@ class PurchaseOrder(models.Model):
     manufacturer = models.ForeignKey(Manufacturer, on_delete=models.CASCADE)
     delivery_person = models.ForeignKey(DeliveryPerson, on_delete=models.CASCADE)
     delivery_type = models.CharField(max_length=20, choices=DELIVERY_CHOICES, default='store')
+    creating_store = models.ForeignKey(
+        Store,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_purchase_orders',
+        help_text='Store that created this purchase order',
+        verbose_name='Creating Store'
+    )
     store = models.ForeignKey(
         Store, 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=False,
+        related_name='received_purchase_orders',
         help_text='Delivery location where items will be received and added to inventory',
         verbose_name='Delivery Location'
     )

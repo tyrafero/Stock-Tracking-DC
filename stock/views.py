@@ -771,6 +771,31 @@ def update_stock(request, pk):
             
             updated_stock = form.save()
             
+            # Handle StockLocation for the updated location
+            location = form.cleaned_data.get('location')
+            aisle = form.cleaned_data.get('aisle', '')
+            new_quantity = updated_stock.quantity
+            
+            if location:
+                # Update or create StockLocation record
+                stock_location, created = StockLocation.objects.get_or_create(
+                    stock=updated_stock,
+                    store=location,
+                    defaults={'quantity': new_quantity, 'aisle': aisle}
+                )
+                if not created:
+                    # If StockLocation already exists, update it
+                    stock_location.quantity = new_quantity
+                    if aisle:
+                        stock_location.aisle = aisle
+                    stock_location.save()
+                
+                # Remove any other StockLocation records for this stock (since we're setting a single location)
+                StockLocation.objects.filter(stock=updated_stock).exclude(store=location).delete()
+            else:
+                # If no location is set, remove all StockLocation records
+                StockLocation.objects.filter(stock=updated_stock).delete()
+            
             # CREATE HISTORY RECORD
             quantity_change = updated_stock.quantity - old_quantity
             
@@ -1895,7 +1920,7 @@ def manage_stores(request):
 @login_required
 def add_store(request):
     if request.method == 'POST':
-        form = StoreForm(request.POST)
+        form = StoreForm(request.POST, request.FILES)
         if form.is_valid():
             store = form.save()
             messages.success(request, f'Store "{store.name}" added successfully!')
@@ -1909,7 +1934,7 @@ def add_store(request):
 def edit_store(request, pk):
     store = get_object_or_404(Store, pk=pk)
     if request.method == 'POST':
-        form = StoreForm(request.POST, instance=store)
+        form = StoreForm(request.POST, request.FILES, instance=store)
         if form.is_valid():
             store = form.save()
             messages.success(request, f'Store "{store.name}" updated successfully!')
@@ -1917,7 +1942,7 @@ def edit_store(request, pk):
     else:
         form = StoreForm(instance=store)
     context = {'title': f'Edit Store - {store.name}', 'form': form, 'store': store}
-    return render(request, 'stock/edit_store.html', context)
+    return render(request, 'stock/add_store.html', context)
 
 @login_required
 def delete_store(request, pk):

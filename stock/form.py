@@ -309,12 +309,13 @@ class StockHistorySearchForm(forms.ModelForm):
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
-        fields = ['note_for_manufacturer', 'manufacturer', 'delivery_person', 'delivery_type', 'store']
+        fields = ['note_for_manufacturer', 'manufacturer', 'delivery_person', 'delivery_type', 'creating_store', 'store']
         widgets = {
             'note_for_manufacturer': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter notes for manufacturer...'}),
             'manufacturer': forms.Select(attrs={'class': 'form-control', 'id': 'id_manufacturer'}),
             'delivery_person': forms.Select(attrs={'class': 'form-control'}),
             'delivery_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_delivery_type'}),
+            'creating_store': forms.Select(attrs={'class': 'form-control', 'id': 'id_creating_store'}),
             'store': forms.Select(attrs={'class': 'form-control', 'id': 'id_store'}),
         }
 
@@ -340,19 +341,28 @@ class PurchaseOrderForm(forms.ModelForm):
                 css_class='card card-inner mb-4'
             ),
             Div(
-                HTML('<h5 class="mb-3">Delivery Information</h5>'),
+                HTML('<h5 class="mb-3">Store Information</h5>'),
                 Row(
+                    Column('creating_store', css_class='form-group col-md-6 mb-3'),
                     Column('delivery_type', css_class='form-group col-md-6 mb-3'),
-                    Column('store', css_class='form-group col-md-6 mb-3'),
+                ),
+                Row(
+                    Column('store', css_class='form-group col-md-12 mb-3'),
                 ),
                 css_class='card card-inner mb-4'
             ),
         )
+        # Configure creating store field
+        self.fields['creating_store'].required = True
+        self.fields['creating_store'].label = 'Creating Store'
+        self.fields['creating_store'].help_text = 'Store that is creating this purchase order'
+        self.fields['creating_store'].queryset = Store.objects.filter(is_active=True, designation='store').order_by('name')
+        
         # Make delivery location required and rename label
         self.fields['store'].required = True
         self.fields['store'].label = 'Delivery Location'
-        self.fields['store'].help_text = 'Where items will be delivered and added to inventory'
-        self.fields['store'].queryset = Store.objects.filter(is_active=True)
+        self.fields['store'].help_text = 'Where items will be delivered and added to inventory (can be any store or warehouse)'
+        self.fields['store'].queryset = Store.objects.filter(is_active=True).order_by('designation', 'name')
 
 
 class PurchaseOrderItemForm(forms.ModelForm):
@@ -560,12 +570,14 @@ class DeliveryPersonForm(forms.ModelForm):
 class StoreForm(forms.ModelForm):
     class Meta:
         model = Store
-        fields = ['name', 'location', 'email', 'address', 'is_active']
+        fields = ['name', 'designation', 'location', 'email', 'address', 'logo', 'is_active']
         widgets = {
             'name': forms.Select(attrs={'class': 'form-control'}),
+            'designation': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'sales@example.com'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
@@ -573,13 +585,18 @@ class StoreForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'post'
+        self.helper.form_enctype = 'multipart/form-data'  # Required for file uploads
         self.helper.layout = Layout(
             Row(
                 Column('name', css_class='form-group col-md-6 mb-3'),
-                Column('location', css_class='form-group col-md-6 mb-3'),
+                Column('designation', css_class='form-group col-md-6 mb-3'),
             ),
             Row(
+                Column('location', css_class='form-group col-md-6 mb-3'),
                 Column('email', css_class='form-group col-md-6 mb-3'),
+            ),
+            Row(
+                Column('logo', css_class='form-group col-md-6 mb-3'),
                 Column('is_active', css_class='form-group col-md-6 mb-3'),
             ),
             Row(Column('address', css_class='form-group col-md-12 mb-3')),

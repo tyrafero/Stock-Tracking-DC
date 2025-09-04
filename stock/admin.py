@@ -95,8 +95,9 @@ class DeliveryPersonAdmin(admin.ModelAdmin):
 # Store Admin
 @admin.register(Store)
 class StoreAdmin(admin.ModelAdmin):
-    list_display = ('name', 'location', 'is_active')
-    list_filter = ('is_active',)
+    list_display = ('name', 'designation', 'location', 'is_active')
+    list_filter = ('designation', 'is_active')
+    fields = ('name', 'designation', 'location', 'address', 'email', 'logo', 'is_active')
 
 # StockLocation Admin
 @admin.register(StockLocation)

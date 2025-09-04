@@ -13,7 +13,11 @@
                             <div class="nk-block-head-content">
                                 <h3 class="nk-block-title page-title">{{ title }}</h3>
                                 <div class="nk-block-des">
-                                    <p>Add a new store or delivery location to your system.</p>
+                                    {% if store %}
+                                        <p>Update store information and settings.</p>
+                                    {% else %}
+                                        <p>Add a new store or delivery location to your system.</p>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -28,13 +32,17 @@
                                             <h5 class="card-title">Store Details</h5>
                                         </div>
                                         
-                                        <form method="POST" action="">
+                                        <form method="POST" action="" enctype="multipart/form-data">
                                             {% csrf_token %}
                                             {{ form|crispy }}
                                             
                                             <div class="form-group mt-4">
                                                 <button type="submit" class="btn btn-primary">
-                                                    <em class="icon ni ni-plus"></em> Add Store
+                                                    {% if store %}
+                                                        <em class="icon ni ni-edit"></em> Update Store
+                                                    {% else %}
+                                                        <em class="icon ni ni-plus"></em> Add Store
+                                                    {% endif %}
                                                 </button>
                                                 <a href="{% url 'manage_stores' %}" class="btn btn-outline-light ms-2">
                                                     Cancel
