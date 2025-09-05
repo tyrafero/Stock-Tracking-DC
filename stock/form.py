@@ -370,7 +370,7 @@ class PurchaseOrderItemForm(forms.ModelForm):
         model = PurchaseOrderItem
         fields = ['product', 'associated_order_number', 'price_inc', 'quantity', 'discount_percent']
         widgets = {
-            'product': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Product name'}),
+            'product': forms.TextInput(attrs={'class': 'form-control product-input', 'placeholder': 'Product name'}),
             'associated_order_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Order #'}),
             'price_inc': forms.NumberInput(attrs={'class': 'form-control price-inc', 'step': '0.01', 'min': '0', 'placeholder': '0.00'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control quantity', 'min': '1', 'placeholder': '1'}),

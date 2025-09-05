@@ -2979,3 +2979,55 @@ def approve_audit(request, audit_id):
         'variance_items': variance_items,
     }
     return render(request, 'stock/approve_audit.html', context)
+
+
+@login_required
+def stock_item_suggestions(request):
+    """AJAX endpoint for stock item autocomplete suggestions"""
+    from django.http import JsonResponse
+    from django.db.models import Q
+    
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'suggestions': []})
+    
+    # Search for existing stock items with similar names
+    stock_items = Stock.objects.filter(
+        Q(item_name__icontains=query) | 
+        Q(category__group__icontains=query)
+    ).select_related('category', 'location').distinct()[:10]
+    
+    # Also search for previous PO items to avoid duplicates
+    po_items = PurchaseOrderItem.objects.filter(
+        product__icontains=query
+    ).values_list('product', flat=True).distinct()[:10]
+    
+    suggestions = []
+    
+    # Add existing stock items (higher priority)
+    for stock in stock_items:
+        suggestions.append({
+            'type': 'existing_stock',
+            'name': stock.item_name,
+            'category': stock.category.group if stock.category else '',
+            'store': stock.location.name if stock.location else '',
+            'quantity': stock.quantity,
+            'unit': 'pcs',
+            'label': f"{stock.item_name} (In Stock: {stock.quantity} pcs)",
+            'priority': 1
+        })
+    
+    # Add previous PO items (lower priority)
+    for po_item in po_items:
+        if not any(s['name'].lower() == po_item.lower() for s in suggestions):
+            suggestions.append({
+                'type': 'previous_order',
+                'name': po_item,
+                'label': f"{po_item} (Previously ordered)",
+                'priority': 2
+            })
+    
+    # Sort by priority and name
+    suggestions.sort(key=lambda x: (x['priority'], x['name'].lower()))
+    
+    return JsonResponse({'suggestions': suggestions[:15]})

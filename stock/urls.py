@@ -53,6 +53,7 @@ urlpatterns = [
     
     # AJAX endpoints
     path('api/manufacturer-details/', views.get_manufacturer_details, name='get_manufacturer_details'),
+    path('api/stock-suggestions/', views.stock_item_suggestions, name='stock_item_suggestions'),
     
     # Management URLs
     path('manufacturers/', views.manage_manufacturers, name='manage_manufacturers'),
