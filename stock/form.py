@@ -571,12 +571,13 @@ class DeliveryPersonForm(forms.ModelForm):
 class StoreForm(forms.ModelForm):
     class Meta:
         model = Store
-        fields = ['name', 'designation', 'location', 'email', 'address', 'logo_url', 'website_url', 'facebook_url', 'instagram_url', 'abn', 'is_active']
+        fields = ['name', 'designation', 'location', 'email', 'order_email', 'address', 'logo_url', 'website_url', 'facebook_url', 'instagram_url', 'abn', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter store or warehouse name'}),
             'designation': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'sales@example.com'}),
+            'order_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'orders@example.com'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'logo_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com/logo.png'}),
             'website_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.example.com'}),

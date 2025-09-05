@@ -60,8 +60,10 @@
                                 </tr>
                                 <tr>
                                     <td style="padding:10px 0;"><strong>Buyer:</strong> {{ purchase_order.creating_store.name|default:purchase_order.store.name }}</td>
-                                    {% if purchase_order.creating_store.abn or purchase_order.store.abn %}
-                                    <td style="padding:10px 0;"><strong>ABN:</strong> {{ purchase_order.creating_store.abn|default:purchase_order.store.abn }}</td>
+                                    {% if purchase_order.creating_store.abn %}
+                                    <td style="padding:10px 0;"><strong>ABN:</strong> {{ purchase_order.creating_store.abn }}</td>
+                                    {% elif purchase_order.store.abn %}
+                                    <td style="padding:10px 0;"><strong>ABN:</strong> {{ purchase_order.store.abn }}</td>
                                     {% else %}
                                     <td style="padding:10px 0;"></td>
                                     {% endif %}
@@ -76,40 +78,49 @@
                     <td style="padding:30px 40px; background:#f9fafc;">
                         <h3 style="font-size:18px; font-weight:600; margin:0 0 15px; color:#333;">Items Ordered</h3>
                         <table width="100%" cellspacing="0" cellpadding="12" style="border-collapse:collapse; font-size:14px; color:#333;">
+                            <thead>
+                                <tr style="background:#0089d1; color:#ffffff;">
+                                    <th style="padding:12px; font-weight:600; text-align:left;">Item</th>
+                                    <th style="padding:12px; font-weight:600; text-align:center;">Quantity</th>
+                                    <th style="padding:12px; font-weight:600; text-align:right;">Price (Ex GST)</th>
+                                    <th style="padding:12px; font-weight:600; text-align:center;">Discount %</th>
+                                </tr>
+                            </thead>
                             <tbody>
                                 {% for item in items %}
                                 <tr style="background:#fff; {% if not forloop.first %}border-top:1px solid #eee;{% else %}border-radius:8px;{% endif %}">
                                     <td style="padding:12px; font-weight:600;">{{ item.product }}</td>
                                     <td style="text-align:center;">{{ item.quantity }}</td>
-                                    <td style="text-align:right;">${{ item.subtotal_exc|floatformat:2 }}</td>
+                                    <td style="text-align:right;">${{ item.price_exc|floatformat:2 }}</td>
+                                    <td style="text-align:center;">{{ item.discount_percent|floatformat:1 }}%</td>
                                 </tr>
                                 {% empty %}
                                 <tr style="background:#fff; border-radius:8px;">
-                                    <td colspan="3" style="padding:12px; text-align:center; color:#666;">No items in this order</td>
+                                    <td colspan="4" style="padding:12px; text-align:center; color:#666;">No items in this order</td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
                             <tfoot>
                                 <tr>
-                                    <td colspan="2" style="text-align:right; padding:12px; font-weight:600;">Subtotal</td>
+                                    <td colspan="3" style="text-align:right; padding:12px; font-weight:600;">Subtotal</td>
                                     <td style="text-align:right; padding:12px;">${{ purchase_order.subtotal_exc|add:purchase_order.total_discount_amount|floatformat:2 }}</td>
                                 </tr>
                                 {% if purchase_order.total_discount_amount > 0 %}
                                 <tr>
-                                    <td colspan="2" style="text-align:right; padding:12px; color:#dc3545;">Total Discount</td>
+                                    <td colspan="3" style="text-align:right; padding:12px; color:#dc3545;">Total Discount</td>
                                     <td style="text-align:right; padding:12px; color:#dc3545;">-${{ purchase_order.total_discount_amount|floatformat:2 }}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="2" style="text-align:right; padding:12px;">After Discount</td>
+                                    <td colspan="3" style="text-align:right; padding:12px;">After Discount</td>
                                     <td style="text-align:right; padding:12px;">${{ purchase_order.subtotal_exc|floatformat:2 }}</td>
                                 </tr>
                                 {% endif %}
                                 <tr>
-                                    <td colspan="2" style="text-align:right; padding:12px;">GST (10%)</td>
+                                    <td colspan="3" style="text-align:right; padding:12px;">GST (10%)</td>
                                     <td style="text-align:right; padding:12px;">${{ purchase_order.gst_amount|floatformat:2 }}</td>
                                 </tr>
                                 <tr>
-                                    <td colspan="2" style="text-align:right; padding:16px; font-size:16px; font-weight:700; border-top:2px solid #0089d1;">Grand Total</td>
+                                    <td colspan="3" style="text-align:right; padding:16px; font-size:16px; font-weight:700; border-top:2px solid #0089d1;">Grand Total</td>
                                     <td style="text-align:right; padding:16px; font-size:16px; font-weight:700; color:#0089d1; border-top:2px solid #0089d1;">${{ purchase_order.grand_total|floatformat:2 }}</td>
                                 </tr>
                             </tfoot>
@@ -139,8 +150,10 @@
                 <!-- Call to action -->
                 <tr>
                     <td align="center" style="padding:40px; background:#f9fafc;">
-                        {% if purchase_order.store.email %}
-                        <a href="mailto:{{ purchase_order.store.email }}" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
+                        {% if purchase_order.creating_store.order_email or purchase_order.store.order_email %}
+                        <a href="mailto:{{ purchase_order.creating_store.order_email|default:purchase_order.store.order_email }}" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
+                        {% elif purchase_order.creating_store.email or purchase_order.store.email %}
+                        <a href="mailto:{{ purchase_order.creating_store.email|default:purchase_order.store.email }}" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
                         {% else %}
                         <a href="mailto:orders@company.com" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
                         {% endif %}
@@ -151,18 +164,25 @@
                 <tr>
                     <td align="center" style="padding:25px 20px; font-size:13px; color:#777; background:#ffffff; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
                         <p style="margin:0 0 10px; font-size:18px; font-weight:600; color:#333;">Need Help?</p>
-                        {% if purchase_order.store.website_url %}
-                        <p style="margin:0 0 10px;">Visit our <a href="{{ purchase_order.store.website_url }}/faqs" style="color:#0089d1; text-decoration:none;">FAQs</a> or <a href="{{ purchase_order.store.website_url }}/contact-us" style="color:#0089d1; text-decoration:none;">Contact Us</a>.</p>
+                        {% if purchase_order.creating_store.website_url or purchase_order.store.website_url %}
+                        <p style="margin:0 0 10px;">Visit our <a href="{{ purchase_order.creating_store.website_url|default:purchase_order.store.website_url }}/faqs" style="color:#0089d1; text-decoration:none;">FAQs</a> or <a href="{{ purchase_order.creating_store.website_url|default:purchase_order.store.website_url }}/contact-us" style="color:#0089d1; text-decoration:none;">Contact Us</a>.</p>
                         {% endif %}
-                        {% if purchase_order.store.address %}
-                        <p style="margin:0 0 15px;">{{ purchase_order.store.address }}</p>
+                        {% if purchase_order.delivery_person %}
+                        <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin:15px 0; border-left:4px solid #0089d1;">
+                            <p style="margin:0 0 5px; font-size:16px; font-weight:600; color:#333;">Delivery Contact</p>
+                            <p style="margin:0; font-size:14px; color:#555;"><strong>{{ purchase_order.delivery_person.name }}</strong></p>
+                            <p style="margin:0; font-size:14px; color:#555;">Phone: {{ purchase_order.delivery_person.phone_number }}</p>
+                        </div>
+                        {% endif %}
+                        {% if purchase_order.creating_store.address or purchase_order.store.address %}
+                        <p style="margin:0 0 15px;">{{ purchase_order.creating_store.address|default:purchase_order.store.address }}</p>
                         {% endif %}
                         <p>
-                            {% if purchase_order.store.instagram_url %}
-                            <a href="{{ purchase_order.store.instagram_url }}"><img src="https://cdn-icons-png.flaticon.com/512/2111/2111463.png" alt="Instagram" width="24" style="margin:0 5px; border:none;"></a>
+                            {% if purchase_order.creating_store.instagram_url or purchase_order.store.instagram_url %}
+                            <a href="{{ purchase_order.creating_store.instagram_url|default:purchase_order.store.instagram_url }}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Instagram_icon.png/64px-Instagram_icon.png" alt="Instagram" width="24" style="margin:0 5px; border:none;"></a>
                             {% endif %}
-                            {% if purchase_order.store.facebook_url %}
-                            <a href="{{ purchase_order.store.facebook_url }}"><img src="https://cdn-icons-png.flaticon.com/512/733/733547.png" alt="Facebook" width="24" style="margin:0 5px; border:none;"></a>
+                            {% if purchase_order.creating_store.facebook_url or purchase_order.store.facebook_url %}
+                            <a href="{{ purchase_order.creating_store.facebook_url|default:purchase_order.store.facebook_url }}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Facebook_f_logo_%282019%29.svg/64px-Facebook_f_logo_%282019%29.svg.png" alt="Facebook" width="24" style="margin:0 5px; border:none;"></a>
                             {% endif %}
                         </p>
                         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;">

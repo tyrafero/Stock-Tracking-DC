@@ -954,6 +954,7 @@ class Store(models.Model):
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
     email = models.EmailField(max_length=255, blank=True, null=True, help_text="Store contact email")
+    order_email = models.EmailField(max_length=255, blank=True, null=True, help_text="Email address for purchase order confirmations")
     logo_url = models.URLField(max_length=500, blank=True, null=True, help_text="URL link to business logo image")
     website_url = models.URLField(max_length=500, blank=True, null=True, help_text="Company website URL")
     facebook_url = models.URLField(max_length=500, blank=True, null=True, help_text="Facebook page URL")
