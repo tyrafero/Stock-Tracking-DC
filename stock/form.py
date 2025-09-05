@@ -502,7 +502,7 @@ class BulkReceivingForm(forms.Form):
 class ManufacturerForm(forms.ModelForm):
     class Meta:
         model = Manufacturer
-        fields = ['company_name', 'company_email', 'additional_email', 'street_address', 'city', 'country', 'region', 'postal_code', 'company_telephone']
+        fields = ['company_name', 'company_email', 'additional_email', 'street_address', 'city', 'country', 'region', 'postal_code', 'company_telephone', 'abn']
         widgets = {
             'company_name': forms.TextInput(attrs={'class': 'form-control'}),
             'company_email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -513,6 +513,7 @@ class ManufacturerForm(forms.ModelForm):
             'region': forms.TextInput(attrs={'class': 'form-control'}),
             'postal_code': forms.TextInput(attrs={'class': 'form-control'}),
             'company_telephone': forms.TextInput(attrs={'class': 'form-control'}),
+            'abn': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12 345 678 901'}),
         }
         labels = {
             'city': 'Suburb',
@@ -570,14 +571,18 @@ class DeliveryPersonForm(forms.ModelForm):
 class StoreForm(forms.ModelForm):
     class Meta:
         model = Store
-        fields = ['name', 'designation', 'location', 'email', 'address', 'logo', 'is_active']
+        fields = ['name', 'designation', 'location', 'email', 'address', 'logo_url', 'website_url', 'facebook_url', 'instagram_url', 'abn', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter store or warehouse name'}),
             'designation': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'sales@example.com'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'logo_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com/logo.png'}),
+            'website_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.example.com'}),
+            'facebook_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.facebook.com/yourpage'}),
+            'instagram_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.instagram.com/yourprofile'}),
+            'abn': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12 345 678 901'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 

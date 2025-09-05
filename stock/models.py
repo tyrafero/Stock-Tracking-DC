@@ -927,6 +927,7 @@ class Manufacturer(models.Model):
     region = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
     company_telephone = models.CharField(max_length=20)
+    abn = models.CharField(max_length=20, blank=True, null=True, help_text="Australian Business Number")
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -953,7 +954,11 @@ class Store(models.Model):
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
     email = models.EmailField(max_length=255, blank=True, null=True, help_text="Store contact email")
-    logo = models.ImageField(upload_to='store_logos/', null=True, blank=True, help_text="Business logo for this store/warehouse")
+    logo_url = models.URLField(max_length=500, blank=True, null=True, help_text="URL link to business logo image")
+    website_url = models.URLField(max_length=500, blank=True, null=True, help_text="Company website URL")
+    facebook_url = models.URLField(max_length=500, blank=True, null=True, help_text="Facebook page URL")
+    instagram_url = models.URLField(max_length=500, blank=True, null=True, help_text="Instagram profile URL")
+    abn = models.CharField(max_length=20, blank=True, null=True, help_text="Australian Business Number")
     is_active = models.BooleanField(default=True)
 
     @property

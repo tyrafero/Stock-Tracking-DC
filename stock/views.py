@@ -1470,33 +1470,38 @@ def create_purchase_order(request):
         po_form = PurchaseOrderForm(request.POST)
         item_formset = PurchaseOrderItemFormSet(request.POST)
         if po_form.is_valid() and item_formset.is_valid():
-            try:
-                with transaction.atomic():
-                    purchase_order = po_form.save(commit=False)
-                    purchase_order.created_by = request.user
-                    purchase_order.save()
-                    item_formset.instance = purchase_order
-                    item_formset.save()
-                    PurchaseOrderHistory.objects.create(
-                        purchase_order=purchase_order,
-                        action='created',
-                        notes='Purchase order created',
-                        created_by=request.user
-                    )
-                    if request.POST.get('action') == 'submit':
-                        purchase_order.status = 'submitted'
-                        purchase_order.submitted_at = timezone.now()
+            # Check if there are any valid items in the formset
+            valid_items = [form for form in item_formset if form.is_valid() and not form.cleaned_data.get('DELETE', False) and form.cleaned_data.get('product')]
+            if not valid_items:
+                messages.error(request, 'Purchase Order must contain at least one item. Please add items before saving.')
+            else:
+                try:
+                    with transaction.atomic():
+                        purchase_order = po_form.save(commit=False)
+                        purchase_order.created_by = request.user
                         purchase_order.save()
+                        item_formset.instance = purchase_order
+                        item_formset.save()
                         PurchaseOrderHistory.objects.create(
                             purchase_order=purchase_order,
-                            action='submitted',
-                            notes='Purchase order submitted',
+                            action='created',
+                            notes='Purchase order created',
                             created_by=request.user
                         )
-                    messages.success(request, f'Purchase Order {purchase_order.reference_number} created successfully!')
-                    return redirect('purchase_order_detail', pk=purchase_order.pk)
-            except Exception as e:
-                messages.error(request, f'Error creating purchase order: {str(e)}')
+                        if request.POST.get('action') == 'submit':
+                            purchase_order.status = 'submitted'
+                            purchase_order.submitted_at = timezone.now()
+                            purchase_order.save()
+                            PurchaseOrderHistory.objects.create(
+                                purchase_order=purchase_order,
+                                action='submitted',
+                                notes='Purchase order submitted',
+                                created_by=request.user
+                            )
+                        messages.success(request, f'Purchase Order {purchase_order.reference_number} created successfully!')
+                        return redirect('purchase_order_detail', pk=purchase_order.pk)
+                except Exception as e:
+                    messages.error(request, f'Error creating purchase order: {str(e)}')
         else:
             print(po_form.errors)
             print(item_formset.errors)
@@ -1531,30 +1536,35 @@ def update_purchase_order(request, pk):
         po_form = PurchaseOrderForm(request.POST, instance=purchase_order)
         item_formset = PurchaseOrderItemFormSet(request.POST, instance=purchase_order)
         if po_form.is_valid() and item_formset.is_valid():
-            try:
-                with transaction.atomic():
-                    po_form.save()
-                    item_formset.save()
-                    PurchaseOrderHistory.objects.create(
-                        purchase_order=purchase_order,
-                        action='updated',
-                        notes='Purchase order updated',
-                        created_by=request.user
-                    )
-                    if request.POST.get('action') == 'submit':
-                        purchase_order.status = 'submitted'
-                        purchase_order.submitted_at = timezone.now()
-                        purchase_order.save()
+            # Check if there are any valid items in the formset
+            valid_items = [form for form in item_formset if form.is_valid() and not form.cleaned_data.get('DELETE', False) and form.cleaned_data.get('product')]
+            if not valid_items:
+                messages.error(request, 'Purchase Order must contain at least one item. Please add items before saving.')
+            else:
+                try:
+                    with transaction.atomic():
+                        po_form.save()
+                        item_formset.save()
                         PurchaseOrderHistory.objects.create(
                             purchase_order=purchase_order,
-                            action='submitted',
-                            notes='Purchase order submitted',
+                            action='updated',
+                            notes='Purchase order updated',
                             created_by=request.user
                         )
-                    messages.success(request, f'Purchase Order {purchase_order.reference_number} updated successfully!')
-                    return redirect('purchase_order_detail', pk=purchase_order.pk)
-            except Exception as e:
-                messages.error(request, f'Error updating purchase order: {str(e)}')
+                        if request.POST.get('action') == 'submit':
+                            purchase_order.status = 'submitted'
+                            purchase_order.submitted_at = timezone.now()
+                            purchase_order.save()
+                            PurchaseOrderHistory.objects.create(
+                                purchase_order=purchase_order,
+                                action='submitted',
+                                notes='Purchase order submitted',
+                                created_by=request.user
+                            )
+                        messages.success(request, f'Purchase Order {purchase_order.reference_number} updated successfully!')
+                        return redirect('purchase_order_detail', pk=purchase_order.pk)
+                except Exception as e:
+                    messages.error(request, f'Error updating purchase order: {str(e)}')
         else:
             print(po_form.errors)
             print(item_formset.errors)
