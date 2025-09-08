@@ -359,6 +359,100 @@
                     </div>
                 </div>
                 {% endif %}
+                
+                <!-- Aging Stock Section for Sales -->
+                {% if aging_stock %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Aging Stock - Sales Opportunity</h5>
+                                <p class="nk-block-des">Long-standing inventory items - potential for promotions or clearance sales</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        {% if aging_stock.old_stock %}
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-warning">
+                                                <em class="icon ni ni-trend-down"></em>
+                                                Slow-Moving Stock - Clearance Candidates (90+ Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-warning">{{ aging_stock.old_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        {% for item in aging_stock.old_stock|slice:":6" %}
+                                        <div class="col-md-4">
+                                            <div class="alert alert-warning-dim" role="alert">
+                                                <div class="alert-text">
+                                                    <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-warning">{{ item.item_name }}</a></strong><br>
+                                                    <small>Available: {{ item.quantity }} units</small><br>
+                                                    <small class="text-muted">{{ item.days_in_stock }} days in stock</small><br>
+                                                    <small class="text-info">💡 Consider promotional pricing</small>
+                                                </div>
+                                                <div class="alert-action mt-2">
+                                                    <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-warning">Promote Sale</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if aging_stock.old_stock|length > 6 %}
+                                    <div class="text-center mt-3">
+                                        <span class="text-muted">... and {{ aging_stock.old_stock|length|add:"-6" }} more items need attention</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if aging_stock.medium_age_stock %}
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-eye"></em>
+                                                Watch List - Medium Age Stock (60-90 Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-info">{{ aging_stock.medium_age_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        {% for item in aging_stock.medium_age_stock|slice:":6" %}
+                                        <div class="col-md-4">
+                                            <div class="alert alert-info-dim" role="alert">
+                                                <div class="alert-text">
+                                                    <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-info">{{ item.item_name }}</a></strong><br>
+                                                    <small>Available: {{ item.quantity }} units</small><br>
+                                                    <small class="text-muted">{{ item.days_in_stock }} days in stock</small>
+                                                </div>
+                                                <div class="alert-action mt-2">
+                                                    <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-info">View Details</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
 
             </div>
         </div>

@@ -300,7 +300,7 @@ class Stock(models.Model):
             return False
     
     class Meta:
-        ordering = ['-last_updated']
+        ordering = ['-last_updated', '-timestamp', '-date']
 
     def __str__(self):
         return f"{self.item_name} ({self.quantity}) - {self.last_updated}"
@@ -781,7 +781,7 @@ class StockTransfer(models.Model):
     collected_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-completed_at', '-approved_at', '-created_at']
     
     def __str__(self):
         return f"Transfer {self.stock.item_name} ({self.quantity}pcs) from {self.from_location} to {self.to_location}"
@@ -1086,7 +1086,7 @@ class PurchaseOrder(models.Model):
         return self.subtotal_after_discount + self.gst_amount
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-updated_at', '-created_at']
     
     def __str__(self):
         return f"{self.reference_number} - {self.manufacturer.company_name}"

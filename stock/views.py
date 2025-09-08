@@ -1,12 +1,14 @@
 import csv
 import os
 import re
+from datetime import datetime, timedelta
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q, F
 from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.utils import timezone
 from .models import *
 from .form import *
 from django.contrib.auth.decorators import login_required
@@ -15,6 +17,42 @@ from django.http import JsonResponse
 from .utils.email_service import send_purchase_order_email_safe
 
 # Create your views here.
+
+def get_aging_stock():
+    """Get stock items that have been in inventory for extended periods"""
+    now = timezone.now()
+    
+    # Define aging periods
+    thirty_days_ago = now - timedelta(days=30)
+    sixty_days_ago = now - timedelta(days=60)
+    ninety_days_ago = now - timedelta(days=90)
+    
+    # Get stock items with quantity > 0 and calculate their age
+    aging_stock = {
+        'old_stock': Stock.objects.filter(
+            quantity__gt=0,
+            timestamp__lt=ninety_days_ago  # More than 90 days old
+        ).select_related('category')[:10],
+        
+        'medium_age_stock': Stock.objects.filter(
+            quantity__gt=0,
+            timestamp__lt=sixty_days_ago,
+            timestamp__gte=ninety_days_ago  # 60-90 days old
+        ).select_related('category')[:10],
+        
+        'aging_stock': Stock.objects.filter(
+            quantity__gt=0,
+            timestamp__lt=thirty_days_ago,
+            timestamp__gte=sixty_days_ago  # 30-60 days old
+        ).select_related('category')[:10],
+    }
+    
+    # Add age calculation to each item
+    for category in aging_stock.values():
+        for item in category:
+            item.days_in_stock = (now - item.timestamp).days if item.timestamp else 0
+            
+    return aging_stock
 
 @login_required
 def pending_approval(request):
@@ -184,6 +222,9 @@ def admin_dashboard(request):
     recent_pos = PurchaseOrder.objects.filter(status__in=['draft', 'submitted']).count()
     total_stock_value = sum(stock.quantity * 100 for stock in Stock.objects.all())  # Placeholder calculation
     
+    # Get aging stock analysis
+    aging_stock = get_aging_stock()
+    
     context = {
         'dashboard_type': 'admin',
         'count': count,
@@ -203,6 +244,7 @@ def admin_dashboard(request):
         'low_stock_items': low_stock_items,
         'recent_pos': recent_pos,
         'total_stock_value': total_stock_value,
+        'aging_stock': aging_stock,
     }
     return render(request, 'stock/dashboards/admin_dashboard.html', context)
 
@@ -237,6 +279,9 @@ def sales_dashboard(request):
     total_reserved = active_reservations.count()
     total_available = available_stock.count()
     
+    # Get aging stock analysis for sales insights
+    aging_stock = get_aging_stock()
+    
     context = {
         'dashboard_type': 'sales',
         'available_stock': available_stock[:20],  # Limit for performance
@@ -247,6 +292,7 @@ def sales_dashboard(request):
         'total_committed': total_committed,
         'total_reserved': total_reserved,
         'total_available': total_available,
+        'aging_stock': aging_stock,
     }
     return render(request, 'stock/dashboards/sales_dashboard.html', context)
 
@@ -274,6 +320,9 @@ def warehouse_dashboard(request):
         stock_count = StockLocation.objects.filter(store=location).count()
         stock_by_location[location.name] = stock_count
     
+    # Get aging stock analysis for warehouse management
+    aging_stock = get_aging_stock()
+    
     context = {
         'dashboard_type': 'warehouse',
         'pending_pos': pending_pos[:10],
@@ -281,6 +330,7 @@ def warehouse_dashboard(request):
         'in_transit_transfers': in_transit_transfers,
         'recent_receiving': recent_receiving,
         'stock_by_location': stock_by_location,
+        'aging_stock': aging_stock,
     }
     return render(request, 'stock/dashboards/warehouse_dashboard.html', context)
 
