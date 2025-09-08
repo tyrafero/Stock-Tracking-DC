@@ -211,6 +211,7 @@ class Stock(models.Model):
     
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
+    sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit - unique identifier for this item")
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
     received_by = models.CharField(max_length=50, blank=True, null=True)
@@ -228,7 +229,7 @@ class Stock(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     date = models.DateTimeField(default=timezone.now)
     export_to_csv = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='stock/images/', null=True, blank=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True, help_text="URL to display an image of the item")
     source_purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.CASCADE, null=True, blank=True)
 
     @property

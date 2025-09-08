@@ -405,7 +405,7 @@ def live_search(request):
             'item_name': stock.item_name,
             'category': stock.category.group if stock.category else 'No Category',
             'quantity': stock.total_across_locations,
-            'image_url': stock.image.url if stock.image else None,
+            'image_url': stock.image_url,
             'low_stock': stock.total_across_locations <= (stock.re_order or 0),
             'condition': stock.condition,
             'condition_display': stock.get_condition_display()
@@ -709,20 +709,13 @@ def add_stock(request):
                     aisle=aisle
                 )
             
-            # Debug the saved image
-            print("\n=== IMAGE DEBUG ===")
-            print(f"Image field: {stock.image}")
-            if stock.image:
-                print(f"Image name: {stock.image.name}")
-                print(f"Image URL: {stock.image.url}")
-                print(f"Image storage: {type(stock.image.storage)}")
-                # Test if we can get image info
-                try:
-                    print(f"Image size: {stock.image.size} bytes")
-                except Exception as e:
-                    print(f"Error getting image size: {e}")
+            # Debug the saved image URL
+            print("\n=== IMAGE URL DEBUG ===")
+            print(f"Image URL field: {stock.image_url}")
+            if stock.image_url:
+                print(f"Image URL: {stock.image_url}")
             else:
-                print("No image was saved!")
+                print("No image URL was saved!")
             
             # CREATE HISTORY RECORD
             StockHistory.objects.create(
@@ -802,9 +795,7 @@ def update_stock(request, pk):
     if request.method == 'POST':
         form = StockUpdateForm(request.POST, request.FILES, instance=update)
         if form.is_valid():
-            # Remove old image if exists
-            if update.image and os.path.exists(update.image.path):
-                os.remove(update.image.path)
+            # Note: Image URL field doesn't require file cleanup
             
             updated_stock = form.save()
             

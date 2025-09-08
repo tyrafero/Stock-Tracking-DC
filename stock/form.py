@@ -12,15 +12,16 @@ from datetime import timedelta
 class StockCreateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'image']
+        fields = ['category', 'item_name', 'sku', 'condition', 'quantity', 'location', 'aisle', 'image_url']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter item name'}),
+            'sku': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter SKU (e.g., SKU-001)'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'location': forms.Select(attrs={'class': 'form-control'}),
             'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact phone number'}),
-            'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Enter image URL'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -35,17 +36,18 @@ class StockCreateForm(forms.ModelForm):
                 Column('item_name', css_class='form-group col-md-6'),
             ),
             Row(
+                Column('sku', css_class='form-group col-md-6'),
                 Column('condition', css_class='form-group col-md-6'),
+            ),
+            Row(
                 Column('quantity', css_class='form-group col-md-6'),
-            ),
-            Row(
                 Column('location', css_class='form-group col-md-6'),
-                Column('aisle', css_class='form-group col-md-6'),
             ),
             Row(
-                Column('note', css_class='form-group col-md-12'),
+                Column('aisle', css_class='form-group col-md-6'),
+                Column('note', css_class='form-group col-md-6'),
             ),
-            Row(Column('image', css_class='form-group col-md-12')),
+            Row(Column('image_url', css_class='form-group col-md-12')),
             Submit('submit', 'Save Stock', css_class='btn btn-primary')
         )
 
@@ -65,14 +67,15 @@ class StockCreateForm(forms.ModelForm):
 class StockUpdateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'image', 'note']
+        fields = ['category', 'item_name', 'sku', 'condition', 'quantity', 'location', 'aisle', 'image_url', 'note']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'sku': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter SKU (e.g., SKU-001)'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'location': forms.Select(attrs={'class': 'form-control'}),
             'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
-            'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Enter image URL'}),
             'note': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Update note'}),
         }
 
