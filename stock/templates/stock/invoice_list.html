@@ -1,0 +1,214 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+{% block content %}
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">{{ title }}</h3>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="{% url 'financial_dashboard' %}" class="btn btn-primary">
+                                    <em class="icon ni ni-bar-chart"></em>
+                                    <span>Financial Dashboard</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Total Invoices</h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount">{{ total_invoices }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Total Amount</h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount">${{ total_amount|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Total Paid</h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount text-success">${{ total_paid|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Outstanding</h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount text-warning">${{ total_outstanding|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Search Form -->
+                {% load crispy_forms_tags %}
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            {% crispy form %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Invoices Table -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner-group">
+                            <div class="card-inner p-0">
+                                <div class="nk-tb-list nk-tb-ulist">
+                                    <div class="nk-tb-item nk-tb-head">
+                                        <div class="nk-tb-col"><span class="sub-text">Invoice #</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">PO Reference</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">Manufacturer</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">Amount</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">Paid</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">Outstanding</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">Status</span></div>
+                                        <div class="nk-tb-col"><span class="sub-text">Due Date</span></div>
+                                        <div class="nk-tb-col nk-tb-col-tools"><span class="sub-text">Actions</span></div>
+                                    </div>
+
+                                    {% for invoice in invoices %}
+                                    <div class="nk-tb-item">
+                                        <div class="nk-tb-col">
+                                            <span class="tb-lead">{{ invoice.invoice_number }}</span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="tb-sub">{{ invoice.purchase_order.reference_number }}</span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="tb-sub">{{ invoice.purchase_order.manufacturer.company_name }}</span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="tb-amount">${{ invoice.invoice_total|floatformat:2 }}</span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="tb-amount text-success">${{ invoice.total_paid|floatformat:2 }}</span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="tb-amount {% if invoice.outstanding_amount > 0 %}text-warning{% else %}text-success{% endif %}">
+                                                ${{ invoice.outstanding_amount|floatformat:2 }}
+                                            </span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="badge badge-sm 
+                                                {% if invoice.status == 'pending' %}badge-warning
+                                                {% elif invoice.status == 'partially_paid' %}badge-info
+                                                {% elif invoice.status == 'fully_paid' %}badge-success
+                                                {% elif invoice.status == 'overdue' %}badge-danger
+                                                {% elif invoice.status == 'disputed' %}badge-secondary
+                                                {% endif %}">
+                                                {{ invoice.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="nk-tb-col">
+                                            <span class="tb-date {% if invoice.is_overdue %}text-danger{% endif %}">
+                                                {{ invoice.due_date|date:"M d, Y" }}
+                                                {% if invoice.is_overdue %}
+                                                    <br><small class="text-danger">({{ invoice.days_overdue }} days overdue)</small>
+                                                {% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="nk-tb-col nk-tb-col-tools">
+                                            <ul class="nk-tb-actions gx-1">
+                                                <li>
+                                                    <div class="drodown">
+                                                        <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                            <em class="icon ni ni-more-h"></em>
+                                                        </a>
+                                                        <div class="dropdown-menu dropdown-menu-right">
+                                                            <ul class="link-list-opt no-bdr">
+                                                                <li>
+                                                                    <a href="{% url 'invoice_detail' invoice.id %}">
+                                                                        <em class="icon ni ni-eye"></em>
+                                                                        <span>View Details</span>
+                                                                    </a>
+                                                                </li>
+                                                                {% if invoice.outstanding_amount > 0 %}
+                                                                <li>
+                                                                    <a href="{% url 'record_payment' invoice.id %}">
+                                                                        <em class="icon ni ni-money"></em>
+                                                                        <span>Record Payment</span>
+                                                                    </a>
+                                                                </li>
+                                                                {% endif %}
+                                                                <li>
+                                                                    <a href="{% url 'purchase_order_detail' invoice.purchase_order.id %}">
+                                                                        <em class="icon ni ni-file-docs"></em>
+                                                                        <span>View PO</span>
+                                                                    </a>
+                                                                </li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="nk-tb-item">
+                                        <div class="nk-tb-col text-center" colspan="9">
+                                            <div class="py-4">
+                                                <em class="icon ni ni-file-docs" style="font-size: 48px; color: #ccc;"></em>
+                                                <h5 class="mt-2">No invoices found</h5>
+                                                <p class="text-muted">There are no invoices matching your criteria.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
+{% endblock %}

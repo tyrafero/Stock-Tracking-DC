@@ -18,6 +18,7 @@ class UserRole(models.Model):
         ('stocktake_manager', 'Stock Take Manager'),
         ('warehouse_boy', 'Warehouse Boy'),
         ('sales', 'Sales'),
+        ('accountant', 'Accountant'),
     ]
     
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='role')
@@ -179,6 +180,27 @@ class UserRole(models.Model):
                 'can_issue_stock': False,
                 'can_receive_stock': False,
                 'can_view_warehouse_receiving': False,
+            },
+            'accountant': {
+                'can_manage_users': True,
+                'can_manage_access_control': True,
+                'can_create_purchase_order': True,
+                'can_edit_purchase_order': True,
+                'can_view_purchase_order': True,
+                'can_receive_purchase_order': True,
+                'can_view_purchase_order_amounts': True,
+                'can_create_stock': True,
+                'can_edit_stock': True,
+                'can_view_stock': True,
+                'can_transfer_stock': True,
+                'can_commit_stock': True,
+                'can_fulfill_commitment': True,
+                'can_issue_stock': True,
+                'can_receive_stock': True,
+                'can_view_warehouse_receiving': True,
+                'can_manage_payments': True,  # New permission for payment management
+                'can_create_invoices': True,  # New permission for invoice creation
+                'can_view_financial_reports': True,  # New permission for financial reporting
             },
         }
         return permissions.get(self.role, permissions['sales'])
@@ -1078,6 +1100,61 @@ class PurchaseOrder(models.Model):
     def grand_total(self):
         return self.subtotal_after_discount + self.gst_amount
 
+    def get_payment_status(self):
+        """Get overall payment status for the purchase order"""
+        if not self.invoices.exists():
+            return 'no_invoices'
+        
+        invoice_statuses = [invoice.status for invoice in self.invoices.all()]
+        
+        if all(status == 'fully_paid' for status in invoice_statuses):
+            return 'fully_paid'
+        elif any(status in ['partially_paid', 'fully_paid'] for status in invoice_statuses):
+            return 'partially_paid'
+        elif any(status == 'overdue' for status in invoice_statuses):
+            return 'overdue'
+        else:
+            return 'pending'
+
+    def get_total_invoice_amount(self):
+        """Get total amount across all invoices"""
+        return self.invoices.aggregate(total=models.Sum('invoice_total'))['total'] or 0
+
+    def get_total_paid_amount(self):
+        """Get total amount paid across all invoices"""
+        return self.invoices.aggregate(total=models.Sum('total_paid'))['total'] or 0
+
+    def get_total_outstanding_amount(self):
+        """Get total outstanding amount across all invoices"""
+        return self.invoices.aggregate(total=models.Sum('outstanding_amount'))['total'] or 0
+
+    def get_overall_status_display(self):
+        """Get display text for overall PO status combining receiving and payment"""
+        receiving_status = self.overall_receiving_status
+        payment_status = self.get_payment_status()
+        
+        status_combinations = {
+            ('fully_received', 'fully_paid'): ('completed', 'success'),
+            ('fully_received', 'partially_paid'): ('received_pending_payment', 'warning'),
+            ('fully_received', 'pending'): ('received_pending_payment', 'warning'),
+            ('fully_received', 'no_invoices'): ('received_pending_invoice', 'info'),
+            ('partially_received', 'fully_paid'): ('paid_pending_receipt', 'warning'),
+            ('partially_received', 'partially_paid'): ('partially_complete', 'warning'),
+            ('partially_received', 'pending'): ('partially_received', 'warning'),
+            ('partially_received', 'no_invoices'): ('partially_received', 'warning'),
+            ('not_received', 'fully_paid'): ('paid_pending_receipt', 'danger'),
+            ('not_received', 'partially_paid'): ('paid_pending_receipt', 'warning'),
+            ('not_received', 'pending'): ('pending', 'secondary'),
+            ('not_received', 'no_invoices'): ('pending', 'secondary'),
+        }
+        
+        return status_combinations.get((receiving_status, payment_status), ('unknown', 'secondary'))
+
+    def get_status_color_class(self):
+        """Get Bootstrap color class for status display"""
+        _, color_class = self.get_overall_status_display()
+        return color_class
+
     class Meta:
         ordering = ['-created_at']
     
@@ -1201,3 +1278,144 @@ class PurchaseOrderReceiving(models.Model):
 
     def __str__(self):
         return f"{self.purchase_order_item.product} - Received {self.quantity_received} on {self.received_at.strftime('%Y-%m-%d')}"
+
+# ----------------------------
+# Payment & Invoice Models
+# ----------------------------
+
+class Invoice(models.Model):
+    """Track invoices received from manufacturers for purchase orders"""
+    INVOICE_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('partially_paid', 'Partially Paid'),
+        ('fully_paid', 'Fully Paid'),
+        ('overdue', 'Overdue'),
+        ('disputed', 'Disputed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    purchase_order = models.ForeignKey(PurchaseOrder, related_name='invoices', on_delete=models.CASCADE)
+    invoice_number = models.CharField(max_length=100, help_text="Manufacturer's invoice number")
+    invoice_date = models.DateField(help_text="Date on the invoice from manufacturer")
+    due_date = models.DateField(help_text="Payment due date")
+    
+    # Invoice amounts
+    invoice_amount_exc = models.DecimalField(max_digits=12, decimal_places=2, help_text="Invoice amount excluding GST")
+    gst_amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="GST amount on invoice")
+    invoice_total = models.DecimalField(max_digits=12, decimal_places=2, help_text="Total invoice amount including GST")
+    
+    # Payment tracking
+    total_paid = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Total amount paid so far")
+    outstanding_amount = models.DecimalField(max_digits=12, decimal_places=2, help_text="Outstanding amount to be paid")
+    status = models.CharField(max_length=20, choices=INVOICE_STATUS_CHOICES, default='pending')
+    
+    # Invoice details
+    notes = models.TextField(blank=True, null=True, help_text="Notes about the invoice")
+    invoice_file = models.FileField(upload_to='invoices/', blank=True, null=True, help_text="Scanned copy of the invoice")
+    
+    # Tracking
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_invoices')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    last_payment_date = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['purchase_order', 'invoice_number']
+    
+    def save(self, *args, **kwargs):
+        # Calculate outstanding amount
+        self.outstanding_amount = self.invoice_total - self.total_paid
+        
+        # Update status based on payment
+        if self.total_paid >= self.invoice_total:
+            self.status = 'fully_paid'
+        elif self.total_paid > 0:
+            self.status = 'partially_paid'
+        elif self.due_date < timezone.now().date() and self.status == 'pending':
+            self.status = 'overdue'
+        
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"Invoice {self.invoice_number} - {self.purchase_order.reference_number}"
+    
+    @property
+    def is_overdue(self):
+        """Check if invoice is overdue"""
+        return self.due_date < timezone.now().date() and self.outstanding_amount > 0
+    
+    @property
+    def days_overdue(self):
+        """Get number of days overdue"""
+        if not self.is_overdue:
+            return 0
+        return (timezone.now().date() - self.due_date).days
+    
+    @property
+    def payment_percentage(self):
+        """Calculate percentage of invoice paid"""
+        if self.invoice_total == 0:
+            return 0
+        return round((self.total_paid / self.invoice_total) * 100, 2)
+
+
+class Payment(models.Model):
+    """Track individual payments made to manufacturers"""
+    PAYMENT_METHOD_CHOICES = [
+        ('bank_transfer', 'Bank Transfer'),
+        ('check', 'Check'),
+        ('cash', 'Cash'),
+        ('credit_card', 'Credit Card'),
+        ('other', 'Other'),
+    ]
+    
+    PAYMENT_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    invoice = models.ForeignKey(Invoice, related_name='payments', on_delete=models.CASCADE)
+    payment_reference = models.CharField(max_length=100, help_text="Payment reference number (check number, transfer ID, etc.)")
+    payment_date = models.DateField(help_text="Date payment was made")
+    payment_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES)
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='completed')
+    
+    # Payment details
+    bank_details = models.TextField(blank=True, null=True, help_text="Bank transfer details, check details, etc.")
+    notes = models.TextField(blank=True, null=True, help_text="Additional notes about this payment")
+    receipt_file = models.FileField(upload_to='payment_receipts/', blank=True, null=True, help_text="Receipt or proof of payment")
+    
+    # Tracking
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_payments')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-payment_date', '-created_at']
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Update invoice totals when payment is saved
+        self.invoice.total_paid = self.invoice.payments.filter(
+            payment_status='completed'
+        ).aggregate(total=models.Sum('payment_amount'))['total'] or 0
+        self.invoice.last_payment_date = timezone.now()
+        self.invoice.save()
+    
+    def delete(self, *args, **kwargs):
+        invoice = self.invoice
+        super().delete(*args, **kwargs)
+        # Update invoice totals when payment is deleted
+        invoice.total_paid = invoice.payments.filter(
+            payment_status='completed'
+        ).aggregate(total=models.Sum('payment_amount'))['total'] or 0
+        invoice.save()
+    
+    def __str__(self):
+        return f"Payment {self.payment_reference} - {self.payment_amount} ({self.payment_date})"
+
+

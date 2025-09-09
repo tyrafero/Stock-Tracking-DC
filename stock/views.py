@@ -1448,19 +1448,76 @@ from .tasks import send_email_async
 
 @login_required
 def purchase_order_list(request):
+    from django.db.models import Q
+    
     form = PurchaseOrderSearchForm(request.GET or None)
-    purchase_orders = PurchaseOrder.objects.all().select_related('manufacturer', 'created_by')
+    purchase_orders = PurchaseOrder.objects.all().select_related('manufacturer', 'created_by').prefetch_related('items', 'invoices')
+    
     if form.is_valid():
+        # Basic filters
         if ref := form.cleaned_data.get('reference_number'):
             purchase_orders = purchase_orders.filter(reference_number__icontains=ref)
         if manufacturer := form.cleaned_data.get('manufacturer'):
             purchase_orders = purchase_orders.filter(manufacturer=manufacturer)
         if status := form.cleaned_data.get('status'):
             purchase_orders = purchase_orders.filter(status=status)
+        
+        # Date range filtering
+        if date_from := form.cleaned_data.get('date_from'):
+            purchase_orders = purchase_orders.filter(created_at__date__gte=date_from)
+        if date_to := form.cleaned_data.get('date_to'):
+            purchase_orders = purchase_orders.filter(created_at__date__lte=date_to)
+        
+        # Product-based filtering
+        if product_search := form.cleaned_data.get('product_search'):
+            purchase_orders = purchase_orders.filter(
+                items__product__icontains=product_search
+            ).distinct()
+        
+        # Advanced status filtering (convert to list for complex filtering)
+        receiving_status = form.cleaned_data.get('receiving_status')
+        payment_status = form.cleaned_data.get('payment_status')
+        
+        # Only apply complex filtering if needed
+        if receiving_status or payment_status:
+            po_list = list(purchase_orders)
+            filtered_pos = []
+            
+            for po in po_list:
+                include_po = True
+                
+                # Filter by receiving status
+                if receiving_status:
+                    po_receiving_status = po.overall_receiving_status
+                    if receiving_status != po_receiving_status:
+                        include_po = False
+                
+                # Filter by payment status
+                if payment_status and include_po:
+                    po_payment_status = po.get_payment_status()
+                    if payment_status != po_payment_status:
+                        include_po = False
+                
+                if include_po:
+                    filtered_pos.append(po)
+            
+            # Convert back to queryset
+            if filtered_pos:
+                po_ids = [po.id for po in filtered_pos]
+                purchase_orders = PurchaseOrder.objects.filter(
+                    id__in=po_ids
+                ).select_related('manufacturer', 'created_by').prefetch_related('items', 'invoices')
+            else:
+                purchase_orders = PurchaseOrder.objects.none()
+    
+    # Summary statistics for display
+    total_pos = purchase_orders.count()
+    
     context = {
         'title': 'Purchase Orders',
-        'purchase_orders': purchase_orders,
+        'purchase_orders': purchase_orders.order_by('-created_at'),
         'form': form,
+        'total_pos': total_pos,
     }
     return render(request, 'stock/purchase_order_list.html', context)
 
@@ -1514,10 +1571,25 @@ def create_purchase_order(request):
 @login_required
 def purchase_order_detail(request, pk):
     purchase_order = get_object_or_404(PurchaseOrder, pk=pk)
+    
+    # Get invoices and payment information
+    invoices = purchase_order.invoices.all().order_by('-created_at')
+    
+    # Calculate totals
+    total_invoice_amount = purchase_order.get_total_invoice_amount()
+    total_paid_amount = purchase_order.get_total_paid_amount()
+    total_outstanding = purchase_order.get_total_outstanding_amount()
+    
     context = {
         'title': f'Purchase Order - {purchase_order.reference_number}',
         'purchase_order': purchase_order,
         'items': purchase_order.items.all(),
+        'invoices': invoices,
+        'total_invoice_amount': total_invoice_amount,
+        'total_paid_amount': total_paid_amount,
+        'total_outstanding': total_outstanding,
+        'payment_status': purchase_order.get_payment_status(),
+        'overall_status_display': purchase_order.get_overall_status_display(),
     }
     return render(request, 'stock/purchase_order_detail.html', context)
 
@@ -2979,3 +3051,235 @@ def approve_audit(request, audit_id):
         'variance_items': variance_items,
     }
     return render(request, 'stock/approve_audit.html', context)
+
+
+# ----------------------------
+# Invoice & Payment Management Views
+# ----------------------------
+
+@login_required
+def invoice_list(request):
+    """List all invoices with search and filtering capabilities"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_payments'):
+        messages.error(request, 'You do not have permission to view invoices.')
+        return redirect('/')
+    
+    from django.db.models import Q
+    
+    invoices = Invoice.objects.all().select_related('purchase_order', 'purchase_order__manufacturer')
+    form = InvoiceSearchForm(request.GET)
+    
+    if form.is_valid():
+        search_query = form.cleaned_data.get('search_query')
+        status_filter = form.cleaned_data.get('status_filter')
+        date_from = form.cleaned_data.get('date_from')
+        date_to = form.cleaned_data.get('date_to')
+        manufacturer = form.cleaned_data.get('manufacturer')
+        
+        if search_query:
+            invoices = invoices.filter(
+                Q(invoice_number__icontains=search_query) |
+                Q(purchase_order__reference_number__icontains=search_query) |
+                Q(purchase_order__manufacturer__company_name__icontains=search_query)
+            )
+        
+        if status_filter:
+            invoices = invoices.filter(status=status_filter)
+        
+        if date_from:
+            invoices = invoices.filter(invoice_date__gte=date_from)
+        
+        if date_to:
+            invoices = invoices.filter(invoice_date__lte=date_to)
+        
+        if manufacturer:
+            invoices = invoices.filter(purchase_order__manufacturer=manufacturer)
+    
+    # Calculate summary statistics
+    total_invoices = invoices.count()
+    total_amount = sum(invoice.invoice_total for invoice in invoices)
+    total_paid = sum(invoice.total_paid for invoice in invoices)
+    total_outstanding = sum(invoice.outstanding_amount for invoice in invoices)
+    
+    context = {
+        'title': 'Invoice Management',
+        'invoices': invoices.order_by('-created_at'),
+        'form': form,
+        'total_invoices': total_invoices,
+        'total_amount': total_amount,
+        'total_paid': total_paid,
+        'total_outstanding': total_outstanding,
+    }
+    return render(request, 'stock/invoice_list.html', context)
+
+
+@login_required
+def create_invoice(request, po_id):
+    """Create a new invoice for a purchase order"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_create_invoices'):
+        messages.error(request, 'You do not have permission to create invoices.')
+        return redirect('/')
+    
+    purchase_order = get_object_or_404(PurchaseOrder, pk=po_id)
+    
+    if request.method == 'POST':
+        form = InvoiceForm(request.POST, request.FILES, purchase_order=purchase_order)
+        if form.is_valid():
+            invoice = form.save(created_by=request.user)
+            messages.success(request, f'Invoice {invoice.invoice_number} created successfully.')
+            return redirect('purchase_order_detail', pk=purchase_order.pk)
+    else:
+        # Pre-fill form with PO amounts
+        initial_data = {
+            'invoice_amount_exc': purchase_order.subtotal_after_discount,
+            'gst_amount': purchase_order.gst_amount,
+            'invoice_total': purchase_order.grand_total,
+            'invoice_date': timezone.now().date(),
+        }
+        form = InvoiceForm(initial=initial_data, purchase_order=purchase_order)
+    
+    context = {
+        'title': f'Create Invoice for {purchase_order.reference_number}',
+        'form': form,
+        'purchase_order': purchase_order,
+    }
+    return render(request, 'stock/create_invoice.html', context)
+
+
+@login_required
+def invoice_detail(request, invoice_id):
+    """View invoice details and payment history"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_purchase_order_amounts'):
+        messages.error(request, 'You do not have permission to view invoice details.')
+        return redirect('/')
+    
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
+    payments = invoice.payments.all().order_by('-payment_date')
+    
+    context = {
+        'title': f'Invoice {invoice.invoice_number}',
+        'invoice': invoice,
+        'payments': payments,
+        'purchase_order': invoice.purchase_order,
+    }
+    return render(request, 'stock/invoice_detail.html', context)
+
+
+@login_required
+def record_payment(request, invoice_id):
+    """Record a payment against an invoice"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_manage_payments'):
+        messages.error(request, 'You do not have permission to record payments.')
+        return redirect('/')
+    
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
+    
+    if invoice.outstanding_amount <= 0:
+        messages.error(request, 'This invoice is already fully paid.')
+        return redirect('invoice_detail', invoice_id=invoice.pk)
+    
+    if request.method == 'POST':
+        form = PaymentForm(request.POST, request.FILES, invoice=invoice)
+        if form.is_valid():
+            payment = form.save(created_by=request.user)
+            messages.success(
+                request, 
+                f'Payment of ${payment.payment_amount:,.2f} recorded successfully.'
+            )
+            return redirect('invoice_detail', invoice_id=invoice.pk)
+    else:
+        form = PaymentForm(invoice=invoice)
+    
+    context = {
+        'title': f'Record Payment for Invoice {invoice.invoice_number}',
+        'form': form,
+        'invoice': invoice,
+    }
+    return render(request, 'stock/record_payment.html', context)
+
+
+@login_required
+def payment_detail(request, payment_id):
+    """View payment details"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_purchase_order_amounts'):
+        messages.error(request, 'You do not have permission to view payment details.')
+        return redirect('/')
+    
+    payment = get_object_or_404(Payment, pk=payment_id)
+    
+    context = {
+        'title': f'Payment {payment.payment_reference}',
+        'payment': payment,
+        'invoice': payment.invoice,
+    }
+    return render(request, 'stock/payment_detail.html', context)
+
+
+@login_required
+def financial_dashboard(request):
+    """Financial dashboard for accountants showing payment summaries"""
+    from .utils.permissions import has_permission
+    if not has_permission(request.user, 'can_view_financial_reports'):
+        messages.error(request, 'You do not have permission to view financial reports.')
+        return redirect('/')
+    
+    from django.db.models import Sum, Count
+    from datetime import datetime, timedelta
+    
+    # Get date range (default to last 30 days)
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    # Invoice statistics
+    total_invoices = Invoice.objects.count()
+    pending_invoices = Invoice.objects.filter(status='pending').count()
+    overdue_invoices = Invoice.objects.filter(status='overdue').count()
+    
+    # Amount statistics
+    total_invoice_amount = Invoice.objects.aggregate(
+        total=Sum('invoice_total')
+    )['total'] or 0
+    
+    total_paid_amount = Invoice.objects.aggregate(
+        total=Sum('total_paid')
+    )['total'] or 0
+    
+    total_outstanding = Invoice.objects.aggregate(
+        total=Sum('outstanding_amount')
+    )['total'] or 0
+    
+    # Recent activity
+    recent_invoices = Invoice.objects.order_by('-created_at')[:5]
+    recent_payments = Payment.objects.order_by('-created_at')[:5]
+    
+    # Overdue invoices
+    overdue_invoice_list = Invoice.objects.filter(
+        status='overdue'
+    ).order_by('due_date')[:10]
+    
+    # Purchase orders needing invoices
+    pos_needing_invoices = PurchaseOrder.objects.filter(
+        status='completed',
+        invoices__isnull=True
+    ).order_by('-updated_at')[:10]
+    
+    context = {
+        'title': 'Financial Dashboard',
+        'total_invoices': total_invoices,
+        'pending_invoices': pending_invoices,
+        'overdue_invoices': overdue_invoices,
+        'total_invoice_amount': total_invoice_amount,
+        'total_paid_amount': total_paid_amount,
+        'total_outstanding': total_outstanding,
+        'recent_invoices': recent_invoices,
+        'recent_payments': recent_payments,
+        'overdue_invoice_list': overdue_invoice_list,
+        'pos_needing_invoices': pos_needing_invoices,
+        'payment_percentage': (total_paid_amount / total_invoice_amount * 100) if total_invoice_amount > 0 else 0,
+    }
+    return render(request, 'stock/financial_dashboard.html', context)

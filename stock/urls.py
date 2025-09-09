@@ -105,6 +105,14 @@ urlpatterns = [
     path('audits/<int:audit_id>/count/<int:item_id>/', views.count_single_item, name='count_single_item'),
     path('audits/<int:audit_id>/complete/', views.complete_audit, name='complete_audit'),
     path('audits/<int:audit_id>/approve/', views.approve_audit, name='approve_audit'),
+    
+    # Invoice & Payment URLs
+    path('invoices/', views.invoice_list, name='invoice_list'),
+    path('invoices/<int:invoice_id>/', views.invoice_detail, name='invoice_detail'),
+    path('purchase-orders/<int:po_id>/create-invoice/', views.create_invoice, name='create_invoice'),
+    path('invoices/<int:invoice_id>/record-payment/', views.record_payment, name='record_payment'),
+    path('payments/<int:payment_id>/', views.payment_detail, name='payment_detail'),
+    path('financial-dashboard/', views.financial_dashboard, name='financial_dashboard'),
 
     path('accounts/', include('registration.backends.default.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

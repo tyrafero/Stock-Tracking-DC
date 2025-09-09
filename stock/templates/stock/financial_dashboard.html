@@ -1,0 +1,285 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+{% block content %}
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">{{ title }}</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Overview of invoices and payments for Purchase Orders</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="{% url 'invoice_list' %}" class="btn btn-primary">
+                                    <em class="icon ni ni-file-docs"></em>
+                                    <span>View All Invoices</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Overview Cards -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Total Invoices</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint-icon icon ni ni-file-docs text-primary"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount">{{ total_invoices }}</span>
+                                    </div>
+                                    <div class="card-meta">
+                                        <span class="text-muted">Pending: {{ pending_invoices }}, Overdue: {{ overdue_invoices }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Total Invoice Amount</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint-icon icon ni ni-money text-info"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount">${{ total_invoice_amount|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Total Paid</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint-icon icon ni ni-check-circle text-success"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount text-success">${{ total_paid_amount|floatformat:2 }}</span>
+                                    </div>
+                                    <div class="card-meta">
+                                        <span class="text-success">{{ payment_percentage|floatformat:1 }}% paid</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-sm-6 col-lg-3">
+                            <div class="card card-bordered">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-2">
+                                        <div class="card-title">
+                                            <h6 class="title">Outstanding Amount</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <em class="card-hint-icon icon ni ni-alert-circle text-warning"></em>
+                                        </div>
+                                    </div>
+                                    <div class="card-amount">
+                                        <span class="amount text-warning">${{ total_outstanding|floatformat:2 }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity and Outstanding Items -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-md-6">
+                            <div class="card card-bordered h-100">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title">Recent Invoices</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-inner p-0">
+                                    {% if recent_invoices %}
+                                        {% for invoice in recent_invoices %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col">
+                                                <div class="user-card">
+                                                    <div class="user-info">
+                                                        <span class="tb-lead">{{ invoice.invoice_number }}</span>
+                                                        <span class="fs-12px text-soft">{{ invoice.purchase_order.reference_number }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="nk-tb-col tb-col-sm">
+                                                <span class="tb-amount">${{ invoice.invoice_total|floatformat:2 }}</span>
+                                                <span class="badge badge-sm 
+                                                    {% if invoice.status == 'pending' %}badge-warning
+                                                    {% elif invoice.status == 'partially_paid' %}badge-info
+                                                    {% elif invoice.status == 'fully_paid' %}badge-success
+                                                    {% elif invoice.status == 'overdue' %}badge-danger
+                                                    {% endif %}">
+                                                    {{ invoice.get_status_display }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col text-center py-3">
+                                                <span class="text-muted">No recent invoices</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="card-inner">
+                                    <a href="{% url 'invoice_list' %}" class="btn btn-primary btn-block">View All Invoices</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card card-bordered h-100">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title">Recent Payments</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-inner p-0">
+                                    {% if recent_payments %}
+                                        {% for payment in recent_payments %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col">
+                                                <div class="user-card">
+                                                    <div class="user-info">
+                                                        <span class="tb-lead">{{ payment.payment_reference }}</span>
+                                                        <span class="fs-12px text-soft">{{ payment.invoice.invoice_number }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="nk-tb-col tb-col-sm">
+                                                <span class="tb-amount text-success">${{ payment.payment_amount|floatformat:2 }}</span>
+                                                <span class="fs-12px text-soft">{{ payment.payment_date|date:"M d, Y" }}</span>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col text-center py-3">
+                                                <span class="text-muted">No recent payments</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Items -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-md-6">
+                            <div class="card card-bordered h-100">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-danger">Overdue Invoices</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-inner p-0">
+                                    {% if overdue_invoice_list %}
+                                        {% for invoice in overdue_invoice_list %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col">
+                                                <div class="user-card">
+                                                    <div class="user-info">
+                                                        <span class="tb-lead">{{ invoice.invoice_number }}</span>
+                                                        <span class="fs-12px text-danger">{{ invoice.days_overdue }} days overdue</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="nk-tb-col tb-col-sm">
+                                                <span class="tb-amount text-danger">${{ invoice.outstanding_amount|floatformat:2 }}</span>
+                                                <a href="{% url 'record_payment' invoice.id %}" class="btn btn-sm btn-primary">Pay</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col text-center py-3">
+                                                <span class="text-success">No overdue invoices! 🎉</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card card-bordered h-100">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">POs Needing Invoices</h6>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="card-inner p-0">
+                                    {% if pos_needing_invoices %}
+                                        {% for po in pos_needing_invoices %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col">
+                                                <div class="user-card">
+                                                    <div class="user-info">
+                                                        <span class="tb-lead">{{ po.reference_number }}</span>
+                                                        <span class="fs-12px text-soft">{{ po.manufacturer.company_name }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="nk-tb-col tb-col-sm">
+                                                <span class="tb-amount">${{ po.grand_total|floatformat:2 }}</span>
+                                                <a href="{% url 'create_invoice' po.id %}" class="btn btn-sm btn-primary">Create Invoice</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    {% else %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col text-center py-3">
+                                                <span class="text-success">All completed POs have invoices! ✅</span>
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
+{% endblock %}

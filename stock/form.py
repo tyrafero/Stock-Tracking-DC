@@ -607,11 +607,15 @@ class StoreForm(forms.ModelForm):
 class PurchaseOrderSearchForm(forms.Form):
     reference_number = forms.CharField(
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Search by PO Reference Number'})
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Search by PO Reference Number'
+        })
     )
     manufacturer = forms.ModelChoiceField(
         queryset=Manufacturer.objects.all(),
         required=False,
+        empty_label='All Manufacturers',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
     status = forms.ChoiceField(
@@ -619,18 +623,75 @@ class PurchaseOrderSearchForm(forms.Form):
         required=False,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+    receiving_status = forms.ChoiceField(
+        choices=[
+            ('', 'All Receiving Status'),
+            ('not_received', 'Not Received'),
+            ('partially_received', 'Partially Received'),
+            ('fully_received', 'Fully Received'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    payment_status = forms.ChoiceField(
+        choices=[
+            ('', 'All Payment Status'),
+            ('no_invoices', 'No Invoices'),
+            ('pending', 'Pending Payment'),
+            ('partially_paid', 'Partially Paid'),
+            ('fully_paid', 'Fully Paid'),
+            ('overdue', 'Overdue'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    product_search = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control', 
+            'placeholder': 'Search by Product/Item Name',
+            'title': 'Search for Purchase Orders containing specific products'
+        })
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control', 
+            'type': 'date',
+            'title': 'Filter POs created from this date'
+        })
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'class': 'form-control', 
+            'type': 'date',
+            'title': 'Filter POs created up to this date'
+        })
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_method = 'get'
         self.helper.layout = Layout(
+            HTML('<h6 class="mb-3">Filter Purchase Orders</h6>'),
             Row(
-                Column('reference_number', css_class='form-group col-md-4'),
-                Column('manufacturer', css_class='form-group col-md-4'),
-                Column('status', css_class='form-group col-md-4'),
+                Column('reference_number', css_class='form-group col-md-3'),
+                Column('manufacturer', css_class='form-group col-md-3'),
+                Column('product_search', css_class='form-group col-md-3'),
+                Column('status', css_class='form-group col-md-3'),
             ),
-            Submit('search', 'Search', css_class='btn btn-primary')
+            Row(
+                Column('receiving_status', css_class='form-group col-md-3'),
+                Column('payment_status', css_class='form-group col-md-3'),
+                Column('date_from', css_class='form-group col-md-3'),
+                Column('date_to', css_class='form-group col-md-3'),
+            ),
+            HTML('<div class="form-group">'),
+            Submit('search', 'Search & Filter', css_class='btn btn-primary mr-2'),
+            HTML('<a href="{% url "purchase_order_list" %}" class="btn btn-outline-secondary">Clear All Filters</a>'),
+            HTML('</div>')
         )
 
 
@@ -1242,3 +1303,271 @@ class AuditItemBulkCountForm(forms.Form):
                         continue
         
         return updated_items
+
+
+# ----------------------------
+# Invoice & Payment Forms
+# ----------------------------
+
+class InvoiceForm(forms.ModelForm):
+    """Form for creating and editing invoices"""
+    class Meta:
+        model = Invoice
+        fields = [
+            'invoice_number', 'invoice_date', 'due_date',
+            'invoice_amount_exc', 'gst_amount', 'invoice_total',
+            'notes', 'invoice_file'
+        ]
+        widgets = {
+            'invoice_number': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter manufacturer invoice number'
+            }),
+            'invoice_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'due_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'invoice_amount_exc': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'gst_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'invoice_total': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Additional notes about the invoice'
+            }),
+            'invoice_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.jpg,.jpeg,.png,.gif'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.purchase_order = kwargs.pop('purchase_order', None)
+        super().__init__(*args, **kwargs)
+        
+        # Auto-calculate GST amount based on invoice amount
+        self.fields['invoice_amount_exc'].widget.attrs['onchange'] = 'calculateGST()'
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_enctype = 'multipart/form-data'
+        self.helper.layout = Layout(
+            Row(
+                Column('invoice_number', css_class='form-group col-md-6'),
+                Column('invoice_date', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('due_date', css_class='form-group col-md-6'),
+                Column('invoice_file', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('invoice_amount_exc', css_class='form-group col-md-4'),
+                Column('gst_amount', css_class='form-group col-md-4'),
+                Column('invoice_total', css_class='form-group col-md-4'),
+            ),
+            'notes',
+            HTML("""
+                <script>
+                function calculateGST() {
+                    const excAmount = parseFloat(document.getElementById('id_invoice_amount_exc').value) || 0;
+                    const gstAmount = excAmount * 0.10;
+                    const totalAmount = excAmount + gstAmount;
+                    
+                    document.getElementById('id_gst_amount').value = gstAmount.toFixed(2);
+                    document.getElementById('id_invoice_total').value = totalAmount.toFixed(2);
+                }
+                </script>
+            """),
+            Submit('save', 'Save Invoice', css_class='btn btn-primary')
+        )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        invoice_amount_exc = cleaned_data.get('invoice_amount_exc')
+        gst_amount = cleaned_data.get('gst_amount')
+        invoice_total = cleaned_data.get('invoice_total')
+        
+        if invoice_amount_exc and gst_amount and invoice_total:
+            expected_total = invoice_amount_exc + gst_amount
+            if abs(invoice_total - expected_total) > 0.01:  # Allow for small rounding differences
+                raise forms.ValidationError(
+                    'Invoice total should equal invoice amount + GST amount'
+                )
+        
+        return cleaned_data
+
+    def save(self, commit=True, created_by=None):
+        invoice = super().save(commit=False)
+        if self.purchase_order:
+            invoice.purchase_order = self.purchase_order
+        if created_by:
+            invoice.created_by = created_by
+        if commit:
+            invoice.save()
+        return invoice
+
+
+class PaymentForm(forms.ModelForm):
+    """Form for recording payments against invoices"""
+    class Meta:
+        model = Payment
+        fields = [
+            'payment_reference', 'payment_date', 'payment_amount',
+            'payment_method', 'bank_details', 'notes', 'receipt_file'
+        ]
+        widgets = {
+            'payment_reference': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Check number, transfer ID, etc.'
+            }),
+            'payment_date': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'payment_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0.01'
+            }),
+            'payment_method': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'bank_details': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Bank details, check details, etc.'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Additional notes about this payment'
+            }),
+            'receipt_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.pdf,.jpg,.jpeg,.png,.gif'
+            }),
+        }
+
+    def __init__(self, *args, **kwargs):
+        self.invoice = kwargs.pop('invoice', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.invoice:
+            # Set max payment amount to outstanding amount
+            outstanding = self.invoice.outstanding_amount
+            self.fields['payment_amount'].widget.attrs['max'] = str(outstanding)
+            self.fields['payment_amount'].help_text = f'Outstanding amount: ${outstanding:,.2f}'
+            
+            # Pre-fill payment amount with outstanding amount
+            if not self.instance.pk:
+                self.fields['payment_amount'].initial = outstanding
+        
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.form_enctype = 'multipart/form-data'
+        self.helper.layout = Layout(
+            Row(
+                Column('payment_reference', css_class='form-group col-md-6'),
+                Column('payment_date', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('payment_amount', css_class='form-group col-md-6'),
+                Column('payment_method', css_class='form-group col-md-6'),
+            ),
+            Row(
+                Column('receipt_file', css_class='form-group col-md-12'),
+            ),
+            'bank_details',
+            'notes',
+            Submit('save', 'Record Payment', css_class='btn btn-success')
+        )
+
+    def clean_payment_amount(self):
+        payment_amount = self.cleaned_data.get('payment_amount')
+        if self.invoice and payment_amount:
+            outstanding = self.invoice.outstanding_amount
+            if payment_amount > outstanding:
+                raise forms.ValidationError(
+                    f'Payment amount cannot exceed outstanding amount of ${outstanding:,.2f}'
+                )
+        return payment_amount
+
+    def save(self, commit=True, created_by=None):
+        payment = super().save(commit=False)
+        if self.invoice:
+            payment.invoice = self.invoice
+        if created_by:
+            payment.created_by = created_by
+        if commit:
+            payment.save()
+        return payment
+
+
+class InvoiceSearchForm(forms.Form):
+    """Form for searching and filtering invoices"""
+    SEARCH_CHOICES = [
+        ('', 'All Invoices'),
+        ('pending', 'Pending'),
+        ('partially_paid', 'Partially Paid'),
+        ('fully_paid', 'Fully Paid'),
+        ('overdue', 'Overdue'),
+        ('disputed', 'Disputed'),
+    ]
+    
+    search_query = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by invoice number, PO reference, or manufacturer'
+        })
+    )
+    status_filter = forms.ChoiceField(
+        choices=SEARCH_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'})
+    )
+    manufacturer = forms.ModelChoiceField(
+        queryset=Manufacturer.objects.all(),
+        required=False,
+        empty_label='All Manufacturers',
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'get'
+        self.helper.layout = Layout(
+            Row(
+                Column('search_query', css_class='form-group col-md-3'),
+                Column('status_filter', css_class='form-group col-md-2'),
+                Column('manufacturer', css_class='form-group col-md-3'),
+                Column('date_from', css_class='form-group col-md-2'),
+                Column('date_to', css_class='form-group col-md-2'),
+            ),
+            Submit('search', 'Search', css_class='btn btn-primary')
+        )
