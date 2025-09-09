@@ -557,17 +557,46 @@
 
   NioApp.ModeSwitch = function () {
     var toggle = $('.dark-switch');
-
-    if ($body.hasClass('dark-mode')) {
-      toggle.addClass('active');
+    var toggleIcon = toggle.find('.icon');
+    var toggleText = toggle.find('span');
+    
+    // Function to update toggle appearance
+    function updateToggle(isDark) {
+      if (isDark) {
+        toggle.addClass('active');
+        toggleIcon.removeClass('ni-moon').addClass('ni-sun');
+        toggleText.text('Light Mode');
+      } else {
+        toggle.removeClass('active');
+        toggleIcon.removeClass('ni-sun').addClass('ni-moon');
+        toggleText.text('Dark Mode');
+      }
+    }
+    
+    // Check localStorage for saved theme preference
+    var savedTheme = localStorage.getItem('theme');
+    
+    // Apply saved theme on page load
+    if (savedTheme === 'light') {
+      $body.removeClass('dark-mode');
+      updateToggle(false);
     } else {
-      toggle.removeClass('active');
+      // Default to dark mode if no preference saved or if preference is 'dark'
+      $body.addClass('dark-mode');
+      updateToggle(true);
     }
 
     toggle.on('click', function (e) {
       e.preventDefault();
-      $(this).toggleClass('active');
       $body.toggleClass('dark-mode');
+      
+      var isDarkMode = $body.hasClass('dark-mode');
+      
+      // Update toggle appearance
+      updateToggle(isDarkMode);
+      
+      // Save theme preference to localStorage
+      localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
     });
   }; // Knob @v1.0
 

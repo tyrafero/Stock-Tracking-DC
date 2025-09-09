@@ -219,6 +219,136 @@
                 </div>
                 {% endif %}
                 
+                <!-- Aging Stock Section -->
+                {% if aging_stock %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Aging Stock Analysis</h5>
+                                <p class="nk-block-des">Items that have been in stock for extended periods - identify slow-moving inventory</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        <!-- Old Stock (90+ days) -->
+                        {% if aging_stock.old_stock %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-danger">
+                                                <em class="icon ni ni-alert-circle"></em>
+                                                Old Stock (90+ Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-danger">{{ aging_stock.old_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for item in aging_stock.old_stock|slice:":5" %}
+                                        <div class="alert alert-danger-dim" role="alert">
+                                            <div class="alert-text">
+                                                <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-danger">{{ item.item_name }}</a></strong><br>
+                                                <small>Qty: {{ item.quantity }} • {{ item.days_in_stock }} days in stock</small><br>
+                                                <small class="text-muted">Category: {{ item.category.group|default:"No Category" }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-danger">View Details</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if aging_stock.old_stock|length > 5 %}
+                                        <p class="text-muted small">... and {{ aging_stock.old_stock|length|add:"-5" }} more items</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Medium Age Stock (60-90 days) -->
+                        {% if aging_stock.medium_age_stock %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-warning">
+                                                <em class="icon ni ni-clock"></em>
+                                                Medium Age (60-90 Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-warning">{{ aging_stock.medium_age_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for item in aging_stock.medium_age_stock|slice:":5" %}
+                                        <div class="alert alert-warning-dim" role="alert">
+                                            <div class="alert-text">
+                                                <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-warning">{{ item.item_name }}</a></strong><br>
+                                                <small>Qty: {{ item.quantity }} • {{ item.days_in_stock }} days in stock</small><br>
+                                                <small class="text-muted">Category: {{ item.category.group|default:"No Category" }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-warning">View Details</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if aging_stock.medium_age_stock|length > 5 %}
+                                        <p class="text-muted small">... and {{ aging_stock.medium_age_stock|length|add:"-5" }} more items</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Aging Stock (30-60 days) -->
+                        {% if aging_stock.aging_stock %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-info"></em>
+                                                Aging Stock (30-60 Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-info">{{ aging_stock.aging_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for item in aging_stock.aging_stock|slice:":5" %}
+                                        <div class="alert alert-info-dim" role="alert">
+                                            <div class="alert-text">
+                                                <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-info">{{ item.item_name }}</a></strong><br>
+                                                <small>Qty: {{ item.quantity }} • {{ item.days_in_stock }} days in stock</small><br>
+                                                <small class="text-muted">Category: {{ item.category.group|default:"No Category" }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-info">View Details</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if aging_stock.aging_stock|length > 5 %}
+                                        <p class="text-muted small">... and {{ aging_stock.aging_stock|length|add:"-5" }} more items</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
                 <!-- Charts Section (Keep original charts) -->
                 <div class="nk-block">
                     <div class="row g-gs">

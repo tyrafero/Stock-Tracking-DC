@@ -1,12 +1,14 @@
 import csv
 import os
 import re
+from datetime import datetime, timedelta
 from django.conf import settings
 from django.contrib import messages
 from django.db.models import Q, F
 from django.db import models
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse
+from django.utils import timezone
 from .models import *
 from .form import *
 from django.contrib.auth.decorators import login_required
@@ -15,6 +17,42 @@ from django.http import JsonResponse
 from .utils.email_service import send_purchase_order_email_safe
 
 # Create your views here.
+
+def get_aging_stock():
+    """Get stock items that have been in inventory for extended periods"""
+    now = timezone.now()
+    
+    # Define aging periods
+    thirty_days_ago = now - timedelta(days=30)
+    sixty_days_ago = now - timedelta(days=60)
+    ninety_days_ago = now - timedelta(days=90)
+    
+    # Get stock items with quantity > 0 and calculate their age
+    aging_stock = {
+        'old_stock': Stock.objects.filter(
+            quantity__gt=0,
+            timestamp__lt=ninety_days_ago  # More than 90 days old
+        ).select_related('category')[:10],
+        
+        'medium_age_stock': Stock.objects.filter(
+            quantity__gt=0,
+            timestamp__lt=sixty_days_ago,
+            timestamp__gte=ninety_days_ago  # 60-90 days old
+        ).select_related('category')[:10],
+        
+        'aging_stock': Stock.objects.filter(
+            quantity__gt=0,
+            timestamp__lt=thirty_days_ago,
+            timestamp__gte=sixty_days_ago  # 30-60 days old
+        ).select_related('category')[:10],
+    }
+    
+    # Add age calculation to each item
+    for category in aging_stock.values():
+        for item in category:
+            item.days_in_stock = (now - item.timestamp).days if item.timestamp else 0
+            
+    return aging_stock
 
 @login_required
 def pending_approval(request):
@@ -184,6 +222,9 @@ def admin_dashboard(request):
     recent_pos = PurchaseOrder.objects.filter(status__in=['draft', 'submitted']).count()
     total_stock_value = sum(stock.quantity * 100 for stock in Stock.objects.all())  # Placeholder calculation
     
+    # Get aging stock analysis
+    aging_stock = get_aging_stock()
+    
     context = {
         'dashboard_type': 'admin',
         'count': count,
@@ -203,6 +244,7 @@ def admin_dashboard(request):
         'low_stock_items': low_stock_items,
         'recent_pos': recent_pos,
         'total_stock_value': total_stock_value,
+        'aging_stock': aging_stock,
     }
     return render(request, 'stock/dashboards/admin_dashboard.html', context)
 
@@ -237,6 +279,9 @@ def sales_dashboard(request):
     total_reserved = active_reservations.count()
     total_available = available_stock.count()
     
+    # Get aging stock analysis for sales insights
+    aging_stock = get_aging_stock()
+    
     context = {
         'dashboard_type': 'sales',
         'available_stock': available_stock[:20],  # Limit for performance
@@ -247,6 +292,7 @@ def sales_dashboard(request):
         'total_committed': total_committed,
         'total_reserved': total_reserved,
         'total_available': total_available,
+        'aging_stock': aging_stock,
     }
     return render(request, 'stock/dashboards/sales_dashboard.html', context)
 
@@ -274,6 +320,9 @@ def warehouse_dashboard(request):
         stock_count = StockLocation.objects.filter(store=location).count()
         stock_by_location[location.name] = stock_count
     
+    # Get aging stock analysis for warehouse management
+    aging_stock = get_aging_stock()
+    
     context = {
         'dashboard_type': 'warehouse',
         'pending_pos': pending_pos[:10],
@@ -281,6 +330,7 @@ def warehouse_dashboard(request):
         'in_transit_transfers': in_transit_transfers,
         'recent_receiving': recent_receiving,
         'stock_by_location': stock_by_location,
+        'aging_stock': aging_stock,
     }
     return render(request, 'stock/dashboards/warehouse_dashboard.html', context)
 
@@ -405,7 +455,7 @@ def live_search(request):
             'item_name': stock.item_name,
             'category': stock.category.group if stock.category else 'No Category',
             'quantity': stock.total_across_locations,
-            'image_url': stock.image.url if stock.image else None,
+            'image_url': stock.image_url,
             'low_stock': stock.total_across_locations <= (stock.re_order or 0),
             'condition': stock.condition,
             'condition_display': stock.get_condition_display()
@@ -709,20 +759,13 @@ def add_stock(request):
                     aisle=aisle
                 )
             
-            # Debug the saved image
-            print("\n=== IMAGE DEBUG ===")
-            print(f"Image field: {stock.image}")
-            if stock.image:
-                print(f"Image name: {stock.image.name}")
-                print(f"Image URL: {stock.image.url}")
-                print(f"Image storage: {type(stock.image.storage)}")
-                # Test if we can get image info
-                try:
-                    print(f"Image size: {stock.image.size} bytes")
-                except Exception as e:
-                    print(f"Error getting image size: {e}")
+            # Debug the saved image URL
+            print("\n=== IMAGE URL DEBUG ===")
+            print(f"Image URL field: {stock.image_url}")
+            if stock.image_url:
+                print(f"Image URL: {stock.image_url}")
             else:
-                print("No image was saved!")
+                print("No image URL was saved!")
             
             # CREATE HISTORY RECORD
             StockHistory.objects.create(
@@ -802,9 +845,7 @@ def update_stock(request, pk):
     if request.method == 'POST':
         form = StockUpdateForm(request.POST, request.FILES, instance=update)
         if form.is_valid():
-            # Remove old image if exists
-            if update.image and os.path.exists(update.image.path):
-                os.remove(update.image.path)
+            # Note: Image URL field doesn't require file cleanup
             
             updated_stock = form.save()
             
@@ -1527,33 +1568,38 @@ def create_purchase_order(request):
         po_form = PurchaseOrderForm(request.POST)
         item_formset = PurchaseOrderItemFormSet(request.POST)
         if po_form.is_valid() and item_formset.is_valid():
-            try:
-                with transaction.atomic():
-                    purchase_order = po_form.save(commit=False)
-                    purchase_order.created_by = request.user
-                    purchase_order.save()
-                    item_formset.instance = purchase_order
-                    item_formset.save()
-                    PurchaseOrderHistory.objects.create(
-                        purchase_order=purchase_order,
-                        action='created',
-                        notes='Purchase order created',
-                        created_by=request.user
-                    )
-                    if request.POST.get('action') == 'submit':
-                        purchase_order.status = 'submitted'
-                        purchase_order.submitted_at = timezone.now()
+            # Check if there are any valid items in the formset
+            valid_items = [form for form in item_formset if form.is_valid() and not form.cleaned_data.get('DELETE', False) and form.cleaned_data.get('product')]
+            if not valid_items:
+                messages.error(request, 'Purchase Order must contain at least one item. Please add items before saving.')
+            else:
+                try:
+                    with transaction.atomic():
+                        purchase_order = po_form.save(commit=False)
+                        purchase_order.created_by = request.user
                         purchase_order.save()
+                        item_formset.instance = purchase_order
+                        item_formset.save()
                         PurchaseOrderHistory.objects.create(
                             purchase_order=purchase_order,
-                            action='submitted',
-                            notes='Purchase order submitted',
+                            action='created',
+                            notes='Purchase order created',
                             created_by=request.user
                         )
-                    messages.success(request, f'Purchase Order {purchase_order.reference_number} created successfully!')
-                    return redirect('purchase_order_detail', pk=purchase_order.pk)
-            except Exception as e:
-                messages.error(request, f'Error creating purchase order: {str(e)}')
+                        if request.POST.get('action') == 'submit':
+                            purchase_order.status = 'submitted'
+                            purchase_order.submitted_at = timezone.now()
+                            purchase_order.save()
+                            PurchaseOrderHistory.objects.create(
+                                purchase_order=purchase_order,
+                                action='submitted',
+                                notes='Purchase order submitted',
+                                created_by=request.user
+                            )
+                        messages.success(request, f'Purchase Order {purchase_order.reference_number} created successfully!')
+                        return redirect('purchase_order_detail', pk=purchase_order.pk)
+                except Exception as e:
+                    messages.error(request, f'Error creating purchase order: {str(e)}')
         else:
             print(po_form.errors)
             print(item_formset.errors)
@@ -1603,30 +1649,35 @@ def update_purchase_order(request, pk):
         po_form = PurchaseOrderForm(request.POST, instance=purchase_order)
         item_formset = PurchaseOrderItemFormSet(request.POST, instance=purchase_order)
         if po_form.is_valid() and item_formset.is_valid():
-            try:
-                with transaction.atomic():
-                    po_form.save()
-                    item_formset.save()
-                    PurchaseOrderHistory.objects.create(
-                        purchase_order=purchase_order,
-                        action='updated',
-                        notes='Purchase order updated',
-                        created_by=request.user
-                    )
-                    if request.POST.get('action') == 'submit':
-                        purchase_order.status = 'submitted'
-                        purchase_order.submitted_at = timezone.now()
-                        purchase_order.save()
+            # Check if there are any valid items in the formset
+            valid_items = [form for form in item_formset if form.is_valid() and not form.cleaned_data.get('DELETE', False) and form.cleaned_data.get('product')]
+            if not valid_items:
+                messages.error(request, 'Purchase Order must contain at least one item. Please add items before saving.')
+            else:
+                try:
+                    with transaction.atomic():
+                        po_form.save()
+                        item_formset.save()
                         PurchaseOrderHistory.objects.create(
                             purchase_order=purchase_order,
-                            action='submitted',
-                            notes='Purchase order submitted',
+                            action='updated',
+                            notes='Purchase order updated',
                             created_by=request.user
                         )
-                    messages.success(request, f'Purchase Order {purchase_order.reference_number} updated successfully!')
-                    return redirect('purchase_order_detail', pk=purchase_order.pk)
-            except Exception as e:
-                messages.error(request, f'Error updating purchase order: {str(e)}')
+                        if request.POST.get('action') == 'submit':
+                            purchase_order.status = 'submitted'
+                            purchase_order.submitted_at = timezone.now()
+                            purchase_order.save()
+                            PurchaseOrderHistory.objects.create(
+                                purchase_order=purchase_order,
+                                action='submitted',
+                                notes='Purchase order submitted',
+                                created_by=request.user
+                            )
+                        messages.success(request, f'Purchase Order {purchase_order.reference_number} updated successfully!')
+                        return redirect('purchase_order_detail', pk=purchase_order.pk)
+                except Exception as e:
+                    messages.error(request, f'Error updating purchase order: {str(e)}')
         else:
             print(po_form.errors)
             print(item_formset.errors)
@@ -3283,3 +3334,59 @@ def financial_dashboard(request):
         'payment_percentage': (total_paid_amount / total_invoice_amount * 100) if total_invoice_amount > 0 else 0,
     }
     return render(request, 'stock/financial_dashboard.html', context)
+
+
+# ----------------------------
+# AJAX and Utility Views
+# ----------------------------
+
+@login_required
+def stock_item_suggestions(request):
+    """AJAX endpoint for stock item autocomplete suggestions"""
+    from django.http import JsonResponse
+    from django.db.models import Q
+    
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'suggestions': []})
+    
+    # Search for existing stock items with similar names
+    stock_items = Stock.objects.filter(
+        Q(item_name__icontains=query) | 
+        Q(category__group__icontains=query)
+    ).select_related('category', 'location').distinct()[:10]
+    
+    # Also search for previous PO items to avoid duplicates
+    po_items = PurchaseOrderItem.objects.filter(
+        product__icontains=query
+    ).values_list('product', flat=True).distinct()[:10]
+    
+    suggestions = []
+    
+    # Add existing stock items (higher priority)
+    for stock in stock_items:
+        suggestions.append({
+            'type': 'existing_stock',
+            'name': stock.item_name,
+            'category': stock.category.group if stock.category else '',
+            'store': stock.location.name if stock.location else '',
+            'quantity': stock.quantity,
+            'unit': 'pcs',
+            'label': f"{stock.item_name} (In Stock: {stock.quantity} pcs)",
+            'priority': 1
+        })
+    
+    # Add previous PO items (lower priority)
+    for po_item in po_items:
+        if not any(s['name'].lower() == po_item.lower() for s in suggestions):
+            suggestions.append({
+                'type': 'previous_order',
+                'name': po_item,
+                'label': f"{po_item} (Previously ordered)",
+                'priority': 2
+            })
+    
+    # Sort by priority and name
+    suggestions.sort(key=lambda x: (x['priority'], x['name'].lower()))
+    
+    return JsonResponse({'suggestions': suggestions[:15]})

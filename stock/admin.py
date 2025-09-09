@@ -51,10 +51,10 @@ class StockTransferInline(admin.TabularInline):
 
 # Stock Admin
 class StockAdmin(admin.ModelAdmin):
-    list_display = ['category', 'item_name', 'quantity', 'committed_quantity', 'condition', 'location', 'aisle']
+    list_display = ['category', 'item_name', 'sku', 'quantity', 'committed_quantity', 'condition', 'location', 'aisle']
     form = StockCreateForm
     list_filter = ['category', 'condition', 'location']
-    search_fields = ['category', 'item_name', 'location__name', 'aisle']
+    search_fields = ['category', 'item_name', 'sku', 'location__name', 'aisle']
     inlines = [StockLocationInline, CommittedStockInline, StockTransferInline]
 
 # CommittedStock Admin
@@ -97,7 +97,7 @@ class DeliveryPersonAdmin(admin.ModelAdmin):
 class StoreAdmin(admin.ModelAdmin):
     list_display = ('name', 'designation', 'location', 'is_active')
     list_filter = ('designation', 'is_active')
-    fields = ('name', 'designation', 'location', 'address', 'email', 'logo', 'is_active')
+    fields = ('name', 'designation', 'location', 'address', 'email', 'logo_url', 'is_active')
 
 # StockLocation Admin
 @admin.register(StockLocation)

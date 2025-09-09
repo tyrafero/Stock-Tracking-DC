@@ -28,6 +28,13 @@
 
 /* Purchase totals section */
 .po-totals {  padding: 1.5rem; border-radius: 0.5rem; margin-top: 2rem; border: 1px solid #dee2e6; }
+
+/* Autocomplete styling */
+.col-product { position: relative; }
+.autocomplete-suggestions { border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+.suggestion-item:hover, .suggestion-item.active { background-color: #f8f9fa; }
+.suggestion-item.existing-stock:hover, .suggestion-item.existing-stock.active { background-color: #d4edda; }
+.suggestion-item:last-child { border-bottom: none; }
 </style>
 
 <div class="nk-content">
@@ -74,7 +81,10 @@
                       {% for form in item_formset %}
                       <div class="formset-row">
                         {{ form.id }}
-                        <div class="col-product">{{ form.product }}</div>
+                        <div class="col-product">
+                          {{ form.product }}
+                          <div class="autocomplete-suggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; z-index: 1000; width: 200px;"></div>
+                        </div>
                         <div class="col-order">{{ form.associated_order_number }}</div>
                         <div class="col-price">{{ form.price_inc }}</div>
                         <div class="col-price-exc"><input type="text" class="form-control calculated-field price-exc-display" readonly></div>
@@ -189,7 +199,10 @@ $(document).ready(function() {
     $('#add-item').click(function() {
         var newItem = `
         <div class="formset-row">
-            <div class="col-product"><input type="text" name="items-${itemCount}-product" class="form-control" placeholder="Product" required></div>
+            <div class="col-product">
+                <input type="text" name="items-${itemCount}-product" class="form-control product-input" placeholder="Product" required>
+                <div class="autocomplete-suggestions" style="display: none; position: absolute; background: white; border: 1px solid #ddd; max-height: 200px; overflow-y: auto; z-index: 1000; width: 200px;"></div>
+            </div>
             <div class="col-order"><input type="text" name="items-${itemCount}-associated_order_number" class="form-control" placeholder="Order #"></div>
             <div class="col-price"><input type="number" name="items-${itemCount}-price_inc" class="form-control" step="0.01" min="0" required></div>
             <div class="col-price-exc"><input type="text" class="form-control calculated-field price-exc-display" readonly></div>
@@ -216,6 +229,132 @@ $(document).ready(function() {
         if ($(this).val() === 'delete') {
             $(this).closest('.formset-row').remove();
             calculateTotals();
+        }
+    });
+
+    // Stock item autocomplete functionality
+    function setupAutocomplete(inputElement) {
+        const $input = $(inputElement);
+        const $suggestions = $input.siblings('.autocomplete-suggestions');
+        let currentTimeout;
+
+        $input.on('input', function() {
+            const query = $(this).val().trim();
+            
+            // Clear previous timeout
+            if (currentTimeout) {
+                clearTimeout(currentTimeout);
+            }
+
+            if (query.length < 2) {
+                $suggestions.hide();
+                return;
+            }
+
+            // Debounce the search to avoid too many requests
+            currentTimeout = setTimeout(function() {
+                $.ajax({
+                    url: '{% url "stock_item_suggestions" %}',
+                    data: { 'q': query },
+                    dataType: 'json',
+                    success: function(data) {
+                        displaySuggestions($suggestions, data.suggestions, $input);
+                    },
+                    error: function() {
+                        console.log('Error fetching suggestions');
+                    }
+                });
+            }, 300);
+        });
+
+        // Hide suggestions when clicking outside
+        $(document).on('click', function(e) {
+            if (!$input.is(e.target) && !$suggestions.is(e.target) && $suggestions.has(e.target).length === 0) {
+                $suggestions.hide();
+            }
+        });
+
+        // Handle keyboard navigation
+        $input.on('keydown', function(e) {
+            const $activeItem = $suggestions.find('.suggestion-item.active');
+            
+            if (e.keyCode === 40) { // Down arrow
+                e.preventDefault();
+                if ($activeItem.length === 0) {
+                    $suggestions.find('.suggestion-item').first().addClass('active');
+                } else {
+                    $activeItem.removeClass('active').next('.suggestion-item').addClass('active');
+                }
+            } else if (e.keyCode === 38) { // Up arrow
+                e.preventDefault();
+                if ($activeItem.length === 0) {
+                    $suggestions.find('.suggestion-item').last().addClass('active');
+                } else {
+                    $activeItem.removeClass('active').prev('.suggestion-item').addClass('active');
+                }
+            } else if (e.keyCode === 13) { // Enter key
+                e.preventDefault();
+                if ($activeItem.length > 0) {
+                    $activeItem.click();
+                }
+            } else if (e.keyCode === 27) { // Escape key
+                $suggestions.hide();
+            }
+        });
+    }
+
+    function displaySuggestions($container, suggestions, $input) {
+        $container.empty();
+        
+        if (suggestions.length === 0) {
+            $container.hide();
+            return;
+        }
+
+        suggestions.forEach(function(suggestion) {
+            const $item = $('<div class="suggestion-item" style="padding: 8px; cursor: pointer; border-bottom: 1px solid #eee;"></div>');
+            
+            if (suggestion.type === 'existing_stock') {
+                $item.html(`
+                    <div style="font-weight: 500; color: #28a745;">${suggestion.name}</div>
+                    <small style="color: #6c757d;">In Stock: ${suggestion.quantity} ${suggestion.unit} | ${suggestion.store}</small>
+                `);
+                $item.addClass('existing-stock');
+            } else {
+                $item.html(`
+                    <div style="font-weight: 500; color: #6c757d;">${suggestion.name}</div>
+                    <small style="color: #6c757d;">Previously ordered item</small>
+                `);
+                $item.addClass('previous-order');
+            }
+            
+            $item.on('click', function() {
+                $input.val(suggestion.name);
+                $container.hide();
+                $input.focus();
+            });
+
+            $item.on('mouseenter', function() {
+                $container.find('.suggestion-item').removeClass('active');
+                $(this).addClass('active');
+            });
+
+            $container.append($item);
+        });
+
+        $container.show();
+    }
+
+    // Setup autocomplete for existing product inputs
+    $('.product-input').each(function() {
+        setupAutocomplete(this);
+    });
+
+    // Setup autocomplete for dynamically added product inputs
+    $('#item-formset').on('focus', '.product-input', function() {
+        if (!$(this).data('autocomplete-setup')) {
+            setupAutocomplete(this);
+            $(this).data('autocomplete-setup', true);
         }
     });
 });

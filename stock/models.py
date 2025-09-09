@@ -233,6 +233,7 @@ class Stock(models.Model):
     
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
     item_name = models.CharField(max_length=50, blank=True, null=True)
+    sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit - unique identifier for this item")
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
     received_by = models.CharField(max_length=50, blank=True, null=True)
@@ -250,7 +251,7 @@ class Stock(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     date = models.DateTimeField(default=timezone.now)
     export_to_csv = models.BooleanField(default=False)
-    image = models.ImageField(upload_to='stock/images/', null=True, blank=True)
+    image_url = models.URLField(max_length=500, blank=True, null=True, help_text="URL to display an image of the item")
     source_purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.CASCADE, null=True, blank=True)
 
     @property
@@ -321,7 +322,7 @@ class Stock(models.Model):
             return False
     
     class Meta:
-        ordering = ['-last_updated']
+        ordering = ['-last_updated', '-timestamp', '-date']
 
     def __str__(self):
         return f"{self.item_name} ({self.quantity}) - {self.last_updated}"
@@ -802,7 +803,7 @@ class StockTransfer(models.Model):
     collected_at = models.DateTimeField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-completed_at', '-approved_at', '-created_at']
     
     def __str__(self):
         return f"Transfer {self.stock.item_name} ({self.quantity}pcs) from {self.from_location} to {self.to_location}"
@@ -949,6 +950,7 @@ class Manufacturer(models.Model):
     region = models.CharField(max_length=100)
     postal_code = models.CharField(max_length=20)
     company_telephone = models.CharField(max_length=20)
+    abn = models.CharField(max_length=20, blank=True, null=True, help_text="Australian Business Number")
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -975,7 +977,12 @@ class Store(models.Model):
     location = models.CharField(max_length=200)
     address = models.TextField(blank=True, null=True)
     email = models.EmailField(max_length=255, blank=True, null=True, help_text="Store contact email")
-    logo = models.ImageField(upload_to='store_logos/', null=True, blank=True, help_text="Business logo for this store/warehouse")
+    order_email = models.EmailField(max_length=255, blank=True, null=True, help_text="Email address for purchase order confirmations")
+    logo_url = models.URLField(max_length=500, blank=True, null=True, help_text="URL link to business logo image")
+    website_url = models.URLField(max_length=500, blank=True, null=True, help_text="Company website URL")
+    facebook_url = models.URLField(max_length=500, blank=True, null=True, help_text="Facebook page URL")
+    instagram_url = models.URLField(max_length=500, blank=True, null=True, help_text="Instagram profile URL")
+    abn = models.CharField(max_length=20, blank=True, null=True, help_text="Australian Business Number")
     is_active = models.BooleanField(default=True)
 
     @property
@@ -1156,7 +1163,7 @@ class PurchaseOrder(models.Model):
         return color_class
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-updated_at', '-created_at']
     
     def __str__(self):
         return f"{self.reference_number} - {self.manufacturer.company_name}"

@@ -172,10 +172,10 @@ count = User.objects.all().count()
             </td>
             {% endif %}
             <td>
-                {% if every.image %}
-                <img style="height: 100px; width: 120px" src="{{ every.image.url }}" alt="{{ every.item_name }}">
+                {% if every.image_url %}
+                <img style="height: 100px; width: 120px" src="{{ every.image_url }}" alt="{{ every.item_name }}">
                 {% else %}
-                <span class="text-muted">No Cover</span>
+                <span class="text-muted">No Image</span>
                 {% endif %}
             </td>
             <td><a href="{% url 're_order' every.id %}">{{every.re_order}}</a></td>

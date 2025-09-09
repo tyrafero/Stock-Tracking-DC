@@ -12,15 +12,16 @@ from datetime import timedelta
 class StockCreateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'image']
+        fields = ['category', 'item_name', 'sku', 'condition', 'quantity', 'location', 'aisle', 'image_url']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter item name'}),
+            'sku': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter SKU (e.g., SKU-001)'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'location': forms.Select(attrs={'class': 'form-control'}),
             'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Contact phone number'}),
-            'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Enter image URL'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -35,17 +36,18 @@ class StockCreateForm(forms.ModelForm):
                 Column('item_name', css_class='form-group col-md-6'),
             ),
             Row(
+                Column('sku', css_class='form-group col-md-6'),
                 Column('condition', css_class='form-group col-md-6'),
+            ),
+            Row(
                 Column('quantity', css_class='form-group col-md-6'),
-            ),
-            Row(
                 Column('location', css_class='form-group col-md-6'),
-                Column('aisle', css_class='form-group col-md-6'),
             ),
             Row(
-                Column('note', css_class='form-group col-md-12'),
+                Column('aisle', css_class='form-group col-md-6'),
+                Column('note', css_class='form-group col-md-6'),
             ),
-            Row(Column('image', css_class='form-group col-md-12')),
+            Row(Column('image_url', css_class='form-group col-md-12')),
             Submit('submit', 'Save Stock', css_class='btn btn-primary')
         )
 
@@ -65,14 +67,15 @@ class StockCreateForm(forms.ModelForm):
 class StockUpdateForm(forms.ModelForm):
     class Meta:
         model = Stock
-        fields = ['category', 'item_name', 'condition', 'quantity', 'location', 'aisle', 'image', 'note']
+        fields = ['category', 'item_name', 'sku', 'condition', 'quantity', 'location', 'aisle', 'image_url', 'note']
         widgets = {
             'item_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'sku': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter SKU (e.g., SKU-001)'}),
             'condition': forms.Select(attrs={'class': 'form-control'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
             'location': forms.Select(attrs={'class': 'form-control'}),
             'aisle': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Aisle or section (e.g., A1, B2)'}),
-            'image': forms.FileInput(attrs={'class': 'form-control'}),
+            'image_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'Enter image URL'}),
             'note': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Update note'}),
         }
 
@@ -370,7 +373,7 @@ class PurchaseOrderItemForm(forms.ModelForm):
         model = PurchaseOrderItem
         fields = ['product', 'associated_order_number', 'price_inc', 'quantity', 'discount_percent']
         widgets = {
-            'product': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Product name'}),
+            'product': forms.TextInput(attrs={'class': 'form-control product-input', 'placeholder': 'Product name'}),
             'associated_order_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Order #'}),
             'price_inc': forms.NumberInput(attrs={'class': 'form-control price-inc', 'step': '0.01', 'min': '0', 'placeholder': '0.00'}),
             'quantity': forms.NumberInput(attrs={'class': 'form-control quantity', 'min': '1', 'placeholder': '1'}),
@@ -502,7 +505,7 @@ class BulkReceivingForm(forms.Form):
 class ManufacturerForm(forms.ModelForm):
     class Meta:
         model = Manufacturer
-        fields = ['company_name', 'company_email', 'additional_email', 'street_address', 'city', 'country', 'region', 'postal_code', 'company_telephone']
+        fields = ['company_name', 'company_email', 'additional_email', 'street_address', 'city', 'country', 'region', 'postal_code', 'company_telephone', 'abn']
         widgets = {
             'company_name': forms.TextInput(attrs={'class': 'form-control'}),
             'company_email': forms.EmailInput(attrs={'class': 'form-control'}),
@@ -513,6 +516,7 @@ class ManufacturerForm(forms.ModelForm):
             'region': forms.TextInput(attrs={'class': 'form-control'}),
             'postal_code': forms.TextInput(attrs={'class': 'form-control'}),
             'company_telephone': forms.TextInput(attrs={'class': 'form-control'}),
+            'abn': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12 345 678 901'}),
         }
         labels = {
             'city': 'Suburb',
@@ -570,14 +574,19 @@ class DeliveryPersonForm(forms.ModelForm):
 class StoreForm(forms.ModelForm):
     class Meta:
         model = Store
-        fields = ['name', 'designation', 'location', 'email', 'address', 'logo', 'is_active']
+        fields = ['name', 'designation', 'location', 'email', 'order_email', 'address', 'logo_url', 'website_url', 'facebook_url', 'instagram_url', 'abn', 'is_active']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Enter store or warehouse name'}),
             'designation': forms.Select(attrs={'class': 'form-control'}),
             'location': forms.TextInput(attrs={'class': 'form-control'}),
             'email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'sales@example.com'}),
+            'order_email': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'orders@example.com'}),
             'address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'logo': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'logo_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://example.com/logo.png'}),
+            'website_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.example.com'}),
+            'facebook_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.facebook.com/yourpage'}),
+            'instagram_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'https://www.instagram.com/yourprofile'}),
+            'abn': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '12 345 678 901'}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
