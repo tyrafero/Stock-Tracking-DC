@@ -1626,6 +1626,11 @@ def purchase_order_detail(request, pk):
     total_paid_amount = purchase_order.get_total_paid_amount()
     total_outstanding = purchase_order.get_total_outstanding_amount()
     
+    # Check permissions
+    can_create_invoices = False
+    if hasattr(request.user, 'userrole'):
+        can_create_invoices = request.user.userrole.has_permission('can_create_invoices')
+    
     context = {
         'title': f'Purchase Order - {purchase_order.reference_number}',
         'purchase_order': purchase_order,
@@ -1636,6 +1641,7 @@ def purchase_order_detail(request, pk):
         'total_outstanding': total_outstanding,
         'payment_status': purchase_order.get_payment_status(),
         'overall_status_display': purchase_order.get_overall_status_display(),
+        'can_create_invoices': can_create_invoices,
     }
     return render(request, 'stock/purchase_order_detail.html', context)
 

@@ -413,6 +413,47 @@
                 </div>
             </div>
         </div>
+
+        <!-- Payment Status Summary -->
+        <div class="card mt-3">
+            <div class="card-inner">
+                <h6 class="card-title">💰 Payment Status</h6>
+                <div class="payment-quick-summary">
+                    <div class="row text-center mb-2">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Total PO Value</small>
+                            <strong class="text-primary">${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">
+                                {% if purchase_order.invoices.count > 0 %}Outstanding{% else %}Uninvoiced{% endif %}
+                            </small>
+                            <strong class="text-warning">
+                                {% if purchase_order.invoices.count > 0 %}
+                                    ${{ purchase_order.get_total_outstanding_amount|floatformat:2 }}
+                                {% else %}
+                                    ${{ purchase_order.grand_total|floatformat:2 }}
+                                {% endif %}
+                            </strong>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <span class="badge 
+                        {% if purchase_order.get_payment_status == 'fully_paid' %}badge-success
+                        {% elif purchase_order.get_payment_status == 'partially_paid' %}badge-warning
+                        {% elif purchase_order.get_payment_status == 'overdue' %}badge-danger
+                        {% else %}badge-secondary{% endif %}">
+                        {{ purchase_order.get_payment_status|title|default:'No Invoices' }}
+                        </span>
+                    </div>
+                    <div class="text-center mt-2">
+                        <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-xs btn-outline-info">
+                            View Full Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 

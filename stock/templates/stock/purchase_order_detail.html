@@ -499,6 +499,73 @@ Complete
 </div>
 </div>
 </div>
+
+<!-- Invoice & Payment Tracking -->
+<div class="card mt-3">
+<div class="card-inner">
+<div class="d-flex justify-content-between align-items-center mb-3">
+<h6 class="mb-0">💰 Payment Status</h6>
+{% if can_create_invoices %}
+<a href="{% url 'create_invoice' purchase_order.pk %}" class="btn btn-sm btn-outline-success">
+<i class="icon ni ni-plus"></i> Record Payment
+</a>
+{% endif %}
+</div>
+
+{% if invoices %}
+<div class="payment-summary mb-3">
+<div class="row text-center">
+<div class="col-4">
+<small class="text-muted d-block">PO Total</small>
+<strong class="text-primary">${{ purchase_order.grand_total|floatformat:2 }}</strong>
+</div>
+<div class="col-4">
+<small class="text-muted d-block">Paid</small>
+<strong class="text-success">${{ total_paid_amount|floatformat:2 }}</strong>
+</div>
+<div class="col-4">
+<small class="text-muted d-block">Remaining</small>
+<strong class="text-warning">${{ total_outstanding|floatformat:2 }}</strong>
+</div>
+</div>
+</div>
+
+<div class="payment-list">
+{% for invoice in invoices %}
+<div class="payment-item p-2 mb-2 border rounded">
+<div class="d-flex justify-content-between align-items-start">
+<div class="flex-grow-1">
+<strong class="d-block">{{ invoice.invoice_number }}</strong>
+<small class="text-muted">{{ invoice.invoice_date }}</small>
+<div class="mt-1">
+<span class="badge badge-sm badge-success">
+Payment Recorded
+</span>
+</div>
+</div>
+<div class="text-end">
+<strong class="d-block text-success">+${{ invoice.invoice_total|floatformat:2 }}</strong>
+<small class="text-muted">{{ invoice.invoice_date }}</small>
+{% if invoice.invoice_file %}
+<div class="mt-1">
+<a href="{{ invoice.invoice_file.url }}" target="_blank" class="btn btn-xs btn-outline-info">
+<i class="icon ni ni-file"></i> Receipt
+</a>
+</div>
+{% endif %}
+</div>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="text-center py-3">
+<i class="icon ni ni-wallet text-muted" style="font-size: 2rem;"></i>
+<p class="text-muted mt-2 mb-0">No payments recorded yet</p>
+</div>
+{% endif %}
+</div>
+</div>
 {% endif %}
 
 </div> <!-- end sidebar -->

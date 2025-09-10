@@ -72,10 +72,13 @@ class UserRole(models.Model):
                 'can_issue_stock': True,
                 'can_receive_stock': True,
                 'can_view_warehouse_receiving': True,
+                'can_manage_payments': True,
+                'can_create_invoices': True,
+                'can_view_financial_reports': True,
             },
             'owner': {
-                'can_manage_users': False,
-                'can_manage_access_control': False,
+                'can_manage_users': True,
+                'can_manage_access_control': True,
                 'can_create_purchase_order': True,
                 'can_edit_purchase_order': True,
                 'can_view_purchase_order': True,
@@ -90,6 +93,9 @@ class UserRole(models.Model):
                 'can_issue_stock': True,
                 'can_receive_stock': True,
                 'can_view_warehouse_receiving': True,
+                'can_manage_payments': True,
+                'can_create_invoices': True,
+                'can_view_financial_reports': True,
             },
             'logistics': {
                 'can_manage_users': False,
@@ -203,7 +209,28 @@ class UserRole(models.Model):
                 'can_view_financial_reports': True,  # New permission for financial reporting
             },
         }
-        return permissions.get(self.role, permissions['sales'])
+        
+        # Get base permissions for the role
+        base_permissions = permissions.get(self.role, permissions['sales'])
+        
+        # Implement hierarchy: Admin → Owner → Accountant
+        # Higher roles inherit all permissions from lower roles
+        if self.role == 'admin':
+            # Admin gets all permissions from owner + accountant + their own
+            for lower_role in ['owner', 'accountant']:
+                lower_permissions = permissions.get(lower_role, {})
+                for perm, value in lower_permissions.items():
+                    if value:  # Only inherit True permissions
+                        base_permissions[perm] = True
+        
+        elif self.role == 'owner':
+            # Owner gets all permissions from accountant + their own
+            accountant_permissions = permissions.get('accountant', {})
+            for perm, value in accountant_permissions.items():
+                if value:  # Only inherit True permissions
+                    base_permissions[perm] = True
+        
+        return base_permissions
     
     def has_permission(self, permission):
         """Check if user has a specific permission"""

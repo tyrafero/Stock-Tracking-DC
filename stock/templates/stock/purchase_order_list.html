@@ -42,7 +42,7 @@
                                     🚨 Overdue Payments
                                 </a>
                                 <a href="?payment_status=no_invoices&status=completed" class="btn btn-sm btn-outline-warning mr-2">
-                                    📋 Need Invoices
+                                    💳 Awaiting Payment
                                 </a>
                                 <a href="?receiving_status=not_received" class="btn btn-sm btn-outline-info mr-2">
                                     📦 Awaiting Items
@@ -125,7 +125,7 @@
                                             <span class="badge badge-sm badge-{{ overall_status.1 }}">
                                                 {% if overall_status.0 == 'completed' %}✅ Completed
                                                 {% elif overall_status.0 == 'received_pending_payment' %}💰 Awaiting Payment
-                                                {% elif overall_status.0 == 'received_pending_invoice' %}📋 Need Invoice
+                                                {% elif overall_status.0 == 'received_pending_invoice' %}💳 Awaiting Payment
                                                 {% elif overall_status.0 == 'paid_pending_receipt' %}📦 Awaiting Items
                                                 {% elif overall_status.0 == 'partially_complete' %}⏳ In Progress
                                                 {% elif overall_status.0 == 'partially_received' %}📥 Partial Receipt
@@ -157,7 +157,7 @@
                                                 {% elif payment_status == 'overdue' %}badge-danger
                                                 {% else %}badge-secondary
                                                 {% endif %}">
-                                                {% if payment_status == 'no_invoices' %}📋 No Invoices
+                                                {% if payment_status == 'no_invoices' %}💳 No Payments
                                                 {% elif payment_status == 'pending' %}⏳ Pending Payment
                                                 {% elif payment_status == 'partially_paid' %}💰 Partially Paid
                                                 {% elif payment_status == 'fully_paid' %}✅ Fully Paid
@@ -220,9 +220,9 @@
                                                                     {% if purchase_order.status == 'completed' and not purchase_order.invoices.exists %}
                                                                     <li class="divider"></li>
                                                                     <li>
-                                                                        <a href="{% url 'create_invoice' purchase_order.pk %}" class="text-warning">
-                                                                            <em class="icon ni ni-file-plus"></em>
-                                                                            <span>Create Invoice</span>
+                                                                        <a href="{% url 'create_invoice' purchase_order.pk %}" class="text-success">
+                                                                            <em class="icon ni ni-wallet"></em>
+                                                                            <span>Record Payment</span>
                                                                         </a>
                                                                     </li>
                                                                     {% endif %}
@@ -231,19 +231,19 @@
                                                                     {% for invoice in purchase_order.invoices.all %}
                                                                     <li>
                                                                         <a href="{% url 'invoice_detail' invoice.pk %}">
-                                                                            <em class="icon ni ni-file-docs"></em>
-                                                                            <span>Invoice #{{ invoice.invoice_number }}</span>
+                                                                            <em class="icon ni ni-check-circle"></em>
+                                                                            <span>Payment #{{ invoice.invoice_number }}</span>
                                                                         </a>
                                                                     </li>
-                                                                    {% if invoice.outstanding_amount > 0 %}
+                                                                    {% endfor %}
+                                                                    {% if purchase_order.get_total_outstanding_amount > 0 %}
                                                                     <li>
-                                                                        <a href="{% url 'record_payment' invoice.pk %}" class="text-success">
-                                                                            <em class="icon ni ni-money"></em>
-                                                                            <span>Record Payment</span>
+                                                                        <a href="{% url 'create_invoice' purchase_order.pk %}" class="text-success">
+                                                                            <em class="icon ni ni-plus"></em>
+                                                                            <span>Add Payment</span>
                                                                         </a>
                                                                     </li>
                                                                     {% endif %}
-                                                                    {% endfor %}
                                                                     {% endif %}
                                                                     <li class="divider"></li>
                                                                     <li>
