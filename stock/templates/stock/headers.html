@@ -1,6 +1,26 @@
 <!DOCTYPE html>
 {% load static %}
 <html lang="en" class="js">
+<script>
+// Apply permanent dark mode immediately and clean up any theme preferences
+(function() {
+    // Clean up any existing theme preferences
+    localStorage.removeItem('theme');
+    
+    // Always apply dark mode - no theme switching
+    document.documentElement.classList.add('dark-mode');
+    if (document.body) {
+        document.body.classList.add('dark-mode');
+    }
+    
+    // Ensure body gets the class after it's available
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('dark-mode');
+        // Remove any light mode classes that might exist
+        document.body.classList.remove('light-mode', 'nk-body-light');
+    });
+})();
+</script>
 
 <head>
     <base href="../">
@@ -22,6 +42,146 @@
     <link href="{% static 'css/sweetalert2.min.css' %}" rel="stylesheet">
      <link href="{% static 'css/navbar-top-fixed.css' %}" rel="stylesheet">
      <style>
+         /* Permanent dark mode styles */
+         :root {
+             --background-color: #1c2b3e;
+             --text-color: #c4cefe;
+             --sidebar-bg: #162031;
+             --header-bg: #162031;
+         }
+         
+         /* Apply dark mode styles globally */
+         html, body {
+             background-color: #1c2b3e !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Dark mode overrides for main elements */
+         .dark-mode body {
+             background-color: #1c2b3e !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .nk-sidebar {
+             background: #101924 !important;
+             border-right-color: #203247 !important;
+         }
+         
+         .dark-mode .nk-header {
+             background: #101924 !important;
+             border-color: #203247 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-link {
+             color: #8699b2 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-link:hover,
+         .dark-mode .nk-sidebar .active > .nk-menu-link {
+             background: #182536 !important;
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-icon {
+             color: #9faec2 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-text {
+             color: #8699b2 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-link:hover .nk-menu-text,
+         .dark-mode .nk-sidebar .active > .nk-menu-link .nk-menu-text {
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .card {
+             background: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .form-control {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .form-control:focus {
+             background-color: #1e2d3f !important;
+             border-color: #854fff !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .table {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .table-bordered th,
+         .dark-mode .table-bordered td {
+             border-color: #374659 !important;
+         }
+         
+         .dark-mode .btn-white {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .btn-light {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .modal-content {
+             background-color: #243447 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .dropdown-menu {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .dropdown-item {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .dropdown-item:hover {
+             background-color: #1e2d3f !important;
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .nk-content {
+             background-color: #1c2b3e !important;
+         }
+         
+         /* User dropdown menu styling for dark mode */
+         .dark-mode .link-list li a {
+             color: #c4cefe !important;
+             padding: 0.75rem 1.25rem;
+             display: flex;
+             align-items: center;
+             text-decoration: none;
+             transition: background-color 0.15s ease;
+         }
+         
+         .dark-mode .link-list li a:hover {
+             background-color: #1e2d3f !important;
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .link-list li a .icon {
+             margin-right: 0.5rem;
+             color: #9faec2 !important;
+         }
+         
+         .dark-mode .link-list li a:hover .icon {
+             color: #98a3ff !important;
+         }
+         
          .search-wrapper {
              position: relative;
          }
@@ -465,7 +625,7 @@
          });
      </script>
 </head>
-<body class="nk-body npc-default has-sidebar ">
+<body class="nk-body npc-default has-sidebar dark-mode">
  <div class="nk-app-root">
         <!-- main @s -->
         <div class="nk-main ">
@@ -757,9 +917,17 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            <!-- User menu options -->
                                             <div class="dropdown-inner">
                                                 <ul class="link-list">
-                                                    <li><a class="dark-switch" href="#"><em class="icon ni ni-moon"></em><span>Dark Mode</span></a></li>
+                                                    {% if request.user.is_authenticated %}
+                                                    <li>
+                                                        <a href="/accounts/password/reset/">
+                                                            <em class="icon ni ni-lock-alt"></em>
+                                                            <span>Reset Password</span>
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
                                                 </ul>
                                             </div>
                                             <div class="dropdown-inner">

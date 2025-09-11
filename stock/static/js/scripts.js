@@ -555,49 +555,12 @@
   }; // Dark Mode Switch @since v2.0
 
 
+  // Permanent dark mode - no theme switching functionality
   NioApp.ModeSwitch = function () {
-    var toggle = $('.dark-switch');
-    var toggleIcon = toggle.find('.icon');
-    var toggleText = toggle.find('span');
-    
-    // Function to update toggle appearance
-    function updateToggle(isDark) {
-      if (isDark) {
-        toggle.addClass('active');
-        toggleIcon.removeClass('ni-moon').addClass('ni-sun');
-        toggleText.text('Light Mode');
-      } else {
-        toggle.removeClass('active');
-        toggleIcon.removeClass('ni-sun').addClass('ni-moon');
-        toggleText.text('Dark Mode');
-      }
-    }
-    
-    // Check localStorage for saved theme preference
-    var savedTheme = localStorage.getItem('theme');
-    
-    // Apply saved theme on page load
-    if (savedTheme === 'light') {
-      $body.removeClass('dark-mode');
-      updateToggle(false);
-    } else {
-      // Default to dark mode if no preference saved or if preference is 'dark'
-      $body.addClass('dark-mode');
-      updateToggle(true);
-    }
-
-    toggle.on('click', function (e) {
-      e.preventDefault();
-      $body.toggleClass('dark-mode');
-      
-      var isDarkMode = $body.hasClass('dark-mode');
-      
-      // Update toggle appearance
-      updateToggle(isDarkMode);
-      
-      // Save theme preference to localStorage
-      localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-    });
+    // Always ensure dark mode is applied
+    $body.addClass('dark-mode');
+    // Remove any existing light mode classes
+    $body.removeClass('light-mode');
   }; // Knob @v1.0
 
 

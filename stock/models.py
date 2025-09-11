@@ -348,6 +348,77 @@ class Stock(models.Model):
         except StockLocation.DoesNotExist:
             return False
     
+    def save(self, *args, **kwargs):
+        """Override save to automatically track stock changes in history"""
+        # Track if this is a new record or an update
+        is_new = self.pk is None
+        old_quantity = 0
+        
+        if not is_new:
+            # Get the old quantity before saving
+            try:
+                old_stock = Stock.objects.get(pk=self.pk)
+                old_quantity = old_stock.quantity or 0
+            except Stock.DoesNotExist:
+                old_quantity = 0
+        
+        # Save the stock record first
+        super().save(*args, **kwargs)
+        
+        # Create history record for quantity changes (excluding audit adjustments which handle their own history)
+        current_quantity = self.quantity or 0
+        skip_history = kwargs.get('skip_history', False)
+        
+        if not skip_history and (is_new or old_quantity != current_quantity):
+            # Determine if it's a receive or issue operation
+            quantity_change = current_quantity - old_quantity
+            
+            # Skip if this appears to be an audit adjustment (will have its own history)
+            if hasattr(self, '_audit_adjustment'):
+                return
+            
+            # Create appropriate history record
+            if is_new and current_quantity > 0:
+                # New stock item created
+                StockHistory.objects.create(
+                    category=self.category,
+                    item_name=self.item_name,
+                    quantity=current_quantity,
+                    receive_quantity=current_quantity,
+                    received_by=self.received_by or self.created_by or 'System',
+                    note=f"New stock item created: {self.item_name} | Initial quantity: {current_quantity} | {self.note or ''}",
+                    created_by=self.created_by or 'System',
+                    last_updated=timezone.now(),
+                    timestamp=timezone.now()
+                )
+            elif quantity_change > 0:
+                # Stock increased (received)
+                StockHistory.objects.create(
+                    category=self.category,
+                    item_name=self.item_name,
+                    quantity=current_quantity,
+                    receive_quantity=quantity_change,
+                    received_by=self.received_by or self.created_by or 'System',
+                    note=f"Stock received: {self.item_name} | Quantity increased by {quantity_change} | {self.note or ''}",
+                    created_by=self.created_by or 'System',
+                    last_updated=timezone.now(),
+                    timestamp=timezone.now()
+                )
+            elif quantity_change < 0:
+                # Stock decreased (issued)
+                StockHistory.objects.create(
+                    category=self.category,
+                    item_name=self.item_name,
+                    quantity=current_quantity,
+                    issue_quantity=abs(quantity_change),
+                    issued_by=self.issued_by or self.created_by or 'System',
+                    issued_to='Stock adjustment',
+                    note=f"Stock issued: {self.item_name} | Quantity decreased by {abs(quantity_change)} | {self.note or ''}",
+                    created_by=self.created_by or 'System',
+                    last_updated=timezone.now(),
+                    timestamp=timezone.now()
+                )
+    
     class Meta:
         ordering = ['-last_updated', '-timestamp', '-date']
 

@@ -3044,15 +3044,82 @@ def complete_audit(request, audit_id):
         )
         return redirect('audit_detail', audit_id=audit.pk)
     
-    # Complete the audit
-    from django.utils import timezone
-    audit.status = 'completed'
-    audit.actual_end_date = timezone.now()
-    audit.update_statistics()
-    audit.save()
+    # Handle POST request for completion with options
+    if request.method == 'POST':
+        auto_adjust = request.POST.get('auto_adjust') == 'true'
+        
+        # Complete the audit
+        from django.utils import timezone
+        audit.status = 'completed'
+        audit.actual_end_date = timezone.now()
+        audit.update_statistics()
+        audit.save()
+        
+        # Auto-apply adjustments if requested
+        if auto_adjust:
+            variance_items = audit.audit_items.exclude(variance_quantity=0)
+            adjustments_applied = 0
+            
+            for item in variance_items:
+                if not item.adjustment_applied:
+                    # Apply the adjustment to actual stock
+                    stock = item.stock
+                    old_quantity = stock.quantity
+                    new_quantity = item.physical_count
+                    variance = item.variance_quantity
+                    
+                    # Update stock quantity (skip automatic history since we create detailed audit history)
+                    stock.quantity = new_quantity
+                    stock.save(skip_history=True)
+                    
+                    # Create comprehensive stock history record for audit adjustment
+                    StockHistory.objects.create(
+                        category=stock.category,
+                        item_name=stock.item_name,
+                        quantity=new_quantity,  # Final quantity after adjustment
+                        receive_quantity=max(0, variance) if variance > 0 else 0,  # If positive variance (found extra stock)
+                        issue_quantity=abs(variance) if variance < 0 else 0,  # If negative variance (missing stock)
+                        received_by=request.user.username if variance > 0 else '',
+                        issued_by=request.user.username if variance < 0 else '',
+                        issued_to=f"Audit Adjustment - {audit.audit_reference}" if variance < 0 else '',
+                        note=f"Auto Stock Audit Adjustment: {audit.audit_reference} | "
+                             f"System Qty: {old_quantity} → Physical Count: {new_quantity} | "
+                             f"Variance: {variance:+d} | "
+                             f"Reason: {item.get_variance_reason_display() or 'Not specified'} | "
+                             f"Notes: {item.variance_notes or 'None'}",
+                        created_by=request.user.username,
+                        last_updated=timezone.now(),
+                        timestamp=timezone.now()
+                    )
+                    
+                    # Mark adjustment as applied
+                    item.adjustment_applied = True
+                    item.adjustment_date = timezone.now()
+                    item.save()
+                    
+                    adjustments_applied += 1
+            
+            if adjustments_applied > 0:
+                messages.success(
+                    request, 
+                    f'Audit "{audit.title}" completed and {adjustments_applied} stock adjustments applied automatically.'
+                )
+            else:
+                messages.success(request, f'Audit "{audit.title}" completed. No adjustments needed.')
+        else:
+            messages.success(request, f'Audit "{audit.title}" completed. Use approve audit to apply adjustments.')
+        
+        return redirect('audit_detail', audit_id=audit.pk)
     
-    messages.success(request, f'Audit "{audit.title}" has been completed.')
-    return redirect('audit_detail', audit_id=audit.pk)
+    # Show completion confirmation page with adjustment options
+    variance_items = audit.audit_items.exclude(variance_quantity=0)
+    context = {
+        'title': f'Complete Audit: {audit.audit_reference}',
+        'audit': audit,
+        'variance_items': variance_items,
+        'has_variances': variance_items.exists(),
+    }
+    return render(request, 'stock/complete_audit_confirm.html', context)
 
 
 @login_required
@@ -3078,8 +3145,33 @@ def approve_audit(request, audit_id):
             if not item.adjustment_applied:
                 # Apply the adjustment to actual stock
                 stock = item.stock
-                stock.quantity = item.physical_count
-                stock.save()
+                old_quantity = stock.quantity
+                new_quantity = item.physical_count
+                variance = item.variance_quantity
+                
+                # Update stock quantity (skip automatic history since we create detailed audit history)
+                stock.quantity = new_quantity
+                stock.save(skip_history=True)
+                
+                # Create comprehensive stock history record for audit adjustment
+                StockHistory.objects.create(
+                    category=stock.category,
+                    item_name=stock.item_name,
+                    quantity=new_quantity,  # Final quantity after adjustment
+                    receive_quantity=max(0, variance) if variance > 0 else 0,  # If positive variance (found extra stock)
+                    issue_quantity=abs(variance) if variance < 0 else 0,  # If negative variance (missing stock)
+                    received_by=request.user.username if variance > 0 else '',
+                    issued_by=request.user.username if variance < 0 else '',
+                    issued_to=f"Audit Adjustment - {audit.audit_reference}" if variance < 0 else '',
+                    note=f"Stock Audit Adjustment: {audit.audit_reference} | "
+                         f"System Qty: {old_quantity} → Physical Count: {new_quantity} | "
+                         f"Variance: {variance:+d} | "
+                         f"Reason: {item.get_variance_reason_display() or 'Not specified'} | "
+                         f"Notes: {item.variance_notes or 'None'}",
+                    created_by=request.user.username,
+                    last_updated=timezone.now(),
+                    timestamp=timezone.now()
+                )
                 
                 # Mark adjustment as applied
                 from django.utils import timezone
