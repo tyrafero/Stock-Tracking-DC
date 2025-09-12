@@ -118,7 +118,7 @@
                                     <th class="nk-tb-col tb-col-md"><span>RECEIVE QUANTITY</span></th>
                                     <th class="nk-tb-col tb-col-md"><span>ISSUED BY / RECEIVED BY</span></th>
                                     <th class="nk-tb-col tb-col-lg notes-column"><span>NOTES</span></th>
-                                    <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>DATE & TIME</span></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -160,7 +160,15 @@
                                         </div>
                                     </td>
                                     <td class="nk-tb-col tb-col-md">
-                                        <span class="tb-sub">{{ total.last_updated }}</span>
+                                        <span class="tb-sub">
+                                            {% if total.timestamp %}
+                                                {{ total.timestamp|date:"M d, Y H:i" }}
+                                            {% elif total.last_updated %}
+                                                {{ total.last_updated|date:"M d, Y H:i" }}
+                                            {% else %}
+                                                No date
+                                            {% endif %}
+                                        </span>
                                     </td>
                                 </tr>
                                 {% endfor %}

@@ -1024,6 +1024,20 @@ def commit_stock(request, pk):
             commitment.committed_by = request.user
             commitment.save()
             
+            # Create history record for stock commitment
+            from django.utils import timezone
+            StockHistory.objects.create(
+                category=stock.category,
+                item_name=stock.item_name,
+                quantity=stock.quantity,
+                issue_quantity=0,
+                receive_quantity=0,
+                issued_by=request.user.username,
+                note=f"Stock committed to {commitment.customer_name} - Order #{commitment.customer_order_number} ({commit_quantity} units committed with ${commitment.deposit_amount} deposit)",
+                timestamp=timezone.now(),
+                last_updated=timezone.now()
+            )
+            
             messages.success(request, f'Successfully committed {commit_quantity} {stock.item_name} for order {commitment.customer_order_number}!')
             return redirect('view_stock')
     else:
@@ -1093,6 +1107,20 @@ def cancel_commitment(request, pk):
     commitment.is_fulfilled = True
     commitment.fulfilled_at = timezone.now()
     commitment.save()
+    
+    # Create history record for commitment cancellation
+    from django.utils import timezone
+    StockHistory.objects.create(
+        category=commitment.stock.category,
+        item_name=commitment.stock.item_name,
+        quantity=commitment.stock.quantity,
+        issue_quantity=0,
+        receive_quantity=0,
+        issued_by=request.user.username,
+        note=f"Commitment cancelled for {commitment.customer_name} - Order #{commitment.customer_order_number} ({commitment.quantity} units released back to available stock, ${commitment.deposit_amount} deposit to be refunded)",
+        timestamp=timezone.now(),
+        last_updated=timezone.now()
+    )
     
     # Note: The stock's committed_quantity will be automatically updated 
     # when the commitment is saved due to the save() method in CommittedStock model
@@ -2596,6 +2624,21 @@ def reserve_stock(request, pk):
         form = StockReservationForm(stock=stock, data=request.POST)
         if form.is_valid():
             reservation = form.save(reserved_by=request.user)
+            
+            # Create history record for reservation creation
+            from django.utils import timezone
+            StockHistory.objects.create(
+                category=stock.category,
+                item_name=stock.item_name,
+                quantity=stock.quantity,
+                issue_quantity=0,
+                receive_quantity=0,
+                issued_by=request.user.username,
+                note=f"Stock reserved for {reservation.customer_name or 'customer'} - {reservation.quantity} units reserved until {reservation.expires_at.strftime('%Y-%m-%d %H:%M')}",
+                timestamp=timezone.now(),
+                last_updated=timezone.now()
+            )
+            
             messages.success(
                 request, 
                 f'Successfully reserved {reservation.quantity} units of {stock.item_name} '
@@ -2711,6 +2754,19 @@ def cancel_reservation(request, pk):
     
     if request.method == 'POST':
         if reservation.cancel(request.user):
+            # Create history record for reservation cancellation
+            from django.utils import timezone
+            StockHistory.objects.create(
+                category=reservation.stock.category,
+                item_name=reservation.stock.item_name,
+                quantity=reservation.stock.quantity,
+                issue_quantity=0,
+                receive_quantity=0,
+                issued_by=request.user.username,
+                note=f"Reservation cancelled for {reservation.customer_name or 'customer'} - {reservation.quantity} units released back to available stock",
+                timestamp=timezone.now(),
+                last_updated=timezone.now()
+            )
             messages.success(request, 'Reservation cancelled successfully.')
         else:
             messages.error(request, 'Failed to cancel reservation.')
@@ -2742,9 +2798,25 @@ def fulfill_reservation(request, pk):
         
         if action == 'commit':
             # Convert to commitment (redirect to commit stock page)
-            reservation.fulfill(request.user)
-            messages.success(request, 'Reservation fulfilled. Please create customer commitment.')
-            return redirect('commit_stock', pk=reservation.stock.pk)
+            if reservation.fulfill(request.user):
+                # Create history record for reservation fulfillment
+                from django.utils import timezone
+                StockHistory.objects.create(
+                    category=reservation.stock.category,
+                    item_name=reservation.stock.item_name,
+                    quantity=reservation.stock.quantity,
+                    issue_quantity=0,
+                    receive_quantity=0,
+                    issued_by=request.user.username,
+                    note=f"Reservation fulfilled - converted to commitment for {reservation.customer_name or 'customer'} ({reservation.quantity} units reserved)",
+                    timestamp=timezone.now(),
+                    last_updated=timezone.now()
+                )
+                messages.success(request, 'Reservation fulfilled. Please create customer commitment.')
+                return redirect('commit_stock', pk=reservation.stock.pk)
+            else:
+                messages.error(request, 'Failed to fulfill reservation.')
+                return redirect('reservation_detail', pk=pk)
         
         elif action == 'complete':
             # Complete as sale (fulfill and issue stock)
@@ -2756,6 +2828,20 @@ def fulfill_reservation(request, pk):
                     stock.quantity -= reservation.quantity
                     stock.issued_by = request.user.username
                     stock.save()
+                    
+                    # Create history record for direct sale completion
+                    from django.utils import timezone
+                    StockHistory.objects.create(
+                        category=stock.category,
+                        item_name=stock.item_name,
+                        quantity=stock.quantity,
+                        issue_quantity=reservation.quantity,
+                        receive_quantity=0,
+                        issued_by=request.user.username,
+                        note=f"Reservation completed as direct sale to {reservation.customer_name or 'customer'} - {reservation.quantity} units issued",
+                        timestamp=timezone.now(),
+                        last_updated=timezone.now()
+                    )
                     
                     messages.success(
                         request, 
