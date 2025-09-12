@@ -1399,7 +1399,90 @@ def view_history(request):
                 print("Form is_valid check...")
                 if form.is_valid():
                     print("Form is valid!")
-                    # Filtering logic can stay here if needed
+                    
+                    # Apply filtering based on form data
+                    filtered_history = StockHistory.objects.all()
+                    
+                    # Filter by category
+                    if form.cleaned_data.get('category'):
+                        filtered_history = filtered_history.filter(category=form.cleaned_data['category'])
+                        print(f"Filtered by category: {form.cleaned_data['category']}")
+                    
+                    # Filter by item name (partial match)
+                    if form.cleaned_data.get('item_name'):
+                        filtered_history = filtered_history.filter(item_name__icontains=form.cleaned_data['item_name'])
+                        print(f"Filtered by item name: {form.cleaned_data['item_name']}")
+                    
+                    # Filter by start date
+                    if form.cleaned_data.get('start_date'):
+                        # Convert date to start of day in Sydney timezone
+                        from django.utils import timezone
+                        import pytz
+                        import datetime
+                        sydney_tz = pytz.timezone('Australia/Sydney')
+                        start_date = form.cleaned_data['start_date']
+                        
+                        # Convert date to datetime at start of day in Sydney
+                        start_datetime = sydney_tz.localize(datetime.datetime.combine(start_date, datetime.time.min))
+                        # Convert to UTC for database query
+                        start_datetime_utc = start_datetime.astimezone(datetime.timezone.utc)
+                        filtered_history = filtered_history.filter(timestamp__gte=start_datetime_utc)
+                        print(f"Filtered by start date: {start_datetime_utc} (Sydney: {start_datetime})")
+                    
+                    # Filter by end date
+                    if form.cleaned_data.get('end_date'):
+                        # Convert date to end of day in Sydney timezone
+                        from django.utils import timezone
+                        import pytz
+                        import datetime
+                        sydney_tz = pytz.timezone('Australia/Sydney')
+                        end_date = form.cleaned_data['end_date']
+                        
+                        # Convert date to datetime at end of day in Sydney
+                        end_datetime = sydney_tz.localize(datetime.datetime.combine(end_date, datetime.time.max))
+                        # Convert to UTC for database query
+                        end_datetime_utc = end_datetime.astimezone(datetime.timezone.utc)
+                        filtered_history = filtered_history.filter(timestamp__lte=end_datetime_utc)
+                        print(f"Filtered by end date: {end_datetime_utc} (Sydney: {end_datetime})")
+                    
+                    history = filtered_history
+                    print(f"Filtered results count: {history.count()}")
+                    
+                    # Handle CSV export
+                    if form.cleaned_data.get('export_to_CSV'):
+                        print("Exporting to CSV...")
+                        import csv
+                        from django.http import HttpResponse
+                        
+                        response = HttpResponse(content_type='text/csv')
+                        response['Content-Disposition'] = 'attachment; filename="stock_history.csv"'
+                        
+                        writer = csv.writer(response)
+                        writer.writerow(['Category', 'Item Name', 'Quantity', 'Issue Qty', 'Receive Qty', 'Issued/Received By', 'Notes', 'Date & Time'])
+                        
+                        for record in history:
+                            timestamp_str = record.timestamp.astimezone(pytz.timezone('Australia/Sydney')).strftime('%Y-%m-%d %H:%M:%S') if record.timestamp else ''
+                            writer.writerow([
+                                record.category.group if record.category else '',
+                                record.item_name or '',
+                                record.quantity or 0,
+                                record.issue_quantity or 0,
+                                record.receive_quantity or 0,
+                                record.issued_by or record.received_by or '',
+                                record.note or '',
+                                timestamp_str
+                            ])
+                        return response
+                    
+                    # Add row_class to filtered records for coloring
+                    for record in history:
+                        if record.issue_quantity and record.issue_quantity > 0:
+                            record.row_class = "row-issue"
+                        elif record.receive_quantity and record.receive_quantity > 0:
+                            record.row_class = "row-receive"
+                        else:
+                            record.row_class = ""
+                    
                     context = {
                         'title': title,
                         'history': history,
@@ -3154,9 +3237,9 @@ def complete_audit(request, audit_id):
                     new_quantity = item.physical_count
                     variance = item.variance_quantity
                     
-                    # Update stock quantity (skip automatic history since we create detailed audit history)
+                    # Update stock quantity
                     stock.quantity = new_quantity
-                    stock.save(skip_history=True)
+                    stock.save()
                     
                     # Create comprehensive stock history record for audit adjustment
                     StockHistory.objects.create(
@@ -3167,12 +3250,12 @@ def complete_audit(request, audit_id):
                         issue_quantity=abs(variance) if variance < 0 else 0,  # If negative variance (missing stock)
                         received_by=request.user.username if variance > 0 else '',
                         issued_by=request.user.username if variance < 0 else '',
-                        issued_to=f"Audit Adjustment - {audit.audit_reference}" if variance < 0 else '',
                         note=f"Auto Stock Audit Adjustment: {audit.audit_reference} | "
                              f"System Qty: {old_quantity} → Physical Count: {new_quantity} | "
                              f"Variance: {variance:+d} | "
                              f"Reason: {item.get_variance_reason_display() or 'Not specified'} | "
-                             f"Notes: {item.variance_notes or 'None'}",
+                             f"Notes: {item.variance_notes or 'None'}"
+                             f"{' | Issued to: Audit Adjustment - ' + audit.audit_reference if variance < 0 else ''}",
                         created_by=request.user.username,
                         last_updated=timezone.now(),
                         timestamp=timezone.now()
@@ -3223,55 +3306,88 @@ def approve_audit(request, audit_id):
         return redirect('audit_detail', audit_id=audit.pk)
     
     if request.method == 'POST':
+        print("=== DEBUG: Starting audit approval ===")
+        from django.utils import timezone
         # Apply stock adjustments for items with variances
         variance_items = audit.audit_items.exclude(variance_quantity=0)
         adjustments_applied = 0
         
         for item in variance_items:
+            print(f"DEBUG: Processing {item.stock.item_name}")
             if not item.adjustment_applied:
+                print("DEBUG: Item not yet applied, processing...")
                 # Apply the adjustment to actual stock
                 stock = item.stock
                 old_quantity = stock.quantity
                 new_quantity = item.physical_count
                 variance = item.variance_quantity
                 
-                # Update stock quantity (skip automatic history since we create detailed audit history)
-                stock.quantity = new_quantity
-                stock.save(skip_history=True)
+                print(f"DEBUG: Updating quantity {old_quantity} → {new_quantity}")
+                # Update stock quantity
+                try:
+                    stock.quantity = new_quantity
+                    stock.save()
+                    print("DEBUG: Stock saved successfully")
+                except Exception as e:
+                    print(f"DEBUG ERROR: Stock save failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
                 
                 # Create comprehensive stock history record for audit adjustment
-                StockHistory.objects.create(
-                    category=stock.category,
-                    item_name=stock.item_name,
-                    quantity=new_quantity,  # Final quantity after adjustment
-                    receive_quantity=max(0, variance) if variance > 0 else 0,  # If positive variance (found extra stock)
-                    issue_quantity=abs(variance) if variance < 0 else 0,  # If negative variance (missing stock)
-                    received_by=request.user.username if variance > 0 else '',
-                    issued_by=request.user.username if variance < 0 else '',
-                    issued_to=f"Audit Adjustment - {audit.audit_reference}" if variance < 0 else '',
-                    note=f"Stock Audit Adjustment: {audit.audit_reference} | "
-                         f"System Qty: {old_quantity} → Physical Count: {new_quantity} | "
-                         f"Variance: {variance:+d} | "
-                         f"Reason: {item.get_variance_reason_display() or 'Not specified'} | "
-                         f"Notes: {item.variance_notes or 'None'}",
-                    created_by=request.user.username,
-                    last_updated=timezone.now(),
-                    timestamp=timezone.now()
-                )
+                try:
+                    print("DEBUG: Creating StockHistory record...")
+                    StockHistory.objects.create(
+                        category=stock.category,
+                        item_name=stock.item_name,
+                        quantity=new_quantity,  # Final quantity after adjustment
+                        receive_quantity=max(0, variance) if variance > 0 else 0,  # If positive variance (found extra stock)
+                        issue_quantity=abs(variance) if variance < 0 else 0,  # If negative variance (missing stock)
+                        received_by=request.user.username if variance > 0 else '',
+                        issued_by=request.user.username if variance < 0 else '',
+                        note=f"Stock Audit Adjustment: {audit.audit_reference} | "
+                             f"System Qty: {old_quantity} → Physical Count: {new_quantity} | "
+                             f"Variance: {variance:+d} | "
+                             f"Reason: {item.get_variance_reason_display() or 'Not specified'} | "
+                             f"Notes: {item.variance_notes or 'None'}"
+                             f"{' | Issued to: Audit Adjustment - ' + audit.audit_reference if variance < 0 else ''}",
+                        created_by=request.user.username,
+                        last_updated=timezone.now(),
+                        timestamp=timezone.now()
+                    )
+                    print("DEBUG: StockHistory created successfully")
+                except Exception as e:
+                    print(f"DEBUG ERROR: StockHistory creation failed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
                 
                 # Mark adjustment as applied
-                from django.utils import timezone
-                item.adjustment_applied = True
-                item.adjustment_date = timezone.now()
-                item.save()
+                try:
+                    print("DEBUG: Marking adjustment as applied...")
+                    item.adjustment_applied = True
+                    item.adjustment_date = timezone.now()
+                    item.save()
+                    print("DEBUG: Adjustment marked successfully")
+                except Exception as e:
+                    print(f"DEBUG ERROR: Marking adjustment failed: {e}")
+                    raise
                 
                 adjustments_applied += 1
+                print(f"DEBUG: Applied {adjustments_applied} adjustments so far")
         
         # Approve the audit
-        audit.status = 'approved'
-        audit.approved_by = request.user
-        audit.save()
+        try:
+            print("DEBUG: Approving audit...")
+            audit.status = 'approved'
+            audit.approved_by = request.user
+            audit.save()
+            print("DEBUG: Audit approved successfully")
+        except Exception as e:
+            print(f"DEBUG ERROR: Audit approval failed: {e}")
+            raise
         
+        print(f"=== DEBUG: Completed successfully with {adjustments_applied} adjustments ===")
         messages.success(
             request, 
             f'Audit approved. Applied {adjustments_applied} stock adjustments.'

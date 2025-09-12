@@ -299,13 +299,36 @@ class StockSearchForm(forms.ModelForm):
 
 
 class StockHistorySearchForm(forms.ModelForm):
-    export_to_CSV = forms.BooleanField(required=False)
-    start_date = forms.DateTimeField(required=False)
-    end_date = forms.DateTimeField(required=False)
+    export_to_CSV = forms.BooleanField(required=False, label='Export to CSV')
+    start_date = forms.DateField(
+        required=False, 
+        label='Start Date',
+        widget=forms.DateInput(attrs={
+            'type': 'date', 
+            'class': 'form-control',
+            'placeholder': 'Select start date'
+        })
+    )
+    end_date = forms.DateField(
+        required=False, 
+        label='End Date',
+        widget=forms.DateInput(attrs={
+            'type': 'date', 
+            'class': 'form-control',
+            'placeholder': 'Select end date'
+        })
+    )
 
     class Meta:
         model = StockHistory
         fields = ['category', 'item_name', 'start_date', 'end_date']
+        widgets = {
+            'category': forms.Select(attrs={'class': 'form-control'}),
+            'item_name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Search item name...'
+            })
+        }
 
 
 # Purchase Order Forms (unchanged from your original)
