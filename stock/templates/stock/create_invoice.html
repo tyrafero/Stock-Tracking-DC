@@ -84,36 +84,51 @@
     <div class="col-lg-8">
         <div class="card">
             <div class="card-inner">
-                <h5 class="card-title">Payment Details</h5>
+                <h5 class="card-title">Invoice Details</h5>
                 
                 <form method="post" enctype="multipart/form-data" id="invoice-form">
                     {% csrf_token %}
                     
-                    <!-- Basic Payment Information -->
+                    <!-- Basic Invoice Information -->
                     <div class="form-section">
-                        <h6 class="mb-3">📋 Payment Information</h6>
+                        <h6 class="mb-3">📋 Invoice Information</h6>
                         <div class="row">
-                            <div class="col-md-6">
-                                <label for="id_invoice_number" class="form-label">Payment Reference</label>
+                            <div class="col-md-4">
+                                <label for="id_invoice_number" class="form-label">Invoice Number</label>
                                 {{ form.invoice_number }}
-                                <small class="form-text text-muted">Enter payment reference (e.g., check number, transfer ID)</small>
+                                <small class="form-text text-muted">Manufacturer's invoice number</small>
                             </div>
-                            <div class="col-md-6">
-                                <label for="id_invoice_date" class="form-label">Payment Date</label>
+                            <div class="col-md-4">
+                                <label for="id_invoice_date" class="form-label">Invoice Date</label>
                                 {{ form.invoice_date }}
-                                <small class="form-text text-muted">Date when payment was made</small>
+                                <small class="form-text text-muted">Date on the invoice</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_due_date" class="form-label">Due Date</label>
+                                {{ form.due_date }}
+                                <small class="form-text text-muted">Payment due date</small>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Payment Amount -->
+                    <!-- Invoice Amounts -->
                     <div class="form-section">
-                        <h6 class="mb-3">💰 Payment Amount</h6>
+                        <h6 class="mb-3">💰 Invoice Amounts</h6>
                         <div class="row">
-                            <div class="col-md-12">
-                                <label for="id_invoice_total" class="form-label">Amount Paid</label>
+                            <div class="col-md-4">
+                                <label for="id_invoice_amount_exc" class="form-label">Amount (Exc GST)</label>
+                                {{ form.invoice_amount_exc }}
+                                <small class="form-text text-muted">Invoice amount excluding GST</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_gst_amount" class="form-label">GST Amount</label>
+                                {{ form.gst_amount }}
+                                <small class="form-text text-muted">GST amount on invoice</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_invoice_total" class="form-label">Total Amount</label>
                                 {{ form.invoice_total }}
-                                <small class="form-text text-muted">Enter the total amount paid to the supplier</small>
+                                <small class="form-text text-muted">Total invoice amount including GST</small>
                             </div>
                         </div>
                         
@@ -149,16 +164,16 @@
                     
                     <!-- File Upload -->
                     <div class="form-section">
-                        <h6 class="mb-3">📎 Payment Receipt/Proof (Optional)</h6>
+                        <h6 class="mb-3">📎 Invoice File (Optional)</h6>
                         <div class="file-upload-area" id="file-upload-area">
                             {{ form.invoice_file }}
                             <div class="upload-content">
                                 <i class="icon ni ni-upload" style="font-size: 2rem; color: #6b7280;"></i>
                                 <p class="mt-2 mb-1"><strong>Click to upload</strong> or drag and drop</p>
-                                <p class="text-muted small">Receipt, bank statement, or payment proof - PDF, JPG, PNG files up to 10MB</p>
+                                <p class="text-muted small">Invoice PDF or image file - PDF, JPG, PNG files up to 10MB</p>
                             </div>
                         </div>
-                        <small class="form-text text-muted">Upload proof of payment (optional but recommended)</small>
+                        <small class="form-text text-muted">Upload the invoice file from manufacturer (optional but recommended)</small>
                     </div>
                     
                     <!-- Notes -->
@@ -174,7 +189,7 @@
                         <div class="col-12">
                             <button type="submit" class="btn btn-success btn-lg">
                                 <i class="icon ni ni-check-circle"></i>
-                                Record Payment
+                                Create Invoice
                             </button>
                             <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-gray ml-2">
                                 <i class="icon ni ni-arrow-left"></i>
@@ -369,22 +384,25 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Form submission validation
     form.addEventListener('submit', function(e) {
-        const paymentRef = document.getElementById('id_invoice_number').value;
-        const paymentDate = document.getElementById('id_invoice_date').value;
-        const amount = document.getElementById('id_invoice_total').value;
+        const invoiceNumber = document.getElementById('id_invoice_number').value;
+        const invoiceDate = document.getElementById('id_invoice_date').value;
+        const dueDate = document.getElementById('id_due_date').value;
+        const amountExc = document.getElementById('id_invoice_amount_exc').value;
+        const gstAmount = document.getElementById('id_gst_amount').value;
+        const invoiceTotal = document.getElementById('id_invoice_total').value;
         
-        if (!paymentRef || !paymentDate || !amount) {
+        if (!invoiceNumber || !invoiceDate || !dueDate || !amountExc || !gstAmount || !invoiceTotal) {
             e.preventDefault();
             Swal.fire({
                 icon: 'error',
                 title: 'Missing Information',
-                text: 'Please fill in payment reference, date, and amount'
+                text: 'Please fill in all required invoice fields'
             });
             return;
         }
         
         // Confirmation dialog
-        const confirmMsg = `Record payment of $${amount} (Ref: ${paymentRef})?`;
+        const confirmMsg = `Create invoice ${invoiceNumber} for $${invoiceTotal}?`;
         if (!confirm(confirmMsg)) {
             e.preventDefault();
         }

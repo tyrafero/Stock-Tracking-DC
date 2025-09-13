@@ -335,7 +335,8 @@ class StockHistorySearchForm(forms.ModelForm):
 class PurchaseOrderForm(forms.ModelForm):
     class Meta:
         model = PurchaseOrder
-        fields = ['note_for_manufacturer', 'manufacturer', 'delivery_person', 'delivery_type', 'creating_store', 'store']
+        fields = ['note_for_manufacturer', 'manufacturer', 'delivery_person', 'delivery_type', 
+                 'creating_store', 'store', 'customer_name', 'customer_address', 'customer_phone', 'customer_order_number']
         widgets = {
             'note_for_manufacturer': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Enter notes for manufacturer...'}),
             'manufacturer': forms.Select(attrs={'class': 'form-control', 'id': 'id_manufacturer'}),
@@ -343,6 +344,10 @@ class PurchaseOrderForm(forms.ModelForm):
             'delivery_type': forms.Select(attrs={'class': 'form-control', 'id': 'id_delivery_type'}),
             'creating_store': forms.Select(attrs={'class': 'form-control', 'id': 'id_creating_store'}),
             'store': forms.Select(attrs={'class': 'form-control', 'id': 'id_store'}),
+            'customer_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer full name'}),
+            'customer_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Customer delivery address'}),
+            'customer_phone': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer phone number'}),
+            'customer_order_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Customer order number/reference'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -367,28 +372,65 @@ class PurchaseOrderForm(forms.ModelForm):
                 css_class='card card-inner mb-4'
             ),
             Div(
-                HTML('<h5 class="mb-3">Store Information</h5>'),
+                HTML('<h5 class="mb-3">Delivery Information</h5>'),
                 Row(
                     Column('creating_store', css_class='form-group col-md-6 mb-3'),
                     Column('delivery_type', css_class='form-group col-md-6 mb-3'),
                 ),
+                # Store delivery fields (shown when delivery_type is 'store')
+                HTML('<div id="store-delivery-fields">'),
                 Row(
                     Column('store', css_class='form-group col-md-12 mb-3'),
                 ),
+                HTML('</div>'),
+                # Customer delivery fields (shown when delivery_type is 'dropship')
+                HTML('<div id="customer-delivery-fields" style="display: none;">'),
+                HTML('<h6 class="mb-3 text-primary">Customer Details</h6>'),
+                Row(
+                    Column('customer_name', css_class='form-group col-md-6 mb-3'),
+                    Column('customer_phone', css_class='form-group col-md-6 mb-3'),
+                ),
+                Row(
+                    Column('customer_order_number', css_class='form-group col-md-6 mb-3'),
+                ),
+                Row(
+                    Column('customer_address', css_class='form-group col-md-12 mb-3'),
+                ),
+                HTML('</div>'),
                 css_class='card card-inner mb-4'
             ),
         )
         # Configure creating store field
         self.fields['creating_store'].required = True
         self.fields['creating_store'].label = 'Creating Store'
-        self.fields['creating_store'].help_text = 'Store that is creating this purchase order'
-        self.fields['creating_store'].queryset = Store.objects.filter(is_active=True, designation='store').order_by('name')
         
-        # Make delivery location required and rename label
-        self.fields['store'].required = True
+        # Configure delivery fields
         self.fields['store'].label = 'Delivery Location'
-        self.fields['store'].help_text = 'Where items will be delivered and added to inventory (can be any store or warehouse)'
-        self.fields['store'].queryset = Store.objects.filter(is_active=True).order_by('designation', 'name')
+        self.fields['customer_name'].label = 'Customer Name'
+        self.fields['customer_address'].label = 'Delivery Address'
+        self.fields['customer_phone'].label = 'Customer Phone'
+        self.fields['customer_order_number'].label = 'Customer Order Number'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        delivery_type = cleaned_data.get('delivery_type')
+        
+        if delivery_type == 'store':
+            # Store delivery requires delivery location
+            if not cleaned_data.get('store'):
+                self.add_error('store', 'Delivery location is required for store delivery.')
+        elif delivery_type == 'dropship':
+            # Dropship requires customer details
+            if not cleaned_data.get('customer_name'):
+                self.add_error('customer_name', 'Customer name is required for dropship orders.')
+            if not cleaned_data.get('customer_address'):
+                self.add_error('customer_address', 'Customer address is required for dropship orders.')
+            if not cleaned_data.get('customer_phone'):
+                self.add_error('customer_phone', 'Customer phone is required for dropship orders.')
+            if not cleaned_data.get('customer_order_number'):
+                self.add_error('customer_order_number', 'Customer order number is required for dropship orders.')
+        
+        return cleaned_data
 
 
 class PurchaseOrderItemForm(forms.ModelForm):

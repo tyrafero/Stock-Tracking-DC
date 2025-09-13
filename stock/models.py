@@ -1138,6 +1138,13 @@ class PurchaseOrder(models.Model):
         help_text='Delivery location where items will be received and added to inventory',
         verbose_name='Delivery Location'
     )
+    
+    # Customer details for dropship orders
+    customer_name = models.CharField(max_length=200, blank=True, null=True, help_text='Customer name for dropship orders')
+    customer_address = models.TextField(blank=True, null=True, help_text='Customer delivery address for dropship orders')
+    customer_phone = models.CharField(max_length=20, blank=True, null=True, help_text='Customer phone number')
+    customer_order_number = models.CharField(max_length=100, blank=True, null=True, help_text='Customer order reference number')
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft')
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created_at = models.DateTimeField(default=timezone.now)

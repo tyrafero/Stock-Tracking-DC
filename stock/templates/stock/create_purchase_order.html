@@ -53,7 +53,27 @@
               <!-- Purchase Order Form -->
               <div class="card mb-4">
                 <div class="card-inner">
-                  {{ po_form|crispy }}
+                  {{ po_form.note_for_manufacturer|as_crispy_field }}
+                  {{ po_form.manufacturer|as_crispy_field }}
+                  {{ po_form.delivery_person|as_crispy_field }}
+                  {{ po_form.delivery_type|as_crispy_field }}
+                  
+                  <!-- ALWAYS VISIBLE - Creating Store is required for both types -->
+                  {{ po_form.creating_store|as_crispy_field }}
+
+                  <!-- DROPSHIP FIELDS -->
+                  <div id="customer-delivery-fields" style="display:none;">
+                    {{ po_form.customer_name|as_crispy_field }}
+                    {{ po_form.customer_address|as_crispy_field }}
+                    {{ po_form.customer_phone|as_crispy_field }}
+                    {{ po_form.customer_order_number|as_crispy_field }}
+                  </div>
+
+                  <!-- STORE FIELDS -->
+                  <div id="store-delivery-fields" style="display:none;">
+                    {{ po_form.store|as_crispy_field }}
+                  </div>
+                  
                   <div id="manufacturer-details"></div>
                 </div>
               </div>
@@ -62,7 +82,6 @@
               <div class="card mb-4">
                 <div class="card-inner">
                   <h5 class="mb-4">Product Items</h5>
-
                   <div class="table-responsive">
                     <div class="items-table-header">
                       <div class="col-product">Product</div>
@@ -75,7 +94,6 @@
                       <div class="col-subtotal">Subtotal Exc</div>
                       <div class="col-action">Action</div>
                     </div>
-
                     <div id="item-formset">
                       {{ item_formset.management_form }}
                       {% for form in item_formset %}
@@ -103,7 +121,6 @@
                       {% endfor %}
                     </div>
                   </div>
-
                   <button type="button" class="btn btn-outline-primary add-item-btn mt-3" id="add-item">
                     <i class="icon ni ni-plus"></i> Add Item
                   </button>
@@ -135,8 +152,8 @@
                   <div class="d-flex justify-content-between">
                     <a href="{% url 'purchase_order_list' %}" class="btn btn-outline-gray"><i class="icon ni ni-arrow-left"></i> Back to List</a>
                     <div>
-                      <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary me-2"><i class="icon ni ni-file-docs"></i> Save as Draft</button>
-                      <button type="submit" name="action" value="submit" class="btn btn-primary"><i class="icon ni ni-check"></i> Submit Purchase Order</button>
+                      <button type="submit" name="action" value="save_draft" class="btn btn-outline-primary me-2" id="btn-save-draft"><i class="icon ni ni-file-docs"></i> Save as Draft</button>
+                      <button type="submit" name="action" value="submit" class="btn btn-primary" id="btn-submit"><i class="icon ni ni-check"></i> Submit Purchase Order</button>
                     </div>
                   </div>
                 </div>
@@ -154,6 +171,7 @@
 
 <script>
 $(document).ready(function() {
+    'use strict';
     function calculateTotals() {
         let subtotal = 0;
         let totalDiscount = 0;
@@ -254,7 +272,7 @@ $(document).ready(function() {
             // Debounce the search to avoid too many requests
             currentTimeout = setTimeout(function() {
                 $.ajax({
-                    url: '{% url "stock_item_suggestions" %}',
+                    url: '/stock/suggestions/',
                     data: { 'q': query },
                     dataType: 'json',
                     success: function(data) {
@@ -357,5 +375,67 @@ $(document).ready(function() {
             $(this).data('autocomplete-setup', true);
         }
     });
+
+    // Handle delivery type changes to show/hide conditional fields
+    function toggleDeliveryFields() {
+        const deliveryType = $('#id_delivery_type').val();
+
+        if (deliveryType === 'dropship') {
+            $('#store-delivery-fields').hide();
+            $('#customer-delivery-fields').show();
+
+            // Required toggles - creating_store is always required and always visible
+            $('#id_store').removeAttr('required');
+            $('#id_customer_name').attr('required', true);
+            $('#id_customer_address').attr('required', true);
+            $('#id_customer_phone').attr('required', true);
+            $('#id_customer_order_number').attr('required', true);
+
+            // Update labels
+            $('label[for="id_customer_name"]').html('Customer Name <span class="text-danger">*</span>');
+            $('label[for="id_customer_address"]').html('Delivery Address <span class="text-danger">*</span>');
+            $('label[for="id_customer_phone"]').html('Customer Phone <span class="text-danger">*</span>');
+            $('label[for="id_customer_order_number"]').html('Customer Order Number <span class="text-danger">*</span>');
+
+        } else if (deliveryType === 'store') {
+            $('#store-delivery-fields').show();
+            $('#customer-delivery-fields').hide();
+
+            // Required toggles - creating_store is always required and always visible
+            $('#id_store').attr('required', true);
+            $('#id_customer_name, #id_customer_address, #id_customer_phone, #id_customer_order_number').removeAttr('required').val('');
+
+            // Update labels
+            $('label[for="id_store"]').html('Delivery Location <span class="text-danger">*</span>');
+        } else {
+            // Hide conditional fields if none selected, but creating_store stays visible
+            $('#store-delivery-fields').hide();
+            $('#customer-delivery-fields').hide();
+            
+            // Remove requirements from conditional fields
+            $('#id_store, #id_customer_name, #id_customer_address, #id_customer_phone, #id_customer_order_number').removeAttr('required');
+        }
+    }
+
+    // Form validation and submission
+    $('#purchase-order-form').on('submit', function(e) {
+        const deliveryType = $('#id_delivery_type').val();
+        
+        // Basic validation - ensure delivery type is selected
+        if (!deliveryType) {
+            alert('Please select a delivery type');
+            e.preventDefault();
+            return false;
+        }
+
+        // Allow submission - server-side validation will handle the rest
+        return true;
+    });
+
+    // Run once on load
+    toggleDeliveryFields();
+
+    // Bind to change
+    $('#id_delivery_type').on('change', toggleDeliveryFields);
 });
 </script>

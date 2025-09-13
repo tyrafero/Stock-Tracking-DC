@@ -132,17 +132,54 @@
                 <tr>
                     <td style="padding:30px 40px; background:#ffffff;">
                         <h3 style="font-size:18px; font-weight:600; margin:0 0 15px; color:#333;">Delivery Details</h3>
+                        
+                        {% if purchase_order.delivery_type == 'dropship' and purchase_order.customer_name %}
+                        <!-- Dropship Customer Information -->
+                        <div style="background:#e8f5e8; padding:20px; border-radius:8px; margin:15px 0; border-left:4px solid #28a745;">
+                            <h4 style="margin:0 0 15px; font-size:16px; font-weight:600; color:#28a745;">📦 Dropship Order - Customer Details</h4>
+                            <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-size:14px; color:#333;">
+                                <tbody>
+                                    <tr>
+                                        <td style="padding:5px 0; width:30%;"><strong>Customer Name:</strong></td>
+                                        <td style="padding:5px 0;">{{ purchase_order.customer_name }}</td>
+                                    </tr>
+                                    {% if purchase_order.customer_phone %}
+                                    <tr>
+                                        <td style="padding:5px 0;"><strong>Customer Phone:</strong></td>
+                                        <td style="padding:5px 0;">{{ purchase_order.customer_phone }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if purchase_order.customer_order_number %}
+                                    <tr>
+                                        <td style="padding:5px 0;"><strong>Customer Order #:</strong></td>
+                                        <td style="padding:5px 0;">{{ purchase_order.customer_order_number }}</td>
+                                    </tr>
+                                    {% endif %}
+                                    {% if purchase_order.customer_address %}
+                                    <tr>
+                                        <td style="padding:5px 0; vertical-align:top;"><strong>Delivery Address:</strong></td>
+                                        <td style="padding:5px 0;">{{ purchase_order.customer_address|linebreaks }}</td>
+                                    </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <!-- Standard Store Delivery -->
                         {% if purchase_order.store %}
-                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Address:</strong> {{ purchase_order.store.address|default:purchase_order.store.location }}</p>
+                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Store Address:</strong> {{ purchase_order.store.address|default:purchase_order.store.location }}</p>
                         {% endif %}
+                        {% endif %}
+                        
                         {% if purchase_order.delivery_person %}
                         <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Attention:</strong> {{ purchase_order.delivery_person.name }}</p>
                         <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Phone:</strong> {{ purchase_order.delivery_person.phone_number }}</p>
                         {% endif %}
                         {% if purchase_order.note_for_manufacturer %}
-                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Instructions:</strong> {{ purchase_order.note_for_manufacturer }}</p>
-                        {% else %}
-                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Instructions:</strong> —</p>
+                        <p style="margin:15px 0 5px; font-size:14px; color:#444;"><strong>Special Instructions:</strong></p>
+                        <div style="background:#f8f9fa; padding:15px; border-radius:6px; font-size:14px; color:#555;">
+                            {{ purchase_order.note_for_manufacturer|linebreaks }}
+                        </div>
                         {% endif %}
                     </td>
                 </tr>
