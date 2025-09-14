@@ -3276,9 +3276,79 @@ def create_invoice(request, po_id):
     if request.method == 'POST':
         form = InvoiceForm(request.POST, request.FILES, purchase_order=purchase_order)
         if form.is_valid():
-            invoice = form.save(created_by=request.user)
-            messages.success(request, f'Invoice {invoice.invoice_number} created successfully.')
-            return redirect('purchase_order_detail', pk=purchase_order.pk)
+            # For partial payments, we should add payments to existing invoices
+            # rather than creating duplicate invoices
+            
+            from .models import Payment
+            
+            # Check if there are existing invoices for this PO with outstanding amounts
+            existing_invoices = purchase_order.invoices.filter(
+                outstanding_amount__gt=0
+            ).order_by('created_at')
+            
+            if existing_invoices.exists():
+                # Add payment to the first invoice with outstanding amount
+                target_invoice = existing_invoices.first()
+                
+                # Create payment record
+                payment = Payment.objects.create(
+                    invoice=target_invoice,
+                    payment_reference=form.cleaned_data['invoice_number'],
+                    payment_date=form.cleaned_data['invoice_date'],
+                    payment_amount=form.cleaned_data['invoice_total'],
+                    payment_method='other',
+                    payment_status='completed',
+                    created_by=request.user,
+                    notes=f"Payment against invoice {target_invoice.invoice_number}"
+                )
+                
+                messages.success(request, f'Payment of ${payment.payment_amount} recorded successfully against invoice {target_invoice.invoice_number}.')
+                return redirect('purchase_order_detail', pk=purchase_order.pk)
+            else:
+                # No existing invoices, create new one
+                try:
+                    # Create the invoice
+                    invoice = form.save(created_by=request.user)
+                    
+                    # Create payment for this invoice
+                    payment = Payment.objects.create(
+                        invoice=invoice,
+                        payment_reference=invoice.invoice_number,
+                        payment_date=invoice.invoice_date,
+                        payment_amount=invoice.invoice_total,
+                        payment_method='other',
+                        payment_status='completed',
+                        created_by=request.user,
+                        notes=f"Initial payment for invoice {invoice.invoice_number}"
+                    )
+                    
+                    messages.success(request, f'Payment of ${payment.payment_amount} recorded successfully (New Invoice: {invoice.invoice_number}).')
+                    return redirect('purchase_order_detail', pk=purchase_order.pk)
+                except Exception as e:
+                    # If invoice creation fails (e.g., duplicate), just create a payment against first available invoice
+                    if purchase_order.invoices.exists():
+                        target_invoice = purchase_order.invoices.first()
+                        payment = Payment.objects.create(
+                            invoice=target_invoice,
+                            payment_reference=form.cleaned_data['invoice_number'],
+                            payment_date=form.cleaned_data['invoice_date'],
+                            payment_amount=form.cleaned_data['invoice_total'],
+                            payment_method='other',
+                            payment_status='completed',
+                            created_by=request.user,
+                            notes=f"Payment against existing invoice {target_invoice.invoice_number}"
+                        )
+                        messages.success(request, f'Payment of ${payment.payment_amount} recorded successfully against invoice {target_invoice.invoice_number}.')
+                        return redirect('purchase_order_detail', pk=purchase_order.pk)
+                    else:
+                        messages.error(request, f'Error creating invoice: {str(e)}')
+                        # Fall through to show form with errors
+        else:
+            # Add error messages for debugging
+            messages.error(request, 'Please correct the errors below.')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
     else:
         # Pre-fill form with PO amounts
         initial_data = {
@@ -3286,6 +3356,7 @@ def create_invoice(request, po_id):
             'gst_amount': purchase_order.gst_amount,
             'invoice_total': purchase_order.grand_total,
             'invoice_date': timezone.now().date(),
+            'due_date': timezone.now().date() + timezone.timedelta(days=30),  # Default 30 days from now
         }
         form = InvoiceForm(initial=initial_data, purchase_order=purchase_order)
     

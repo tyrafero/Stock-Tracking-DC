@@ -60,7 +60,13 @@
         <div class="col-md-8">
             <h3 class="mb-2">💳 Record Payment</h3>
             <p class="mb-1 opacity-75">{{ purchase_order.reference_number }} - {{ purchase_order.manufacturer.company_name }}</p>
-            <p class="mb-0 opacity-75">Record payment made to supplier for this purchase order</p>
+            <p class="mb-0 opacity-75">
+                {% if purchase_order.invoices.exists %}
+                    Add payment to existing invoice for this purchase order
+                {% else %}
+                    Record payment and create invoice for this purchase order
+                {% endif %}
+            </p>
         </div>
         <div class="col-md-4">
             <div class="text-end">
@@ -89,19 +95,39 @@
                 <form method="post" enctype="multipart/form-data" id="invoice-form">
                     {% csrf_token %}
                     
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
                     <!-- Basic Payment Information -->
                     <div class="form-section">
                         <h6 class="mb-3">📋 Payment Information</h6>
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label for="id_invoice_number" class="form-label">Payment Reference</label>
                                 {{ form.invoice_number }}
+                                {% if form.invoice_number.errors %}
+                                    <div class="text-danger">{{ form.invoice_number.errors }}</div>
+                                {% endif %}
                                 <small class="form-text text-muted">Enter payment reference (e.g., check number, transfer ID)</small>
                             </div>
-                            <div class="col-md-6">
-                                <label for="id_invoice_date" class="form-label">Payment Date</label>
+                            <div class="col-md-4">
+                                <label for="id_invoice_date" class="form-label">Invoice Date</label>
                                 {{ form.invoice_date }}
-                                <small class="form-text text-muted">Date when payment was made</small>
+                                {% if form.invoice_date.errors %}
+                                    <div class="text-danger">{{ form.invoice_date.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Date on the invoice</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_due_date" class="form-label">Due Date</label>
+                                {{ form.due_date }}
+                                {% if form.due_date.errors %}
+                                    <div class="text-danger">{{ form.due_date.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Payment due date</small>
                             </div>
                         </div>
                     </div>
@@ -111,10 +137,31 @@
                         <h6 class="mb-3">💰 Payment Amount</h6>
                         <div class="row">
                             <div class="col-md-12">
-                                <label for="id_invoice_total" class="form-label">Amount Paid</label>
-                                {{ form.invoice_total }}
-                                <small class="form-text text-muted">Enter the total amount paid to the supplier</small>
+                                <label for="id_invoice_amount_exc" class="form-label">Payment Amount (Excluding GST)</label>
+                                {{ form.invoice_amount_exc }}
+                                {% if form.invoice_amount_exc.errors %}
+                                    <div class="text-danger">{{ form.invoice_amount_exc.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Enter the amount paid excluding GST. GST and total will be calculated automatically.</small>
                             </div>
+                        </div>
+                        
+                        <!-- Auto-calculated fields (hidden but shown for reference) -->
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">GST Amount (10%)</label>
+                                <div class="form-control-plaintext text-info font-weight-bold" id="gst-display">$0.00</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">Total Amount (Inc. GST)</label>
+                                <div class="form-control-plaintext text-success font-weight-bold" id="total-display">$0.00</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden fields for form submission -->
+                        <div style="display: none;">
+                            {{ form.gst_amount }}
+                            {{ form.invoice_total }}
                         </div>
                         
                         <!-- Payment helper -->
@@ -235,28 +282,40 @@
         {% if purchase_order.invoices.exists %}
         <div class="card mt-3">
             <div class="card-inner">
-                <h6 class="card-title">Existing Invoices</h6>
+                <h6 class="card-title">💳 Existing Invoices</h6>
+                <div class="alert alert-info">
+                    <i class="icon ni ni-info"></i>
+                    <strong>Note:</strong> Since invoices already exist for this PO, your payment will be applied to the oldest unpaid invoice.
+                </div>
                 {% for invoice in purchase_order.invoices.all %}
-                <div class="existing-invoice mb-2 p-2 border rounded">
-                    <div class="d-flex justify-content-between">
-                        <strong>{{ invoice.invoice_number }}</strong>
-                        <span class="badge 
-                        {% if invoice.status == 'fully_paid' %}badge-success
-                        {% elif invoice.status == 'partially_paid' %}badge-warning  
-                        {% elif invoice.status == 'overdue' %}badge-danger
-                        {% else %}badge-secondary{% endif %}">
-                        {{ invoice.get_status_display }}
-                        </span>
+                <div class="existing-invoice mb-2 p-2 border rounded 
+                    {% if invoice.outstanding_amount > 0 %}border-warning{% else %}border-success{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ invoice.invoice_number }}</strong>
+                            <br>
+                            <small class="text-muted">{{ invoice.invoice_date|date:"M d, Y" }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge 
+                            {% if invoice.status == 'fully_paid' %}badge-success
+                            {% elif invoice.status == 'partially_paid' %}badge-warning  
+                            {% elif invoice.status == 'overdue' %}badge-danger
+                            {% else %}badge-secondary{% endif %}">
+                            {{ invoice.get_status_display }}
+                            </span>
+                            <br>
+                            <small class="text-muted">
+                                Total: ${{ invoice.invoice_total|floatformat:2 }}<br>
+                                Paid: ${{ invoice.total_paid|floatformat:2 }}<br>
+                                <strong class="{% if invoice.outstanding_amount > 0 %}text-warning{% else %}text-success{% endif %}">
+                                    Due: ${{ invoice.outstanding_amount|floatformat:2 }}
+                                </strong>
+                            </small>
+                        </div>
                     </div>
-                    <small class="text-muted">${{ invoice.invoice_total|floatformat:2 }} • {{ invoice.invoice_date }}</small>
                 </div>
                 {% endfor %}
-                
-                <div class="mt-2 pt-2 border-top">
-                    <small class="text-muted">
-                        Total Invoiced: <strong>${{ purchase_order.get_total_invoice_amount|floatformat:2 }}</strong>
-                    </small>
-                </div>
             </div>
         </div>
         {% endif %}
@@ -303,7 +362,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Pay full PO total button
     usePOTotalBtn.addEventListener('click', function() {
-        document.getElementById('id_invoice_total').value = poAmounts.total.toFixed(2);
+        const excAmount = poAmounts.total / 1.1; // Remove GST to get exclusive amount
+        
+        document.getElementById('id_invoice_amount_exc').value = excAmount.toFixed(2);
+        calculateGST(); // This will update all other fields
         
         Swal.fire({
             icon: 'success',
@@ -316,7 +378,10 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Pay remaining balance button
     payRemainingBtn.addEventListener('click', function() {
-        document.getElementById('id_invoice_total').value = poAmounts.remaining.toFixed(2);
+        const excAmount = poAmounts.remaining / 1.1; // Remove GST to get exclusive amount
+        
+        document.getElementById('id_invoice_amount_exc').value = excAmount.toFixed(2);
+        calculateGST(); // This will update all other fields
         
         Swal.fire({
             icon: 'success',
@@ -351,6 +416,29 @@ document.addEventListener('DOMContentLoaded', function() {
     
     fileInput.addEventListener('change', updateFileDisplay);
     
+    // GST calculation functionality
+    function calculateGST() {
+        const excAmount = parseFloat(document.getElementById('id_invoice_amount_exc').value) || 0;
+        const gstAmount = excAmount * 0.10;
+        const totalAmount = excAmount + gstAmount;
+        
+        // Update hidden form fields
+        document.getElementById('id_gst_amount').value = gstAmount.toFixed(2);
+        document.getElementById('id_invoice_total').value = totalAmount.toFixed(2);
+        
+        // Update display fields
+        document.getElementById('gst-display').textContent = `$${gstAmount.toFixed(2)}`;
+        document.getElementById('total-display').textContent = `$${totalAmount.toFixed(2)}`;
+    }
+    
+    // Add event listener for GST calculation
+    document.getElementById('id_invoice_amount_exc').addEventListener('input', calculateGST);
+    
+    // Calculate initially if there's a pre-filled value
+    document.addEventListener('DOMContentLoaded', function() {
+        calculateGST();
+    });
+    
     function updateFileDisplay() {
         const file = fileInput.files[0];
         if (file) {
@@ -371,20 +459,25 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', function(e) {
         const paymentRef = document.getElementById('id_invoice_number').value;
         const paymentDate = document.getElementById('id_invoice_date').value;
-        const amount = document.getElementById('id_invoice_total').value;
+        const dueDate = document.getElementById('id_due_date').value;
+        const excAmount = document.getElementById('id_invoice_amount_exc').value;
         
-        if (!paymentRef || !paymentDate || !amount) {
+        // Ensure GST calculation is done before submission
+        calculateGST();
+        
+        if (!paymentRef || !paymentDate || !dueDate || !excAmount || parseFloat(excAmount) <= 0) {
             e.preventDefault();
             Swal.fire({
                 icon: 'error',
                 title: 'Missing Information',
-                text: 'Please fill in payment reference, date, and amount'
+                text: 'Please fill in payment reference, dates, and a valid payment amount'
             });
             return;
         }
         
         // Confirmation dialog
-        const confirmMsg = `Record payment of $${amount} (Ref: ${paymentRef})?`;
+        const totalAmount = document.getElementById('id_invoice_total').value;
+        const confirmMsg = `Record payment of $${totalAmount} (Ref: ${paymentRef})?`;
         if (!confirm(confirmMsg)) {
             e.preventDefault();
         }

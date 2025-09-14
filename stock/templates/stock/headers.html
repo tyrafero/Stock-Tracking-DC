@@ -113,6 +113,187 @@
              color: #c4cefe !important;
          }
          
+         /* Additional form element styling for dark mode */
+         .dark-mode input[type="text"],
+         .dark-mode input[type="email"],
+         .dark-mode input[type="password"],
+         .dark-mode input[type="number"],
+         .dark-mode input[type="date"],
+         .dark-mode input[type="datetime-local"],
+         .dark-mode input[type="tel"],
+         .dark-mode input[type="url"],
+         .dark-mode textarea,
+         .dark-mode select {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode input[type="text"]:focus,
+         .dark-mode input[type="email"]:focus,
+         .dark-mode input[type="password"]:focus,
+         .dark-mode input[type="number"]:focus,
+         .dark-mode input[type="date"]:focus,
+         .dark-mode input[type="datetime-local"]:focus,
+         .dark-mode input[type="tel"]:focus,
+         .dark-mode input[type="url"]:focus,
+         .dark-mode textarea:focus,
+         .dark-mode select:focus {
+             background-color: #1e2d3f !important;
+             border-color: #854fff !important;
+             color: #c4cefe !important;
+             outline: none !important;
+             box-shadow: 0 0 0 0.2rem rgba(133, 79, 255, 0.25) !important;
+         }
+         
+         /* Form labels and text styling */
+         .dark-mode .form-label,
+         .dark-mode label {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .form-text,
+         .dark-mode .text-muted,
+         .dark-mode small {
+             color: #8699b2 !important;
+         }
+         
+         /* Select dropdown styling */
+         .dark-mode select option {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Placeholder text */
+         .dark-mode input::placeholder,
+         .dark-mode textarea::placeholder {
+             color: #8699b2 !important;
+             opacity: 1 !important;
+         }
+         
+         /* Additional input styling */
+         .dark-mode .input-group-text {
+             background-color: #374659 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Bootstrap form styling overrides */
+         .dark-mode .form-select,
+         .dark-mode .custom-select {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Crispy forms styling */
+         .dark-mode .crispy-field input,
+         .dark-mode .crispy-field select,
+         .dark-mode .crispy-field textarea {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* File inputs */
+         .dark-mode input[type="file"] {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Checkboxes and radios */
+         .dark-mode .form-check-input {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+         }
+         
+         .dark-mode .form-check-input:checked {
+             background-color: #854fff !important;
+             border-color: #854fff !important;
+         }
+         
+         .dark-mode .form-check-label {
+             color: #c4cefe !important;
+         }
+         
+         /* More aggressive form styling for all contexts */
+         body.dark-mode input,
+         body.dark-mode textarea,
+         body.dark-mode select {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #374659 !important;
+         }
+         
+         body.dark-mode input:focus,
+         body.dark-mode textarea:focus,
+         body.dark-mode select:focus {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #854fff !important;
+             outline: none !important;
+             box-shadow: 0 0 0 0.2rem rgba(133, 79, 255, 0.25) !important;
+         }
+         
+         /* Target specific form elements that might have white backgrounds */
+         body.dark-mode input[id^="id_"],
+         body.dark-mode textarea[id^="id_"],
+         body.dark-mode select[id^="id_"] {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #374659 !important;
+         }
+         
+         /* Force styling on payment and invoice forms */
+         body.dark-mode .row input,
+         body.dark-mode .row textarea,
+         body.dark-mode .row select,
+         body.dark-mode .col-md-6 input,
+         body.dark-mode .col-md-6 textarea,
+         body.dark-mode .col-md-6 select {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #374659 !important;
+         }
+         
+         /* Fix white background sections in invoice forms */
+         .dark-mode .form-section {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .po-summary-card {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .payment-summary,
+         .dark-mode .bg-light {
+             background-color: #243447 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .alert-info {
+             background-color: #1e3a52 !important;
+             border-color: #2c5aa0 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Card styling for dark mode */
+         .dark-mode .card {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .card-inner {
+             background-color: #243447 !important;
+             color: #c4cefe !important;
+         }
+         
          .dark-mode .table {
              color: #c4cefe !important;
          }

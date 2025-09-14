@@ -248,6 +248,10 @@ class UserRole(models.Model):
 class Category(models.Model):
     group = models.CharField(max_length=50, blank=True, null=True, unique=True)
 
+    class Meta:
+        ordering = ['group']  # Alphabetical order for categories
+        verbose_name_plural = "Categories"
+
     def __str__(self):
         return self.group
 
@@ -1052,6 +1056,9 @@ class Manufacturer(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        ordering = ['-updated_at', '-created_at']  # Latest modified first
+
     def __str__(self):
         return self.company_name
 
@@ -1060,6 +1067,9 @@ class DeliveryPerson(models.Model):
     phone_number = models.CharField(max_length=20)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-created_at', 'name']  # Latest created first, then alphabetical
 
     def __str__(self):
         return f"{self.name}, {self.phone_number}"
@@ -1094,6 +1104,9 @@ class Store(models.Model):
         if not meaningful_words:
             return 'ST'  # Fallback if no meaningful words
         return ''.join(word[0].upper() for word in meaningful_words)[:3]  # Max 3 letters
+
+    class Meta:
+        ordering = ['name']  # Alphabetical order for stores
 
     def __str__(self):
         return f"{self.name}"

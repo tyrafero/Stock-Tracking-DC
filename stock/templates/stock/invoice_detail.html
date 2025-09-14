@@ -1,0 +1,242 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+{% block content %}
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                
+                <!-- Page Header -->
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">{{ title }}</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Invoice details and payment history for {{ purchase_order.reference_number }}</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="{% url 'purchase_order_detail' pk=purchase_order.pk %}" class="btn btn-outline-primary">
+                                    <em class="icon ni ni-arrow-left"></em>
+                                    <span>Back to PO</span>
+                                </a>
+                                {% if invoice.outstanding_amount > 0 %}
+                                <a href="{% url 'create_invoice' invoice.purchase_order.pk %}" class="btn btn-primary ml-2">
+                                    <em class="icon ni ni-plus"></em>
+                                    <span>Add Payment</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- Invoice Details -->
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="invoice-head">
+                                    <div class="invoice-contact">
+                                        <div class="invoice-contact-info">
+                                            <h4 class="title">Invoice {{ invoice.invoice_number }}</h4>
+                                            <ul class="list-plain">
+                                                <li><em class="icon ni ni-calendar"></em><span>Invoice Date: {{ invoice.invoice_date|date:"M d, Y" }}</span></li>
+                                                <li><em class="icon ni ni-clock"></em><span>Due Date: {{ invoice.due_date|date:"M d, Y" }}</span></li>
+                                                <li><em class="icon ni ni-building"></em><span>Manufacturer: {{ purchase_order.manufacturer.company_name }}</span></li>
+                                                <li><em class="icon ni ni-file-docs"></em><span>Purchase Order: {{ purchase_order.reference_number }}</span></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div><!-- .invoice-head -->
+                                
+                                <!-- Invoice Status -->
+                                <div class="invoice-bills">
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th class="tb-col"><span class="overline-title">Description</span></th>
+                                                    <th class="tb-col text-end"><span class="overline-title">Amount</span></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="tb-col">Invoice Amount (Excluding GST)</td>
+                                                    <td class="tb-col text-end">${{ invoice.invoice_amount_exc|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <td class="tb-col">GST (10%)</td>
+                                                    <td class="tb-col text-end">${{ invoice.gst_amount|floatformat:2 }}</td>
+                                                </tr>
+                                                <tr class="tb-odr-total">
+                                                    <td class="tb-col"><span class="fw-medium">Total Invoice Amount</span></td>
+                                                    <td class="tb-col text-end"><span class="fw-medium">${{ invoice.invoice_total|floatformat:2 }}</span></td>
+                                                </tr>
+                                                <tr class="tb-odr-paid">
+                                                    <td class="tb-col"><span class="text-success">Total Paid</span></td>
+                                                    <td class="tb-col text-end"><span class="text-success">${{ invoice.total_paid|floatformat:2 }}</span></td>
+                                                </tr>
+                                                <tr class="tb-odr-due">
+                                                    <td class="tb-col"><span class="fw-medium {% if invoice.outstanding_amount > 0 %}text-warning{% else %}text-success{% endif %}">Outstanding Amount</span></td>
+                                                    <td class="tb-col text-end">
+                                                        <span class="fw-medium {% if invoice.outstanding_amount > 0 %}text-warning{% else %}text-success{% endif %}">
+                                                            ${{ invoice.outstanding_amount|floatformat:2 }}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div><!-- .invoice-bills -->
+                                
+                                <!-- Invoice Notes -->
+                                {% if invoice.notes %}
+                                <div class="invoice-notes">
+                                    <div class="fs-15px">
+                                        <p><strong>Notes:</strong></p>
+                                        <p>{{ invoice.notes|linebreaks }}</p>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                
+                                <!-- Invoice File -->
+                                {% if invoice.invoice_file %}
+                                <div class="invoice-attachment mt-3">
+                                    <div class="card card-bordered">
+                                        <div class="card-inner">
+                                            <h6 class="card-title">📎 Invoice File</h6>
+                                            <a href="{{ invoice.invoice_file.url }}" class="btn btn-outline-primary" target="_blank">
+                                                <em class="icon ni ni-download"></em>
+                                                <span>View Invoice File</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment History Sidebar -->
+                    <div class="col-lg-4">
+                        
+                        <!-- Invoice Status Card -->
+                        <div class="card">
+                            <div class="card-inner">
+                                <h6 class="card-title">📊 Invoice Status</h6>
+                                <div class="text-center py-3">
+                                    <span class="badge badge-lg 
+                                        {% if invoice.status == 'fully_paid' %}badge-success
+                                        {% elif invoice.status == 'partially_paid' %}badge-warning
+                                        {% elif invoice.status == 'overdue' %}badge-danger
+                                        {% else %}badge-secondary{% endif %}">
+                                        {% if invoice.status == 'fully_paid' %}✅ Fully Paid
+                                        {% elif invoice.status == 'partially_paid' %}💰 Partially Paid
+                                        {% elif invoice.status == 'overdue' %}🚨 Overdue
+                                        {% elif invoice.status == 'pending' %}⏳ Pending Payment
+                                        {% else %}{{ invoice.get_status_display }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                
+                                {% if invoice.outstanding_amount > 0 %}
+                                <div class="text-center">
+                                    <a href="{% url 'create_invoice' invoice.purchase_order.pk %}" class="btn btn-primary">
+                                        <em class="icon ni ni-plus"></em>
+                                        <span>Add Payment</span>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Payment History -->
+                        <div class="card mt-3">
+                            <div class="card-inner">
+                                <h6 class="card-title">💳 Payment History</h6>
+                                
+                                {% if payments %}
+                                <div class="payment-list">
+                                    {% for payment in payments %}
+                                    <div class="payment-item mb-3 p-3 border rounded">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div class="flex-grow-1">
+                                                <strong class="d-block">{{ payment.payment_reference }}</strong>
+                                                <small class="text-muted">{{ payment.payment_date|date:"M d, Y" }}</small>
+                                                {% if payment.payment_method != 'other' %}
+                                                <div class="mt-1">
+                                                    <small class="text-info">{{ payment.get_payment_method_display }}</small>
+                                                </div>
+                                                {% endif %}
+                                                {% if payment.notes %}
+                                                <div class="mt-1">
+                                                    <small class="text-muted">{{ payment.notes }}</small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-end">
+                                                <strong class="d-block 
+                                                    {% if payment.payment_status == 'completed' %}text-success
+                                                    {% elif payment.payment_status == 'pending' %}text-warning
+                                                    {% elif payment.payment_status == 'failed' %}text-danger
+                                                    {% else %}text-info{% endif %}">
+                                                    ${{ payment.payment_amount|floatformat:2 }}
+                                                </strong>
+                                                <small class="text-muted">{{ payment.get_payment_status_display }}</small>
+                                                {% if payment.receipt_file %}
+                                                <div class="mt-1">
+                                                    <a href="{{ payment.receipt_file.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                                                        <em class="icon ni ni-file"></em>
+                                                    </a>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <em class="icon ni ni-wallet" style="font-size: 3rem; opacity: 0.3;"></em>
+                                    <h6 class="mt-2">No Payments Yet</h6>
+                                    <p class="text-soft">No payments have been recorded for this invoice.</p>
+                                    <a href="{% url 'create_invoice' invoice.purchase_order.pk %}" class="btn btn-primary">
+                                        <em class="icon ni ni-plus"></em>
+                                        <span>Record First Payment</span>
+                                    </a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Purchase Order Link -->
+                        <div class="card mt-3">
+                            <div class="card-inner">
+                                <h6 class="card-title">📦 Related Purchase Order</h6>
+                                <div class="po-summary">
+                                    <p><strong>PO:</strong> {{ purchase_order.reference_number }}</p>
+                                    <p><strong>Manufacturer:</strong> {{ purchase_order.manufacturer.company_name }}</p>
+                                    <p><strong>Status:</strong> {{ purchase_order.get_status_display }}</p>
+                                    <p><strong>Total:</strong> ${{ purchase_order.grand_total|floatformat:2 }}</p>
+                                    
+                                    <a href="{% url 'purchase_order_detail' pk=purchase_order.pk %}" class="btn btn-outline-primary btn-block">
+                                        <em class="icon ni ni-eye"></em>
+                                        <span>View Purchase Order</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% include 'stock/footers.html' %}
