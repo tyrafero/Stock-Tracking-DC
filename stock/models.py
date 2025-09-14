@@ -416,8 +416,7 @@ class Stock(models.Model):
                     quantity=current_quantity,
                     issue_quantity=abs(quantity_change),
                     issued_by=self.issued_by or self.created_by or 'System',
-                    issued_to='Stock adjustment',
-                    note=f"Stock issued: {self.item_name} | Quantity decreased by {abs(quantity_change)} | {self.note or ''}",
+                    note=f"Stock issued: {self.item_name} | Quantity decreased by {abs(quantity_change)} | Issued to: Stock adjustment | {self.note or ''}",
                     created_by=self.created_by or 'System',
                     last_updated=timezone.now(),
                     timestamp=timezone.now()
