@@ -310,3 +310,15 @@
       $('[data-toggle="tooltip"]').tooltip()
     })
 </script>
+
+<!-- ✅ Override DataTable default sorting to sort by Date column (index 7) descending -->
+<script>
+$(document).ready(function() {
+    // Wait for DataTable to initialize, then override the sorting
+    setTimeout(function() {
+        var table = $('.datatable-init').DataTable();
+        // Sort by Date column (index 7) in descending order (latest first)
+        table.order([7, 'desc']).draw();
+    }, 100);
+});
+</script>

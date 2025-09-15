@@ -372,7 +372,7 @@ def logistics_dashboard(request):
 @login_required
 def view_stock(request):
     title = "VIEW STOCKS"
-    everything = Stock.objects.all()
+    everything = Stock.objects.all().order_by('-timestamp')
     form = StockSearchForm(request.POST or None)
 
     context = {'everything': everything, 'form': form}
@@ -383,9 +383,9 @@ def view_stock(request):
         # Use flexible search for item names
         if item_name:
             item_search_query = create_flexible_search_query(item_name, 'item_name')
-            everything = Stock.objects.filter(item_search_query)
+            everything = Stock.objects.filter(item_search_query).order_by('-timestamp')
         else:
-            everything = Stock.objects.all()
+            everything = Stock.objects.all().order_by('-timestamp')
             
         if category != '':
             everything = everything.filter(category_id=category)
@@ -1172,7 +1172,7 @@ def stock_detail(request, pk):
     # Get commitments for this stock
     commitments = CommittedStock.objects.filter(
         stock=detail
-    )  # Uses model default ordering
+    ).order_by('-created_at')
     
     context = {
         'detail': detail,
@@ -1365,7 +1365,10 @@ def view_history(request):
     
     try:
         title = "STOCK HISTORY"
-        history = StockHistory.objects.all()
+        # Force explicit ordering, handle NULL timestamps
+        history = StockHistory.objects.all().extra(
+            select={'timestamp_for_sort': 'COALESCE(timestamp, last_updated, "1900-01-01")'}
+        ).order_by('-timestamp_for_sort', '-id')
         print(f"Total StockHistory records: {history.count()}")
         
         # ✅ Add row_class to each record for coloring
@@ -1377,10 +1380,12 @@ def view_history(request):
             else:
                 record.row_class = ""                # Default
 
-        # Debug: show first 5 records with row_class
+        # Debug: show first 5 records with row_class and timestamps
+        print("=== FIRST 5 RECORDS ===")
         for record in history[:5]:
             print(f"Record: {record.item_name}, Issue: {record.issue_quantity}, "
-                  f"Receive: {record.receive_quantity}, RowClass: {record.row_class}")
+                  f"Receive: {record.receive_quantity}, Timestamp: {record.timestamp}, RowClass: {record.row_class}")
+        print("=== END FIRST 5 RECORDS ===")
         
         form = StockHistorySearchForm(request.POST or None)
         print(f"Form created successfully")
@@ -1401,7 +1406,9 @@ def view_history(request):
                     print("Form is valid!")
                     
                     # Apply filtering based on form data
-                    filtered_history = StockHistory.objects.all()
+                    filtered_history = StockHistory.objects.all().extra(
+                        select={'timestamp_for_sort': 'COALESCE(timestamp, last_updated, "1900-01-01")'}
+                    ).order_by('-timestamp_for_sort', '-id')
                     
                     # Filter by category
                     if form.cleaned_data.get('category'):
