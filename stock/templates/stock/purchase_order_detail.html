@@ -116,10 +116,17 @@ font-size: 1rem;
 
 /* Action Buttons */
 .action-buttons {
-position: static;
-margin-bottom: 1rem;
+width: 100%;
+height: fit-content;   /* grows with content */
+overflow: hidden;      /* nothing spills out */
 }
-.action-buttons .btn { margin-bottom: 0.5rem; }
+
+.action-buttons .btn {
+width: 100%;           /* buttons stay inside card */
+min-width: 0;          /* avoids flex forcing width */
+white-space: normal;   /* text wraps if needed */
+text-align: center;    /* keeps label centered */
+}
 
 /* Receiving action buttons enhancement */
 .receiving-actions {
@@ -138,21 +145,48 @@ color: white;
 
 /* Overall receiving status card */
 .receiving-status-card {
-background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-border: 1px solid #bbf7d0;
+background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+border: 1px solid #10b981;
 border-radius: 0.5rem;
 padding: 1.5rem;
 margin-bottom: 1rem;
+color: #065f46;
+}
+
+.receiving-status-card h5,
+.receiving-status-card p,
+.receiving-status-card .text-success,
+.receiving-status-card .text-warning,
+.receiving-status-card .text-danger {
+color: #065f46 !important;
 }
 
 .receiving-status-card.partial {
-background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-border-color: #fed7aa;
+background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+border-color: #f59e0b;
+color: #92400e;
+}
+
+.receiving-status-card.partial h5,
+.receiving-status-card.partial p,
+.receiving-status-card.partial .text-success,
+.receiving-status-card.partial .text-warning,
+.receiving-status-card.partial .text-danger {
+color: #92400e !important;
 }
 
 .receiving-status-card.not-started {
-background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-border-color: #fecaca;
+background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+border-color: #ef4444;
+color: #991b1b;
+}
+
+.receiving-status-card.not-started h5,
+.receiving-status-card.not-started p,
+.receiving-status-card.not-started .text-success,
+.receiving-status-card.not-started .text-warning,
+.receiving-status-card.not-started .text-danger {
+color: #991b1b !important;
 }
 
 /* Responsive adjustments */
@@ -171,6 +205,11 @@ border-color: #fecaca;
 
 .card.mt-auto {
     margin-top: 2rem !important;
+}
+
+.action-buttons .btn {
+    font-size: 0.8rem;   /* smaller font */
+    padding: 0.4rem 0.6rem; /* tighter padding */
 }
 }
 </style>
@@ -410,10 +449,11 @@ Complete
 <div class="col-lg-4 d-flex flex-column">
 
 <!-- Action Buttons -->
-<div class="card action-buttons no-print mb-3" style="width: 100% !important; min-width: 100% !important; max-width: 100% !important; height: auto !important; overflow: visible !important;">
-<div class="card-inner" style="width: 100% !important; overflow: visible !important;">
-<h6 class="card-title">Actions</h6>
-<div class="d-grid gap-2">
+<div class="card action-buttons mb-3">
+<div class="card-inner">
+<h6 class="mb-3">Actions</h6>
+
+<div class="d-flex flex-column gap-2">
 
 <!-- Receiving Actions (Priority) -->
 {% if purchase_order.status in 'sent,confirmed,completed' %}
@@ -505,6 +545,11 @@ Complete
 <div class="card-inner">
 <div class="d-flex justify-content-between align-items-center mb-3">
 <h6 class="mb-0">💰 Payment Status</h6>
+{% if total_outstanding == 0 and invoices %}
+<span class="badge badge-lg badge-success">
+<i class="icon ni ni-check-circle"></i> Paid in Full
+</span>
+{% else %}
 <div class="btn-group">
 {% if can_create_invoices %}
 <a href="{% url 'create_invoice' purchase_order.pk %}" class="btn btn-sm btn-outline-success">
@@ -515,6 +560,7 @@ Complete
 <i class="icon ni ni-edit"></i> Update Payment Information
 </a>
 </div>
+{% endif %}
 </div>
 
 {% if invoices %}
