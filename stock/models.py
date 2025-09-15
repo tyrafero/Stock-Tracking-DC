@@ -1242,8 +1242,9 @@ class PurchaseOrder(models.Model):
         return self.invoices.aggregate(total=models.Sum('total_paid'))['total'] or 0
 
     def get_total_outstanding_amount(self):
-        """Get total outstanding amount across all invoices"""
-        return self.invoices.aggregate(total=models.Sum('outstanding_amount'))['total'] or 0
+        """Get total outstanding amount (PO total - total paid)"""
+        total_paid = self.get_total_paid_amount()
+        return max(0, self.grand_total - total_paid)
 
     def get_overall_status_display(self):
         """Get display text for overall PO status combining receiving and payment"""
