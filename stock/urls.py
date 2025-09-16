@@ -55,6 +55,15 @@ urlpatterns = [
     path('api/manufacturer-details/', views.get_manufacturer_details, name='get_manufacturer_details'),
     path('api/stock-suggestions/', views.stock_item_suggestions, name='stock_item_suggestions'),
     
+    # Notification API endpoints
+    path('api/notifications/', views.get_notifications, name='get_notifications'),
+    path('api/notifications/mark-read/', views.mark_notification_read, name='mark_notification_read'),
+    path('api/notifications/mark-all-read/', views.mark_all_notifications_read, name='mark_all_notifications_read'),
+    path('api/notifications/count/', views.get_unread_count, name='get_unread_count'),
+    
+    # Notification pages
+    path('notifications/', views.notifications_list, name='notifications_list'),
+    
     # Management URLs
     path('manufacturers/', views.manage_manufacturers, name='manage_manufacturers'),
     path('manufacturers/add/', views.add_manufacturer, name='add_manufacturer'),

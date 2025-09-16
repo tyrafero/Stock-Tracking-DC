@@ -1537,3 +1537,195 @@ class Payment(models.Model):
         return f"Payment {self.payment_reference} - {self.payment_amount} ({self.payment_date})"
 
 
+# ----------------------------
+# Notification Models
+# ----------------------------
+
+class Notification(models.Model):
+    """Track notifications for user activities in the system"""
+    NOTIFICATION_TYPE_CHOICES = [
+        ('purchase_order_created', 'Purchase Order Created'),
+        ('purchase_order_confirmed', 'Purchase Order Confirmed'),
+        ('stock_transfer_initiated', 'Stock Transfer Initiated'),
+        ('stock_transfer_completed', 'Stock Transfer Completed'),
+        ('stock_committed', 'Stock Committed'),
+        ('stock_received', 'Stock Received'),
+        ('po_items_received', 'Purchase Order Items Received'),
+        ('stock_audit_started', 'Stock Audit Started'),
+        ('stock_audit_completed', 'Stock Audit Completed'),
+        ('invoice_created', 'Invoice Created'),
+        ('payment_made', 'Payment Made'),
+        ('stock_low', 'Low Stock Alert'),
+        ('reservation_created', 'Stock Reservation Created'),
+        ('reservation_expired', 'Stock Reservation Expired'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('urgent', 'Urgent'),
+    ]
+    
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPE_CHOICES)
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    
+    # Related objects (generic foreign key approach)
+    related_object_type = models.CharField(max_length=50, blank=True, null=True, help_text="Type of related object (e.g., 'purchase_order', 'stock_transfer')")
+    related_object_id = models.PositiveIntegerField(blank=True, null=True, help_text="ID of related object")
+    
+    # Notification state
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    # Additional data for the notification (JSON format)
+    extra_data = models.JSONField(default=dict, blank=True, help_text="Additional data for the notification")
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['recipient', 'is_read', '-created_at']),
+            models.Index(fields=['recipient', 'notification_type']),
+        ]
+    
+    def __str__(self):
+        return f"{self.recipient.username} - {self.title}"
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=['is_read', 'read_at'])
+    
+    def get_related_object(self):
+        """Get the related object if it exists"""
+        if not self.related_object_type or not self.related_object_id:
+            return None
+        
+        model_mapping = {
+            'purchase_order': PurchaseOrder,
+            'stock_transfer': StockTransfer,
+            'stock': Stock,
+            'committed_stock': CommittedStock,
+            'stock_reservation': StockReservation,
+            'stock_audit': StockAudit,
+            'invoice': Invoice,
+            'payment': Payment,
+        }
+        
+        model_class = model_mapping.get(self.related_object_type)
+        if model_class:
+            try:
+                return model_class.objects.get(id=self.related_object_id)
+            except model_class.DoesNotExist:
+                return None
+        return None
+    
+    def get_action_url(self):
+        """Get URL for the notification action based on the related object"""
+        related_obj = self.get_related_object()
+        if not related_obj:
+            return None
+        
+        url_mapping = {
+            'purchase_order': lambda obj: f'/purchase-orders/{obj.id}/',
+            'stock_transfer': lambda obj: f'/transfers/',
+            'stock': lambda obj: f'/stock_detail/{obj.id}/',
+            'committed_stock': lambda obj: f'/stock_detail/{obj.stock.id}/',
+            'stock_reservation': lambda obj: f'/reservations/{obj.id}/',
+            'stock_audit': lambda obj: f'/audits/{obj.id}/',
+            'invoice': lambda obj: f'/invoices/{obj.id}/',
+            'payment': lambda obj: f'/payments/{obj.id}/',
+        }
+        
+        url_func = url_mapping.get(self.related_object_type)
+        if url_func:
+            try:
+                return url_func(related_obj)
+            except:
+                return None
+        return None
+    
+    @classmethod
+    def create_notification(cls, recipients, notification_type, title, message, 
+                          related_object=None, priority='medium', extra_data=None):
+        """Create notifications for multiple recipients"""
+        if not isinstance(recipients, (list, tuple)):
+            recipients = [recipients]
+        
+        notifications = []
+        for recipient in recipients:
+            # Determine related object info
+            related_object_type = None
+            related_object_id = None
+            if related_object:
+                model_name = related_object.__class__.__name__.lower()
+                if model_name == 'purchaseorder':
+                    related_object_type = 'purchase_order'
+                elif model_name == 'stocktransfer':
+                    related_object_type = 'stock_transfer'
+                elif model_name == 'committedstock':
+                    related_object_type = 'committed_stock'
+                elif model_name == 'stockreservation':
+                    related_object_type = 'stock_reservation'
+                elif model_name == 'stockaudit':
+                    related_object_type = 'stock_audit'
+                else:
+                    related_object_type = model_name
+                related_object_id = related_object.id
+            
+            notification = cls.objects.create(
+                recipient=recipient,
+                notification_type=notification_type,
+                title=title,
+                message=message,
+                priority=priority,
+                related_object_type=related_object_type,
+                related_object_id=related_object_id,
+                extra_data=extra_data or {}
+            )
+            notifications.append(notification)
+        
+        return notifications
+    
+    @classmethod
+    def get_recipients_for_activity(cls, activity_type, related_object=None):
+        """Get list of users who should receive notifications for an activity type"""
+        # This can be customized based on user roles and permissions
+        from django.contrib.auth.models import User
+        
+        activity_recipients = {
+            'purchase_order_created': ['admin', 'owner', 'logistics', 'accountant'],
+            'purchase_order_confirmed': ['admin', 'owner', 'logistics', 'warehouse', 'accountant'],
+            'stock_transfer_initiated': ['admin', 'owner', 'logistics', 'warehouse'],
+            'stock_transfer_completed': ['admin', 'owner', 'logistics', 'warehouse'],
+            'stock_committed': ['admin', 'owner', 'logistics', 'sales'],
+            'stock_received': ['admin', 'owner', 'logistics', 'warehouse'],
+            'po_items_received': ['admin', 'owner', 'logistics', 'warehouse', 'accountant'],
+            'stock_audit_started': ['admin', 'owner', 'stocktake_manager'],
+            'stock_audit_completed': ['admin', 'owner', 'stocktake_manager'],
+            'invoice_created': ['admin', 'owner', 'accountant'],
+            'payment_made': ['admin', 'owner', 'accountant'],
+            'stock_low': ['admin', 'owner', 'logistics', 'warehouse'],
+            'reservation_created': ['admin', 'owner', 'logistics', 'sales'],
+            'reservation_expired': ['admin', 'owner', 'logistics', 'sales'],
+        }
+        
+        roles = activity_recipients.get(activity_type, [])
+        if not roles:
+            return []
+        
+        # Get users with these roles
+        users = User.objects.filter(
+            role__role__in=roles,
+            is_active=True
+        ).distinct()
+        
+        return list(users)
+
+

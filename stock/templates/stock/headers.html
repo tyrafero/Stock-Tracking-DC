@@ -538,6 +538,183 @@
              color: #8094ae;
              font-size: 14px;
          }
+         
+         /* Notification Dropdown Styles */
+         .dark-mode #notifications-dropdown {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+             min-width: 350px;
+             max-width: 400px;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head {
+             background-color: #1e2d3f !important;
+             border-bottom: 1px solid #374659 !important;
+             padding: 0.75rem 1.25rem;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head h6 {
+             color: #c4cefe !important;
+             margin: 0;
+             font-weight: 600;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head a {
+             color: #98a3ff !important;
+             font-size: 0.875rem;
+             text-decoration: none;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head a:hover {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-body {
+             max-height: 350px;
+             overflow-y: auto;
+             padding: 0;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-foot {
+             background-color: #1e2d3f !important;
+             border-top: 1px solid #374659 !important;
+             padding: 0.75rem 1.25rem;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-foot a {
+             color: #98a3ff !important;
+             text-decoration: none;
+             font-size: 0.875rem;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-foot a:hover {
+             color: #c4cefe !important;
+         }
+         
+         .notification-item {
+             padding: 0.75rem 1.25rem;
+             border-bottom: 1px solid #374659;
+             cursor: pointer;
+             transition: background-color 0.15s ease;
+             display: flex;
+             align-items: flex-start;
+             gap: 0.75rem;
+         }
+         
+         .dark-mode .notification-item:hover {
+             background-color: #1e2d3f !important;
+         }
+         
+         .dark-mode .notification-item:last-child {
+             border-bottom: none;
+         }
+         
+         .notification-icon {
+             width: 32px;
+             height: 32px;
+             border-radius: 50%;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             flex-shrink: 0;
+             font-size: 14px;
+         }
+         
+         .notification-icon.priority-low {
+             background-color: #e3f2fd;
+             color: #1976d2;
+         }
+         
+         .notification-icon.priority-medium {
+             background-color: #fff3e0;
+             color: #f57c00;
+         }
+         
+         .notification-icon.priority-high {
+             background-color: #ffebee;
+             color: #d32f2f;
+         }
+         
+         .notification-icon.priority-urgent {
+             background-color: #f3e5f5;
+             color: #7b1fa2;
+         }
+         
+         .dark-mode .notification-icon.priority-low {
+             background-color: #1e3a52;
+             color: #64b5f6;
+         }
+         
+         .dark-mode .notification-icon.priority-medium {
+             background-color: #2e2310;
+             color: #ffb74d;
+         }
+         
+         .dark-mode .notification-icon.priority-high {
+             background-color: #3e1419;
+             color: #f48fb1;
+         }
+         
+         .dark-mode .notification-icon.priority-urgent {
+             background-color: #2e1434;
+             color: #ce93d8;
+         }
+         
+         .notification-content {
+             flex: 1;
+             min-width: 0;
+         }
+         
+         .notification-title {
+             font-weight: 600;
+             color: #c4cefe;
+             margin-bottom: 0.25rem;
+             font-size: 0.875rem;
+             line-height: 1.3;
+         }
+         
+         .notification-message {
+             color: #8699b2;
+             font-size: 0.8rem;
+             line-height: 1.4;
+             margin-bottom: 0.25rem;
+         }
+         
+         .notification-time {
+             color: #8699b2;
+             font-size: 0.75rem;
+         }
+         
+         .notification-count-badge {
+             position: relative;
+             top: -8px;
+             right: -8px;
+             background-color: #e74c3c;
+             color: white;
+             border-radius: 50%;
+             font-size: 0.7rem;
+             min-width: 18px;
+             height: 18px;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             font-weight: bold;
+         }
+         
+         .no-notifications {
+             padding: 2rem 1.25rem;
+             text-align: center;
+             color: #8699b2;
+         }
+         
+         .no-notifications em {
+             font-size: 2rem;
+             opacity: 0.5;
+             margin-bottom: 0.5rem;
+             display: block;
+         }
      </style>
      <script>
          document.addEventListener('DOMContentLoaded', function() {
@@ -805,6 +982,249 @@
              }
          });
      </script>
+    
+    <script>
+        function initializeNotifications() {
+            let notificationCheckInterval;
+            
+            // Elements
+            const notificationsBell = document.getElementById('notifications-bell');
+            const notificationsDropdown = document.getElementById('notifications-dropdown');
+            const notificationsList = document.getElementById('notifications-list');
+            const notificationCount = document.getElementById('notification-count');
+            const markAllReadBtn = document.getElementById('mark-all-read');
+            
+            if (!notificationsBell || !notificationsList) {
+                console.log('Notification elements not found');
+                return;
+            }
+            
+            // Load notifications when dropdown is opened
+            notificationsBell.addEventListener('click', function(e) {
+                e.preventDefault();
+                loadNotifications();
+            });
+            
+            // Mark all as read functionality
+            markAllReadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                markAllNotificationsRead();
+            });
+            
+            // Load initial notification count
+            updateNotificationCount();
+            
+            // Set up periodic checking for new notifications (every 30 seconds)
+            notificationCheckInterval = setInterval(updateNotificationCount, 30000);
+            
+            function loadNotifications() {
+                // Show loading state
+                notificationsList.innerHTML = `
+                    <div class="text-center py-4">
+                        <em class="icon ni ni-loader"></em>
+                        <span>Loading notifications...</span>
+                    </div>
+                `;
+                
+                fetch('/api/notifications/')
+                    .then(response => response.json())
+                    .then(data => {
+                        displayNotifications(data.notifications);
+                    })
+                    .catch(error => {
+                        console.error('Error loading notifications:', error);
+                        notificationsList.innerHTML = `
+                            <div class="no-notifications">
+                                <em class="icon ni ni-alert-circle"></em>
+                                <p>Failed to load notifications</p>
+                            </div>
+                        `;
+                    });
+            }
+            
+            function displayNotifications(notifications) {
+                if (!notifications || notifications.length === 0) {
+                    notificationsList.innerHTML = `
+                        <div class="no-notifications">
+                            <em class="icon ni ni-bell-off"></em>
+                            <p>No new notifications</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                notifications.forEach(notification => {
+                    html += createNotificationHTML(notification);
+                });
+                
+                notificationsList.innerHTML = html;
+                
+                // Add click handlers for notification items
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const notificationId = this.dataset.notificationId;
+                        const actionUrl = this.dataset.actionUrl;
+                        
+                        // Update UI immediately before marking as read
+                        const countElement = document.getElementById('notification-count');
+                        if (countElement) {
+                            const currentCount = parseInt(countElement.textContent) || 0;
+                            const newCount = Math.max(0, currentCount - 1);
+                            
+                            console.log('Updating count from', currentCount, 'to', newCount); // Debug log
+                            
+                            if (newCount > 0) {
+                                countElement.textContent = newCount > 99 ? '99+' : newCount;
+                                countElement.style.display = 'block';
+                            } else {
+                                countElement.style.display = 'none';
+                            }
+                        }
+                        
+                        // Remove this notification from the dropdown
+                        this.remove();
+                        
+                        // Mark as read (async, don't wait for response)
+                        markNotificationRead(notificationId);
+                        
+                        // Small delay to ensure UI update is visible before redirect
+                        setTimeout(() => {
+                            // Navigate to action URL if available, otherwise go to notifications list
+                            if (actionUrl && actionUrl !== 'null' && actionUrl !== '#' && actionUrl !== 'None') {
+                                window.location.href = actionUrl;
+                            } else {
+                                // If no specific action URL, go to notifications list
+                                window.location.href = '/notifications/';
+                            }
+                        }, 100); // 100ms delay
+                    });
+                });
+            }
+            
+            function createNotificationHTML(notification) {
+                const iconClass = notification.icon_class || 'ni ni-bell';
+                const priorityClass = `priority-${notification.priority}`;
+                const actionUrl = notification.action_url || '#';
+                
+                return `
+                    <div class="notification-item" data-notification-id="${notification.id}" data-action-url="${actionUrl}">
+                        <div class="notification-icon ${priorityClass}">
+                            <em class="icon ${iconClass}"></em>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">${escapeHtml(notification.title)}</div>
+                            <div class="notification-message">${escapeHtml(notification.message)}</div>
+                            <div class="notification-time">${notification.time_ago}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function updateNotificationCount() {
+                fetch('/api/notifications/count/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const count = data.count;
+                        if (count > 0) {
+                            notificationCount.textContent = count > 99 ? '99+' : count;
+                            notificationCount.style.display = 'block';
+                        } else {
+                            notificationCount.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting notification count:', error);
+                    });
+            }
+            
+            function markNotificationRead(notificationId) {
+                const formData = new FormData();
+                formData.append('notification_id', notificationId);
+                formData.append('csrfmiddlewaretoken', getCsrfToken());
+                
+                fetch('/api/notifications/mark-read/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the count immediately
+                        updateNotificationCount();
+                        // Also remove the notification from the dropdown
+                        const notificationElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                        if (notificationElement) {
+                            notificationElement.remove();
+                        }
+                        // If no notifications left, show empty state
+                        const remainingNotifications = document.querySelectorAll('.notification-item');
+                        if (remainingNotifications.length === 0) {
+                            notificationsList.innerHTML = `
+                                <div class="no-notifications">
+                                    <em class="icon ni ni-bell-off"></em>
+                                    <p>No new notifications</p>
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error marking notification as read:', error);
+                });
+            }
+            
+            function markAllNotificationsRead() {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', getCsrfToken());
+                
+                fetch('/api/notifications/mark-all-read/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the count immediately
+                        updateNotificationCount();
+                        // Show empty state in dropdown
+                        notificationsList.innerHTML = `
+                            <div class="no-notifications">
+                                <em class="icon ni ni-bell-off"></em>
+                                <p>No new notifications</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error marking all notifications as read:', error);
+                });
+            }
+            
+            function getCsrfToken() {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'csrftoken') {
+                        return value;
+                    }
+                }
+                return '';
+            }
+            
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize notifications when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNotifications();
+        });
+    </script>
 </head>
 <body class="nk-body npc-default has-sidebar dark-mode">
  <div class="nk-app-root">
@@ -1049,6 +1469,29 @@
                                             <em class="icon ni ni-search"></em>
                                         </a>
                                     </li>
+                                    <!-- Notifications Bell -->
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown" id="notifications-bell">
+                                            <em class="icon ni ni-bell"></em>
+                                            <span class="badge badge-danger" id="notification-count" style="display: none;"></span>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-md dropdown-menu-right" id="notifications-dropdown">
+                                            <div class="dropdown-head">
+                                                <h6 class="d-none d-sm-block">Notifications</h6>
+                                                <a href="#" class="dropdown-toggle" id="mark-all-read">Mark All as Read</a>
+                                            </div>
+                                            <div class="dropdown-body" id="notifications-list">
+                                                <div class="text-center py-4">
+                                                    <em class="icon ni ni-loader" id="notifications-loading"></em>
+                                                    <span>Loading notifications...</span>
+                                                </div>
+                                            </div>
+                                            <div class="dropdown-foot text-center">
+                                                <a href="{% url 'notifications_list' %}" class="dropdown-link">View All Notifications</a>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    
                                     <!-- Desktop Purchase Orders Dropdown (hidden on mobile) -->
                                     {% if user_permissions.can_view_purchase_order or user_permissions.can_create_purchase_order %}
                                     <li class="dropdown d-none d-xl-block">

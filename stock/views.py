@@ -527,7 +527,7 @@ def transfer_stock(request, pk):
 @login_required
 def transfer_list(request):
     """List all stock transfers"""
-    transfers = StockTransfer.objects.select_related('stock', 'from_location', 'to_location', 'created_by').all()
+    transfers = StockTransfer.objects.select_related('stock', 'from_location', 'to_location', 'created_by').all().order_by('-created_at')
     
     # Filter by status if requested
     status_filter = request.GET.get('status')
@@ -1172,7 +1172,7 @@ def stock_detail(request, pk):
     # Get commitments for this stock
     commitments = CommittedStock.objects.filter(
         stock=detail
-    ).order_by('-created_at')
+    ).order_by('-committed_at')
     
     context = {
         'detail': detail,
@@ -3768,3 +3768,167 @@ def stock_item_suggestions(request):
     suggestions.sort(key=lambda x: (x['priority'], x['name'].lower()))
     
     return JsonResponse({'suggestions': suggestions[:15]})
+
+
+# ----------------------------
+# Notification Views
+# ----------------------------
+
+@login_required
+def get_notifications(request):
+    """AJAX endpoint to get user notifications"""
+    from .models import Notification
+    from django.utils import timezone
+    
+    # Get unread notifications for the current user, latest first
+    notifications = Notification.objects.filter(
+        recipient=request.user,
+        is_read=False
+    ).order_by('-created_at')[:20]  # Limit to 20 most recent
+    
+    notifications_data = []
+    for notification in notifications:
+        # Calculate time ago
+        time_diff = timezone.now() - notification.created_at
+        if time_diff.days > 0:
+            time_ago = f"{time_diff.days}d ago"
+        elif time_diff.seconds > 3600:
+            hours = time_diff.seconds // 3600
+            time_ago = f"{hours}h ago"
+        elif time_diff.seconds > 60:
+            minutes = time_diff.seconds // 60
+            time_ago = f"{minutes}m ago"
+        else:
+            time_ago = "Just now"
+        
+        notifications_data.append({
+            'id': notification.id,
+            'title': notification.title,
+            'message': notification.message,
+            'priority': notification.priority,
+            'notification_type': notification.notification_type,
+            'created_at': notification.created_at.isoformat(),
+            'time_ago': time_ago,
+            'action_url': notification.get_action_url(),
+            'icon_class': get_notification_icon_class(notification.notification_type)
+        })
+    
+    return JsonResponse({
+        'notifications': notifications_data,
+        'count': len(notifications_data)
+    })
+
+
+@login_required  
+def mark_notification_read(request):
+    """AJAX endpoint to mark a notification as read"""
+    from .models import Notification
+    
+    if request.method == 'POST':
+        notification_id = request.POST.get('notification_id')
+        try:
+            notification = Notification.objects.get(
+                id=notification_id,
+                recipient=request.user
+            )
+            notification.mark_as_read()
+            return JsonResponse({'success': True})
+        except Notification.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Notification not found'})
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def mark_all_notifications_read(request):
+    """AJAX endpoint to mark all notifications as read"""
+    from .models import Notification
+    from django.utils import timezone
+    
+    if request.method == 'POST':
+        # Mark all unread notifications as read
+        notifications = Notification.objects.filter(
+            recipient=request.user,
+            is_read=False
+        )
+        
+        count = notifications.count()
+        notifications.update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'marked_count': count
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def get_unread_count(request):
+    """AJAX endpoint to get count of unread notifications"""
+    from .models import Notification
+    
+    count = Notification.objects.filter(
+        recipient=request.user,
+        is_read=False
+    ).count()
+    
+    return JsonResponse({'count': count})
+
+
+def get_notification_icon_class(notification_type):
+    """Get icon class for notification type"""
+    icon_mapping = {
+        'purchase_order_created': 'ni ni-cart',
+        'purchase_order_confirmed': 'ni ni-check-circle',
+        'stock_transfer_initiated': 'ni ni-swap',
+        'stock_transfer_completed': 'ni ni-check',
+        'stock_committed': 'ni ni-lock',
+        'stock_received': 'ni ni-inbox',
+        'po_items_received': 'ni ni-package',
+        'stock_audit_started': 'ni ni-clipboard',
+        'stock_audit_completed': 'ni ni-check-circle',
+        'invoice_created': 'ni ni-file-text',
+        'payment_made': 'ni ni-money',
+        'stock_low': 'ni ni-alert-circle',
+        'reservation_created': 'ni ni-clock',
+        'reservation_expired': 'ni ni-alert-triangle',
+    }
+    return icon_mapping.get(notification_type, 'ni ni-bell')
+
+
+@login_required
+def notifications_list(request):
+    """Display all notifications for the current user"""
+    from .models import Notification
+    from django.core.paginator import Paginator
+    
+    # Get all notifications for the user
+    notifications = Notification.objects.filter(
+        recipient=request.user
+    ).order_by('-created_at')
+    
+    # Pagination
+    paginator = Paginator(notifications, 20)  # Show 20 notifications per page
+    page_number = request.GET.get('page')
+    notifications_page = paginator.get_page(page_number)
+    
+    # Mark viewed notifications as read (optional behavior)
+    if request.method == 'POST' and 'mark_all_read' in request.POST:
+        from django.utils import timezone
+        notifications.filter(is_read=False).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+        return redirect('notifications_list')
+    
+    context = {
+        'notifications': notifications_page,
+        'unread_count': notifications.filter(is_read=False).count(),
+        'total_count': notifications.count(),
+    }
+    
+    return render(request, 'stock/notifications_list.html', context)
