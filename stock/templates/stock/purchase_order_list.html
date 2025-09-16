@@ -32,34 +32,6 @@
                     </div>
                 </div>
                 
-                <!-- Quick Filter Buttons -->
-                <div class="nk-block">
-                    <div class="card">
-                        <div class="card-inner">
-                            <h6 class="card-title mb-2">Quick Filters</h6>
-                            <div class="btn-group-wrap">
-                                <a href="?payment_status=overdue" class="btn btn-sm btn-outline-danger mr-2">
-                                    🚨 Overdue Payments
-                                </a>
-                                <a href="?payment_status=no_invoices&amp;status=completed" class="btn btn-sm btn-outline-warning mr-2">
-                                    💳 Awaiting Payment
-                                </a>
-                                <a href="?receiving_status=not_received" class="btn btn-sm btn-outline-info mr-2">
-                                    📦 Awaiting Items
-                                </a>
-                                <a href="?receiving_status=partially_received" class="btn btn-sm btn-outline-primary mr-2">
-                                    📥 Partial Receipts
-                                </a>
-                                <a href="?payment_status=partially_paid" class="btn btn-sm btn-outline-success mr-2">
-                                    💰 Partial Payments
-                                </a>
-                                <a href="?receiving_status=fully_received&amp;payment_status=fully_paid" class="btn btn-sm btn-outline-dark">
-                                    ✅ Completed
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Results Summary -->
                 {% if total_pos %}
