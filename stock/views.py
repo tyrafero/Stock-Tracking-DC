@@ -226,7 +226,11 @@ def admin_dashboard(request):
     # Admin-specific metrics
     low_stock_items = Stock.objects.filter(quantity__lte=models.F('re_order')).count()
     recent_pos = PurchaseOrder.objects.filter(status__in=['draft', 'submitted']).count()
-    total_stock_value = sum(stock.quantity * 100 for stock in Stock.objects.all())  # Placeholder calculation
+    # Use database aggregation instead of loading all objects
+    from django.db.models import Sum, F
+    total_stock_value = Stock.objects.aggregate(
+        total=Sum(F('quantity') * 100)
+    )['total'] or 0
     
     # Get aging stock analysis
     aging_stock = get_aging_stock()
@@ -377,35 +381,58 @@ def logistics_dashboard(request):
 
 @login_required
 def view_stock(request):
+    from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
     title = "VIEW STOCKS"
-    everything = Stock.objects.all().order_by('-timestamp')
+    # Start with all stock, but we'll paginate it
+    queryset = Stock.objects.select_related('category', 'location').order_by('-timestamp')
     form = StockSearchForm(request.POST or None)
 
-    context = {'everything': everything, 'form': form}
+    # Default to showing only first 50 items for performance
+    page_size = 50
     if request.method == 'POST':
         category = form['category'].value()
         item_name = form['item_name'].value()
-        
+
         # Use flexible search for item names
         if item_name:
             item_search_query = create_flexible_search_query(item_name, 'item_name')
-            everything = Stock.objects.filter(item_search_query).order_by('-timestamp')
-        else:
-            everything = Stock.objects.all().order_by('-timestamp')
-            
-        if category != '':
-            everything = everything.filter(category_id=category)
+            queryset = queryset.filter(item_search_query)
 
-        if form['export_to_CSV'].value() == True:
-            resp = HttpResponse(content_type='text/csv')
-            resp['Content-Disposition'] = 'attachment; filename = "Invoice.csv"'
-            writer = csv.writer(resp)
-            writer.writerow(['CATEGORY', 'ITEM NAME', 'QUANTITY'])
-            instance = everything
-            for stock in instance:
-                writer.writerow([stock.category, stock.item_name, stock.quantity])
-            return resp
-        context = {'title': title, 'everything': everything, 'form': form}
+        if category != '':
+            queryset = queryset.filter(category_id=category)
+
+    # Pagination
+    paginator = Paginator(queryset, page_size)
+    page = request.GET.get('page', 1)
+
+    try:
+        everything = paginator.page(page)
+    except PageNotAnInteger:
+        everything = paginator.page(1)
+    except EmptyPage:
+        everything = paginator.page(paginator.num_pages)
+
+    # Handle CSV export (if form is submitted and export is requested)
+    if request.method == 'POST' and form.is_valid() and form['export_to_CSV'].value() == True:
+        resp = HttpResponse(content_type='text/csv')
+        resp['Content-Disposition'] = 'attachment; filename = "Stock_Export.csv"'
+        writer = csv.writer(resp)
+        writer.writerow(['CATEGORY', 'ITEM NAME', 'QUANTITY'])
+        # For export, get all filtered results (not just current page)
+        export_queryset = queryset.select_related('category')
+        for stock in export_queryset:
+            writer.writerow([stock.category, stock.item_name, stock.quantity])
+        return resp
+
+    context = {
+        'title': title,
+        'everything': everything,
+        'form': form,
+        'total_items': paginator.count,
+        'items_per_page': page_size,
+        'page_range': paginator.get_elided_page_range(everything.number, on_each_side=2, on_ends=1)
+    }
     return render(request, 'stock/view_stock.html', context)
 
 
