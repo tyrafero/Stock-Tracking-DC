@@ -57,6 +57,10 @@ def get_aging_stock():
 @login_required
 def pending_approval(request):
     """Show pending approval screen for users waiting for admin approval"""
+    # Superusers should never see pending approval screen
+    if request.user.is_superuser:
+        return redirect('/')
+
     user_role = getattr(request.user, 'role', None)
     if not user_role or user_role.role != 'pending':
         return redirect('/')  # Redirect to home if not pending
@@ -141,9 +145,11 @@ def get_client_ip(request):
     
     # Check if user is authenticated and pending approval
     if request.user.is_authenticated:
-        user_role = getattr(request.user, 'role', None)
-        if user_role and user_role.role == 'pending':
-            return redirect('pending_approval')
+        # Superusers bypass approval process
+        if not request.user.is_superuser:
+            user_role = getattr(request.user, 'role', None)
+            if user_role and user_role.role == 'pending':
+                return redirect('pending_approval')
     
     # Track visitor IP (keeping original functionality)
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
