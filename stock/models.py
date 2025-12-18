@@ -260,10 +260,12 @@ class Stock(models.Model):
         ('new', 'New'),
         ('demo_unit', 'Demo Unit'),
         ('bstock', 'B-Stock'),
+        ('open_box', 'Open Box'),
+        ('refurbished', 'Refurbished'),
     ]
-    
+
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
-    item_name = models.CharField(max_length=50, blank=True, null=True)
+    item_name = models.CharField(max_length=200, blank=True, null=True)
     sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit - unique identifier for this item")
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
@@ -284,6 +286,12 @@ class Stock(models.Model):
     export_to_csv = models.BooleanField(default=False)
     image_url = models.URLField(max_length=500, blank=True, null=True, help_text="URL to display an image of the item")
     source_purchase_order = models.ForeignKey('PurchaseOrder', on_delete=models.CASCADE, null=True, blank=True)
+
+    # Zoho Integration Fields
+    product = models.ForeignKey('Product', on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_items', help_text="Link to product catalog")
+    opening_stock = models.IntegerField(default=0, blank=True, null=True, help_text="Opening stock from Zoho")
+    stock_on_hand = models.IntegerField(default=0, blank=True, null=True, help_text="Stock on hand from Zoho")
+    warehouse_name = models.CharField(max_length=200, blank=True, null=True, help_text="Warehouse name from Zoho")
 
     @property
     def total_stock(self):
@@ -1033,6 +1041,31 @@ class Product(models.Model):
     default_price_inc = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(default=timezone.now)
+
+    # Essential Product Fields (from Zoho)
+    sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit - unique identifier")
+    upc = models.CharField(max_length=100, blank=True, null=True, help_text="Universal Product Code")
+    ean = models.CharField(max_length=100, blank=True, null=True, help_text="European Article Number")
+    isbn = models.CharField(max_length=100, blank=True, null=True, help_text="International Standard Book Number")
+    part_number = models.CharField(max_length=100, blank=True, null=True, help_text="Manufacturer part number")
+    brand = models.CharField(max_length=200, blank=True, null=True, help_text="Product brand")
+    manufacturer = models.CharField(max_length=200, blank=True, null=True, help_text="Product manufacturer")
+    sales_description = models.TextField(blank=True, null=True, help_text="Sales description from Zoho")
+    product_type = models.CharField(max_length=50, blank=True, null=True, help_text="Product type (goods/service)")
+    unit = models.CharField(max_length=50, blank=True, null=True, help_text="Unit of measurement (box/pair/etc)")
+
+    # Physical Dimensions
+    package_weight = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Package weight")
+    package_length = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Package length")
+    package_width = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Package width")
+    package_height = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Package height")
+    dimension_unit = models.CharField(max_length=10, blank=True, null=True, help_text="Dimension unit (cm/inch)")
+    weight_unit = models.CharField(max_length=10, blank=True, null=True, help_text="Weight unit (kg/lb)")
+
+    # Zoho Integration
+    zoho_item_id = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Zoho Item ID")
+    zoho_created_time = models.DateTimeField(blank=True, null=True, help_text="Created time from Zoho")
+    zoho_last_modified = models.DateTimeField(blank=True, null=True, help_text="Last modified time from Zoho")
 
     def __str__(self):
         return self.name

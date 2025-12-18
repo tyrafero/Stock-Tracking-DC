@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
@@ -25,11 +24,9 @@ media
 ### Django.Python Stack ###
 # Byte-compiled / optimized / DLL files
 *.py[cod]
-=======
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
 *$py.class
 
 # C extensions
@@ -75,21 +72,16 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-<<<<<<< HEAD
 *.py,cover
-=======
 *.py.cover
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
 .hypothesis/
 .pytest_cache/
 cover/
 
 # Translations
 *.mo
-<<<<<<< HEAD
 
 # Django stuff:
-=======
 *.pot
 
 # Django stuff:
@@ -97,7 +89,6 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
 
 # Flask stuff:
 instance/
@@ -132,22 +123,18 @@ ipython_config.py
 #   install all needed dependencies.
 #Pipfile.lock
 
-<<<<<<< HEAD
-=======
 # UV
 #   Similar to Pipfile.lock, it is generally recommended to include uv.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 #uv.lock
 
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
 # poetry
 #   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
 #   This is especially recommended for binary packages to ensure reproducibility, and is more
 #   commonly ignored for libraries.
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
-<<<<<<< HEAD
 
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
@@ -156,7 +143,6 @@ ipython_config.py
 #   in version control.
 #   https://pdm.fming.dev/#use-with-ide
 .pdm.toml
-=======
 #poetry.toml
 
 # pdm
@@ -174,7 +160,6 @@ ipython_config.py
 #   Pixi creates a virtual environment in the .pixi directory, just like venv module creates one
 #   in the .venv directory. It is recommended not to include this directory in version control.
 .pixi
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
 
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
@@ -188,10 +173,7 @@ celerybeat.pid
 
 # Environments
 .env
-<<<<<<< HEAD
-=======
 .envrc
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
 .venv
 env/
 venv/
@@ -230,9 +212,7 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-<<<<<<< HEAD
 # End of https://www.toptal.com/developers/gitignore/api/django
-=======
 # Abstra
 # Abstra is an AI-powered process automation framework.
 # Ignore directories containing user credentials, local state, and settings.
@@ -263,4 +243,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
->>>>>>> 1b33c123f3a47564ccc3e248c93b8be7c26a664d
+
+# Database backups
+*.sql

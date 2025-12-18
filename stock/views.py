@@ -385,7 +385,8 @@ def view_stock(request):
 
     title = "VIEW STOCKS"
     # Start with all stock, but we'll paginate it
-    queryset = Stock.objects.select_related('category', 'location').order_by('-timestamp')
+    # Prefetch locations to show all warehouse locations and quantities
+    queryset = Stock.objects.select_related('category', 'location', 'product').prefetch_related('locations__store', 'commitments').order_by('-timestamp')
     form = StockSearchForm(request.POST or None)
 
     # Default to showing only first 50 items for performance
