@@ -441,28 +441,28 @@ def view_stock(request):
 def global_search(request):
     query = request.GET.get('q', '').strip()
     results = []
-    
+
     if query:
         # Use flexible search for item names and category names
         item_search_query = create_flexible_search_query(query, 'item_name')
         category_search_query = create_flexible_search_query(query, 'category__group')
-        
+
         # Combine searches with OR logic
         stocks = Stock.objects.filter(
             item_search_query | category_search_query
-        ).select_related('category')
-        
+        ).select_related('category').prefetch_related('locations__store')
+
         results = stocks
     else:
         # If no search query, show all stocks
-        results = Stock.objects.all()
-    
+        results = Stock.objects.select_related('category').prefetch_related('locations__store').all()
+
     context = {
         'query': query,
         'results': results,
         'title': 'Search Results' if query else 'All Items'
     }
-    
+
     return render(request, 'stock/search_results.html', context)
 
 
@@ -470,20 +470,20 @@ def live_search(request):
     """AJAX endpoint for live search suggestions"""
     if not request.user.is_authenticated:
         return JsonResponse({'suggestions': []})
-        
+
     query = request.GET.get('q', '').strip()
     suggestions = []
-    
+
     if query and len(query) >= 2:  # Only search if query is at least 2 characters
         # Use flexible search for item names and category names
         item_search_query = create_flexible_search_query(query, 'item_name')
         category_search_query = create_flexible_search_query(query, 'category__group')
-        
+
         # Search in Stock items (limit to 10 results for performance)
         stocks = Stock.objects.filter(
             item_search_query | category_search_query
-        ).select_related('category')[:10]
-        
+        ).select_related('category').prefetch_related('locations__store')[:10]
+
         suggestions = [{
             'id': stock.id,
             'item_name': stock.item_name,
@@ -494,7 +494,7 @@ def live_search(request):
             'condition': stock.condition,
             'condition_display': stock.get_condition_display()
         } for stock in stocks]
-    
+
     return JsonResponse({'suggestions': suggestions})
 
 @login_required

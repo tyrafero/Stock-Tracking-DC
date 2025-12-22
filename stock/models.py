@@ -265,7 +265,7 @@ class Stock(models.Model):
     ]
 
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
-    item_name = models.CharField(max_length=200, blank=True, null=True, db_index=True)
+    item_name = models.TextField(blank=True, null=True)
     sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit - unique identifier for this item")
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
@@ -438,7 +438,7 @@ class Stock(models.Model):
 
 class StockHistory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
-    item_name = models.CharField(max_length=50, blank=True, null=True, db_index=True)
+    item_name = models.TextField(blank=True, null=True)
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
     received_by = models.CharField(max_length=50, blank=True, null=True)
