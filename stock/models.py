@@ -265,7 +265,7 @@ class Stock(models.Model):
     ]
 
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
-    item_name = models.CharField(max_length=200, blank=True, null=True)
+    item_name = models.CharField(max_length=200, blank=True, null=True, db_index=True)
     sku = models.CharField(max_length=100, unique=True, blank=True, null=True, help_text="Stock Keeping Unit - unique identifier for this item")
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
@@ -273,7 +273,7 @@ class Stock(models.Model):
     issue_quantity = models.IntegerField(default=0, blank=True, null=True)
     issued_by = models.CharField(max_length=50, blank=True, null=True)
     committed_quantity = models.IntegerField(default=0, blank=True, null=True)
-    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new')
+    condition = models.CharField(max_length=20, choices=CONDITION_CHOICES, default='new', db_index=True)
     location = models.ForeignKey('Store', on_delete=models.SET_NULL, null=True, blank=True, help_text="Store location where this item is kept")
     aisle = models.CharField(max_length=50, blank=True, null=True, help_text="Specific aisle or section within the store")
     note = models.CharField(max_length=255, blank=True, null=True)
@@ -291,7 +291,7 @@ class Stock(models.Model):
     product = models.ForeignKey('Product', on_delete=models.SET_NULL, null=True, blank=True, related_name='stock_items', help_text="Link to product catalog")
     opening_stock = models.IntegerField(default=0, blank=True, null=True, help_text="Opening stock from Zoho")
     stock_on_hand = models.IntegerField(default=0, blank=True, null=True, help_text="Stock on hand from Zoho")
-    warehouse_name = models.CharField(max_length=200, blank=True, null=True, help_text="Warehouse name from Zoho")
+    warehouse_name = models.CharField(max_length=200, blank=True, null=True, db_index=True, help_text="Warehouse name from Zoho")
 
     @property
     def total_stock(self):
@@ -438,7 +438,7 @@ class Stock(models.Model):
 
 class StockHistory(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, blank=True, null=True)
-    item_name = models.CharField(max_length=50, blank=True, null=True)
+    item_name = models.CharField(max_length=50, blank=True, null=True, db_index=True)
     quantity = models.IntegerField(default=0, blank=True, null=True)
     receive_quantity = models.IntegerField(default=0, blank=True, null=True)
     received_by = models.CharField(max_length=50, blank=True, null=True)
@@ -517,7 +517,7 @@ class StockReservation(models.Model):
     # Reservation details
     reason = models.TextField(help_text="Reason for reservation")
     notes = models.TextField(blank=True, null=True)
-    
+
     # Timing
     reserved_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_reservations')
     reserved_at = models.DateTimeField(auto_now_add=True)

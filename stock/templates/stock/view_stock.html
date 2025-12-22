@@ -21,19 +21,64 @@
                                             </div>
                                         </div>
 
-                                        <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                                        <!-- DataTable Search Suggestions Container -->
+                                        <style>
+                                            .dataTables_wrapper .dataTables_filter {
+                                                position: relative;
+                                            }
+
+                                            /* Force bigger search input */
+                                            .dataTables_filter input[type="text"],
+                                            .dataTables_filter input[type="search"] {
+                                                font-size: 18px !important;
+                                                padding: 14px 24px !important;
+                                                min-width: 450px !important;
+                                                height: 50px !important;
+                                                line-height: 22px !important;
+                                            }
+
+                                            .dataTables_filter label {
+                                                font-size: 18px !important;
+                                                display: flex !important;
+                                                align-items: center !important;
+                                                gap: 10px !important;
+                                            }
+
+                                            .dataTables_filter {
+                                                margin-bottom: 20px !important;
+                                            }
+
+                                            #datatable-search-suggestions {
+                                                position: absolute;
+                                                top: 100%;
+                                                right: 0;
+                                                left: auto;
+                                                min-width: 400px;
+                                                background: white;
+                                                border: 1px solid #e3e7f1;
+                                                border-radius: 8px;
+                                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                                                z-index: 1000;
+                                                max-height: 400px;
+                                                overflow-y: auto;
+                                                display: none;
+                                            }
+                                            #datatable-search-suggestions.show {
+                                                display: block;
+                                            }
+                                        </style>
+
+                                        <table class="datatable-init nk-tb-list is-separate" data-auto-responsive="false" style="text-align: left;">
                                             <thead>
                                                 <tr class="nk-tb-item nk-tb-head">
                                                     <th class="nk-tb-col tb-col-sm"><span>COUNT</span></th>
                                                     <th class="nk-tb-col"><span>STOCK NAME</span></th>
-                                                    <th class="nk-tb-col"><span>CATEGORY</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>LOCATION</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>TOTAL STOCK</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>COMMITTED</span></th>
                                                     <th class="nk-tb-col tb-col-md"><span>AVAILABLE</span></th>
-                                                    <th class="nk-tb-col tb-col-md"><span>REORDER LEVEL</span></th>
-                                                      <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
                                                     <th class="nk-tb-col nk-tb-col-tools">
                                                         <ul class="nk-tb-actions gx-1 my-n1">
                                                             <li class="mr-n1">
@@ -64,15 +109,11 @@
                                                                 </div>
                                                             {% endif %}
                                                             {% if every.quantity <= every.re_order %}
-                                                            <span style="background: red" class="title"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>
+                                                            <span class="title" style="background: red; word-wrap: break-word; white-space: normal;"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>
                                                             {% else %}
-                                                            <span class="title"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>
+                                                            <span class="title" style="word-wrap: break-word; white-space: normal;"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>
                                                             {% endif %}
                                                         </span>
-                                                    </td>
-
-                                                    <td class="nk-tb-col">
-                                                        <span class="tb-lead"><a href="{% url 'update_stock' every.id %}">{{every.category}}</a></span>
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
                                                         {% if every.condition == 'new' %}
@@ -120,9 +161,6 @@
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
                                                         <span class="tb-sub {% if every.is_low_stock %}text-danger{% else %}text-success{% endif %}">{{ every.available_for_sale }}</span>
-                                                    </td>
-                                                    <td class="nk-tb-col tb-col-md">
-                                                        <span class="tb-sub"><a href="{% url 're_order' every.id %}">{{every.re_order}}</a></span>
                                                     </td>
                                                     <td class="nk-tb-col tb-col-md">
                                                         <span class="tb-sub">{{every.last_updated}}</span>
@@ -222,26 +260,148 @@
     </div>
 </div>
 
+<script>
+// Add live search functionality to DataTable search
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for DataTable to initialize
+    setTimeout(function() {
+        const datatableSearchInput = $('.dataTables_filter input');
+        const filterContainer = $('.dataTables_filter');
 
-<div class="nk-content ">
-<div class="container-fluid">
-    <div class="nk-content-inner">
-        <div class="nk-content-body">
-          <div class="col-lg-12 pb-5">
-                            <div class="card h-100">
-                                <div class="card-inner">
-                                    <form method="POST" action=" ">
-                                      {% csrf_token %}
-                                      {{form|crispy}}
-                                      <input class="mt-2 btn btn-primary" type="submit">
-                                    </form>
+        if (datatableSearchInput.length && filterContainer.length) {
+            // Add suggestions container
+            filterContainer.css('position', 'relative');
+            filterContainer.append('<div id="datatable-search-suggestions" class="search-suggestions"></div>');
+
+            const suggestionsContainer = $('#datatable-search-suggestions');
+            let searchTimeout;
+            let selectedIndex = -1;
+
+            // Disable DataTable's default search to prevent filtering current results
+            datatableSearchInput.off('keyup.DT input.DT');
+
+            // Handle input changes for live search
+            datatableSearchInput.on('input', function(e) {
+                const query = e.target.value.trim();
+                clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    hideSuggestions();
+                    return;
+                }
+
+                // Debounce the search requests
+                searchTimeout = setTimeout(function() {
+                    performLiveSearch(query);
+                }, 300);
+            });
+
+            // Handle keyboard navigation
+            datatableSearchInput.on('keydown', function(e) {
+                const suggestions = suggestionsContainer.find('.suggestion-item');
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+                    updateHighlight(suggestions);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateHighlight(suggestions);
+                } else if (e.key === 'Enter') {
+                    if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                        // A suggestion is selected - navigate to it
+                        e.preventDefault();
+                        e.stopPropagation();
+                        $(suggestions[selectedIndex]).click();
+                    } else {
+                        // No suggestion selected - go to search results page
+                        const query = datatableSearchInput.val().trim();
+                        if (query.length > 0) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.location.href = `/search/?q=${encodeURIComponent(query)}`;
+                        }
+                    }
+                } else if (e.key === 'Escape') {
+                    hideSuggestions();
+                }
+            });
+
+            // Hide suggestions when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.dataTables_filter').length) {
+                    hideSuggestions();
+                }
+            });
+
+            function performLiveSearch(query) {
+                $.ajax({
+                    url: `/api/live-search/?q=${encodeURIComponent(query)}`,
+                    method: 'GET',
+                    success: function(data) {
+                        displaySuggestions(data.suggestions);
+                    },
+                    error: function(error) {
+                        console.error('Search error:', error);
+                        hideSuggestions();
+                    }
+                });
+            }
+
+            function displaySuggestions(suggestions) {
+                selectedIndex = -1;
+
+                if (suggestions.length === 0) {
+                    suggestionsContainer.html('<div class="no-suggestions">No items found</div>');
+                } else {
+                    const html = suggestions.map(item => `
+                        <div class="suggestion-item" data-id="${item.id}" onclick="window.location.href='/stock_detail/${item.id}/'">
+                            ${item.image_url ?
+                                `<img src="${item.image_url}" alt="${item.item_name}" class="suggestion-image">` :
+                                '<div class="suggestion-image"></div>'
+                            }
+                            <div class="suggestion-content">
+                                <div class="suggestion-title ${item.low_stock ? 'low-stock' : ''}">${item.item_name}</div>
+                                <div class="suggestion-meta">
+                                    ${item.category}
+                                    ${item.condition === 'new' ?
+                                        `<span class="badge badge-success" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                        item.condition === 'bstock' ?
+                                        `<span class="badge badge-warning" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                        item.condition === 'demo_unit' ?
+                                        `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                        `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
+                                    }
+                                    <br><small style="color: #8094ae;">Total: ${item.quantity} units</small>
                                 </div>
                             </div>
+                            <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
                         </div>
-        </div>
-    </div>
-</div>
-</div>
+                    `).join('');
+                    suggestionsContainer.html(html);
+                }
 
+                showSuggestions();
+            }
+
+            function updateHighlight(suggestions) {
+                suggestions.each(function(index) {
+                    $(this).toggleClass('highlighted', index === selectedIndex);
+                });
+            }
+
+            function showSuggestions() {
+                suggestionsContainer.addClass('show');
+            }
+
+            function hideSuggestions() {
+                suggestionsContainer.removeClass('show');
+                selectedIndex = -1;
+            }
+        }
+    }, 1000); // Wait 1 second for DataTable to fully initialize
+});
+</script>
 
 {% include 'stock/footers.html' %}

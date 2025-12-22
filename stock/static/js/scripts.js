@@ -468,7 +468,7 @@
           dom: dom,
           language: {
             search: "",
-            searchPlaceholder: "Type in to Search",
+            searchPlaceholder: "Search anything",
             lengthMenu: "<span class='d-none d-sm-inline-block'>Show</span><div class='form-control-select'> _MENU_ </div>",
             info: "_START_ -_END_ of _TOTAL_",
             infoEmpty: "No records found",
@@ -479,6 +479,34 @@
               "next": "Next",
               "previous": "Prev"
             }
+          },
+          initComplete: function() {
+            // Customize search input styling
+            $('.dataTables_filter input[type="search"]')
+              .removeClass('form-control-sm')
+              .addClass('border-transparent form-focus-none')
+              .attr('type', 'text')
+              .attr('name', 'q')
+              .attr('id', 'datatable-search-input')
+              .attr('autocomplete', 'off')
+              .css({
+                'font-size': '18px !important',
+                'padding': '14px 24px !important',
+                'min-width': '450px !important',
+                'height': '50px !important'
+              });
+
+            // Make the filter container and label bigger too
+            $('.dataTables_filter').css({
+              'margin-bottom': '20px'
+            });
+
+            $('.dataTables_filter label').css({
+              'font-size': '18px',
+              'display': 'flex',
+              'align-items': 'center',
+              'gap': '10px'
+            });
           }
         },
             attr = opt ? extend(def, opt) : def;
