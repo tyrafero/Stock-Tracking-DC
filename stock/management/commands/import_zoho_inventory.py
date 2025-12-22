@@ -429,26 +429,31 @@ class Command(BaseCommand):
 
         # Get or create warehouse/location
         location = None
+        main_warehouse = None
+
         if warehouse_name:
             # Parse warehouse name to get the main location
             # Example: "Silverwater - [ B-Stock / Open Box / Ex- Demo / Refurb]" -> "Silverwater"
             main_warehouse = warehouse_name.split('-')[0].strip()
+        else:
+            # Default warehouse for items without warehouse name
+            main_warehouse = 'Main Warehouse'
 
-            # Try to find existing store/warehouse by name
-            location = Store.objects.filter(name__icontains=main_warehouse).first()
+        # Try to find existing store/warehouse by name
+        location = Store.objects.filter(name__icontains=main_warehouse).first()
 
-            if not location:
-                # Create a new warehouse if it doesn't exist
-                location, created = Store.objects.get_or_create(
-                    name=main_warehouse,
-                    defaults={
-                        'designation': 'warehouse',
-                        'location': f'{main_warehouse}, NSW',
-                        'is_active': True,
-                    }
-                )
-                if created:
-                    self.stdout.write(f'    Created new warehouse: {main_warehouse}')
+        if not location:
+            # Create a new warehouse if it doesn't exist
+            location, created = Store.objects.get_or_create(
+                name=main_warehouse,
+                defaults={
+                    'designation': 'warehouse',
+                    'location': f'{main_warehouse}, NSW',
+                    'is_active': True,
+                }
+            )
+            if created:
+                self.stdout.write(f'    Created new warehouse: {main_warehouse}')
 
         # Parse location/aisle from SKU field
         sku_field = row.get('SKU', '').strip()
