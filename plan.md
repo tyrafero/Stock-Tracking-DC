@@ -304,19 +304,22 @@ GET    /api/v1/categories/            - List categories
 
 ## 🚀 Next Steps
 
-1. **Restructure Project** (Phase 1.2):
-   - Move existing Django code to `src/backend/`
-   - Initialize React app in `src/frontend/`
-
-2. **Test Docker Setup**:
-   - Copy `.env.example` to `.env` and configure
+1. **Test Docker Setup** (Optional but Recommended):
+   - Ensure `.env` is configured with valid database credentials
    - Run `docker-compose -f docker-compose.dev.yml up`
    - Verify all containers start successfully
+   - Test that frontend can communicate with backend
 
-3. **Begin Phase 2** (Backend API):
-   - Install Django REST Framework
-   - Create API layer structure
-   - Start migrating Stock endpoints
+2. **Begin Phase 2** (Backend API Modernization):
+   - Install Django REST Framework and dependencies
+   - Configure DRF settings and CORS
+   - Create `api/` Django app structure
+   - Start building Stock API endpoints
+
+3. **Phase 3** (Frontend Development):
+   - Set up core frontend structure (states, API client, router)
+   - Build authentication UI
+   - Create stock management pages
 
 ---
 
@@ -383,5 +386,5 @@ GET    /api/v1/categories/            - List categories
 ---
 
 **Last Updated**: December 24, 2025
-**Status**: Phase 1.1 Complete (Docker Infrastructure) ✅
-**Next**: Phase 1.2 (Project Restructuring) ⏳
+**Status**: Phase 1 Complete (Infrastructure & Foundation) ✅
+**Next**: Phase 2 (Backend API Modernization) ⏳
