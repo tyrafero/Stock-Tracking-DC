@@ -1,0 +1,45 @@
+# Stock Tracking DC - Development Docker Compose Override
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  # Backend in development mode
+  backend:
+    build:
+      target: development
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./src/backend:/app
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=stockmgtr.settings
+    ports:
+      - "8000:8000"
+
+  # Worker in development mode
+  worker:
+    build:
+      target: development
+    volumes:
+      - ./src/backend:/app
+      - media_data:/app/media
+    command: celery -A stockmgtr worker -l debug --concurrency=1
+
+  # Frontend in development mode (Vite dev server)
+  frontend:
+    build:
+      target: development
+    command: npm run dev -- --host 0.0.0.0
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+    ports:
+      - "5173:5173"  # Vite dev server
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - NODE_ENV=development
