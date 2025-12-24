@@ -10,54 +10,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        # Remove any indexes on item_name before changing to TextField
-        migrations.RunSQL(
-            sql=[
-                # Remove index from stock.item_name if it exists
-                """
-                SET @index_exists = (
-                    SELECT COUNT(*)
-                    FROM information_schema.statistics
-                    WHERE table_schema = DATABASE()
-                    AND table_name = 'stock_stock'
-                    AND column_name = 'item_name'
-                );
-                SET @sql = IF(@index_exists > 0,
-                    CONCAT('ALTER TABLE stock_stock DROP INDEX ',
-                        (SELECT index_name FROM information_schema.statistics
-                         WHERE table_schema = DATABASE()
-                         AND table_name = 'stock_stock'
-                         AND column_name = 'item_name'
-                         AND index_name != 'PRIMARY' LIMIT 1)),
-                    'SELECT 1');
-                PREPARE stmt FROM @sql;
-                EXECUTE stmt;
-                DEALLOCATE PREPARE stmt;
-                """,
-                # Remove index from stockhistory.item_name if it exists
-                """
-                SET @index_exists = (
-                    SELECT COUNT(*)
-                    FROM information_schema.statistics
-                    WHERE table_schema = DATABASE()
-                    AND table_name = 'stock_stockhistory'
-                    AND column_name = 'item_name'
-                );
-                SET @sql = IF(@index_exists > 0,
-                    CONCAT('ALTER TABLE stock_stockhistory DROP INDEX ',
-                        (SELECT index_name FROM information_schema.statistics
-                         WHERE table_schema = DATABASE()
-                         AND table_name = 'stock_stockhistory'
-                         AND column_name = 'item_name'
-                         AND index_name != 'PRIMARY' LIMIT 1)),
-                    'SELECT 1');
-                PREPARE stmt FROM @sql;
-                EXECUTE stmt;
-                DEALLOCATE PREPARE stmt;
-                """,
-            ],
-            reverse_sql=migrations.RunSQL.noop,
-        ),
         migrations.AlterField(
             model_name='stock',
             name='item_name',
