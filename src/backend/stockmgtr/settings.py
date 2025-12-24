@@ -5,8 +5,11 @@ import os
 # BASE DIR
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Project root is two levels up from BASE_DIR (src/backend -> src -> project_root)
+PROJECT_ROOT = BASE_DIR.parent.parent
+
 # Load environment variables from .env file
-load_dotenv(os.path.join(BASE_DIR, '.env'))
+load_dotenv(os.path.join(PROJECT_ROOT, '.env'))
 
 # SECURITY
 SECRET_KEY = os.getenv("SECRET_KEY")
