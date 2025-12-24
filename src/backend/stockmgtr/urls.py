@@ -18,5 +18,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('stock.urls'))
+    path('api/', include('api.urls')),  # API endpoints
+    path('', include('stock.urls'))     # Existing Django views
 ]
