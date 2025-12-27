@@ -62,6 +62,8 @@ CORS_ALLOWED_ORIGINS = [
     'https://stock-tracking-dc-production.up.railway.app',
     'http://localhost:5173',  # Vite dev server
     'http://127.0.0.1:5173',
+    'http://localhost:5174',  # Vite dev server alternate port
+    'http://127.0.0.1:5174',
 ]
 
 # Allow all origins in development

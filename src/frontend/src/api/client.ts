@@ -71,8 +71,9 @@ class ApiClient {
   }
 
   private handleError(error: AxiosError): ApiError {
+    const data = error.response?.data as any;
     return {
-      message: error.response?.data?.message || error.message || 'An unexpected error occurred',
+      message: data?.detail || data?.message || error.message || 'An unexpected error occurred',
       status: error.response?.status || 500,
       data: error.response?.data,
     };

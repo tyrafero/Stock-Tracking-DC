@@ -1,4 +1,5 @@
 import apiClient from './client';
+import { mockApiService } from './mockService';
 import type {
   Stock,
   StockCreate,
@@ -9,13 +10,24 @@ import type {
   CommittedStock,
   StockReservation,
   StockTransfer,
+  Stocktake,
+  StocktakeForm,
+  PurchaseOrder,
+  PurchaseOrderForm,
   PaginatedResponse,
   StockFilters,
 } from '@/types/stock';
 
+const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+
 export class StockAPI {
   // Stock CRUD operations
   async getStocks(params?: StockFilters): Promise<PaginatedResponse<Stock>> {
+    if (isDemoMode) return mockApiService.getStocks(params);
+    return apiClient.get('/v1/stock/', params);
+  }
+
+  async getStockList(params?: any): Promise<PaginatedResponse<Stock>> {
     return apiClient.get('/v1/stock/', params);
   }
 
@@ -106,7 +118,12 @@ export class StockAPI {
 
   // Stores/Locations
   async getStores(): Promise<PaginatedResponse<Store>> {
+    if (isDemoMode) return mockApiService.getStores();
     return apiClient.get('/v1/stores/');
+  }
+
+  async getLocations(): Promise<string[]> {
+    return apiClient.get('/v1/locations/');
   }
 
   // Stock History
@@ -126,6 +143,10 @@ export class StockAPI {
   // Stock Reservations
   async getReservations(params?: any): Promise<PaginatedResponse<StockReservation>> {
     return apiClient.get('/v1/reservations/', params);
+  }
+
+  async getReservation(id: number): Promise<StockReservation> {
+    return apiClient.get(`/v1/reservations/${id}/`);
   }
 
   async createReservation(data: any): Promise<StockReservation> {
@@ -153,6 +174,10 @@ export class StockAPI {
     return apiClient.get('/v1/transfers/', params);
   }
 
+  async getTransfer(id: number): Promise<StockTransfer> {
+    return apiClient.get(`/v1/transfers/${id}/`);
+  }
+
   async createTransfer(data: any): Promise<StockTransfer> {
     return apiClient.post('/v1/transfers/', data);
   }
@@ -165,8 +190,16 @@ export class StockAPI {
     return apiClient.post(`/v1/transfers/${id}/complete/`);
   }
 
-  async markTransferCollected(id: number): Promise<{ message: string; transfer: StockTransfer }> {
+  async collectTransfer(id: number): Promise<{ message: string; transfer: StockTransfer }> {
     return apiClient.post(`/v1/transfers/${id}/collect/`);
+  }
+
+  async dispatchTransfer(id: number): Promise<{ message: string; transfer: StockTransfer }> {
+    return apiClient.post(`/v1/transfers/${id}/dispatch/`);
+  }
+
+  async cancelTransfer(id: number): Promise<{ message: string; transfer: StockTransfer }> {
+    return apiClient.post(`/v1/transfers/${id}/cancel/`);
   }
 
   async getPendingTransfers(): Promise<PaginatedResponse<StockTransfer>> {
@@ -175,6 +208,102 @@ export class StockAPI {
 
   async getAwaitingCollectionTransfers(): Promise<PaginatedResponse<StockTransfer>> {
     return apiClient.get('/v1/transfers/awaiting-collection/');
+  }
+
+  // Stocktakes (Stock Audits)
+  async getStocktakes(params?: any): Promise<PaginatedResponse<Stocktake>> {
+    if (isDemoMode) return mockApiService.getStocktakes(params);
+    return apiClient.get('/v1/stock-audits/', params);
+  }
+
+  async getStocktake(id: number): Promise<Stocktake> {
+    if (isDemoMode) return mockApiService.getStocktake(id);
+    return apiClient.get(`/v1/stock-audits/${id}/`);
+  }
+
+  async createStocktake(data: StocktakeForm): Promise<Stocktake> {
+    if (isDemoMode) return mockApiService.createStocktake(data);
+    return apiClient.post('/v1/stock-audits/', data);
+  }
+
+  async updateStocktake(id: number, data: Partial<StocktakeForm>): Promise<Stocktake> {
+    return apiClient.patch(`/v1/stock-audits/${id}/`, data);
+  }
+
+  async deleteStocktake(id: number): Promise<void> {
+    return apiClient.delete(`/v1/stock-audits/${id}/`);
+  }
+
+  async startStocktake(id: number): Promise<{ message: string; audit: Stocktake }> {
+    if (isDemoMode) return mockApiService.startStocktake(id);
+    return apiClient.post(`/v1/stock-audits/${id}/start/`);
+  }
+
+  async completeStocktake(id: number): Promise<{ message: string; audit: Stocktake }> {
+    if (isDemoMode) return mockApiService.completeStocktake(id);
+    return apiClient.post(`/v1/stock-audits/${id}/complete/`);
+  }
+
+  async cancelStocktake(id: number): Promise<{ message: string; audit: Stocktake }> {
+    if (isDemoMode) return mockApiService.cancelStocktake(id);
+    return apiClient.post(`/v1/stock-audits/${id}/cancel/`);
+  }
+
+  async countStocktakeItem(stocktakeId: number, itemId: number, data: {
+    actual_quantity: number;
+    notes?: string;
+  }): Promise<{ message: string; item: any }> {
+    return apiClient.post(`/v1/stock-audits/${stocktakeId}/count_item/`, { item_id: itemId, counted_quantity: data.actual_quantity, notes: data.notes });
+  }
+
+  // Purchase Orders
+  async getPurchaseOrders(params?: any): Promise<PaginatedResponse<PurchaseOrder>> {
+    if (isDemoMode) return mockApiService.getPurchaseOrders(params);
+    return apiClient.get('/v1/purchase-orders/', params);
+  }
+
+  async getPurchaseOrder(id: number): Promise<PurchaseOrder> {
+    if (isDemoMode) return mockApiService.getPurchaseOrder(id);
+    return apiClient.get(`/v1/purchase-orders/${id}/`);
+  }
+
+  async createPurchaseOrder(data: PurchaseOrderForm): Promise<PurchaseOrder> {
+    if (isDemoMode) return mockApiService.createPurchaseOrder(data);
+    return apiClient.post('/v1/purchase-orders/', data);
+  }
+
+  async updatePurchaseOrder(id: number, data: Partial<PurchaseOrderForm>): Promise<PurchaseOrder> {
+    return apiClient.patch(`/v1/purchase-orders/${id}/`, data);
+  }
+
+  async deletePurchaseOrder(id: number): Promise<void> {
+    return apiClient.delete(`/v1/purchase-orders/${id}/`);
+  }
+
+  async sendPurchaseOrder(id: number): Promise<{ message: string; purchase_order: PurchaseOrder }> {
+    if (isDemoMode) return mockApiService.sendPurchaseOrder(id);
+    return apiClient.post(`/v1/purchase-orders/${id}/send/`);
+  }
+
+  async approvePurchaseOrder(id: number): Promise<{ message: string; purchase_order: PurchaseOrder }> {
+    if (isDemoMode) return mockApiService.approvePurchaseOrder(id);
+    return apiClient.post(`/v1/purchase-orders/${id}/approve/`);
+  }
+
+  async receivePurchaseOrder(id: number, data: {
+    items: Array<{
+      id: number;
+      received_quantity: number;
+    }>;
+    delivery_date?: string;
+    notes?: string;
+  }): Promise<{ message: string; purchase_order: PurchaseOrder }> {
+    return apiClient.post(`/v1/purchase-orders/${id}/receive/`, data);
+  }
+
+  async cancelPurchaseOrder(id: number): Promise<{ message: string; purchase_order: PurchaseOrder }> {
+    if (isDemoMode) return mockApiService.cancelPurchaseOrder(id);
+    return apiClient.post(`/v1/purchase-orders/${id}/cancel/`);
   }
 }
 

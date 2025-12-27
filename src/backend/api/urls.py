@@ -15,6 +15,9 @@ from .views.stock import (
     CategoryViewSet, StoreViewSet, StockViewSet, StockHistoryViewSet,
     CommittedStockViewSet, StockReservationViewSet, StockTransferViewSet
 )
+from .views.purchase_orders import PurchaseOrderViewSet
+from .views.stocktake import StockAuditViewSet
+from .views.auth import user_profile, update_profile, user_permissions, check_permission
 
 # Create a router and register our viewsets
 router = DefaultRouter()
@@ -27,6 +30,8 @@ router.register(r'stock-history', StockHistoryViewSet, basename='stockhistory')
 router.register(r'committed-stock', CommittedStockViewSet, basename='committedstock')
 router.register(r'reservations', StockReservationViewSet, basename='stockreservation')
 router.register(r'transfers', StockTransferViewSet, basename='stocktransfer')
+router.register(r'purchase-orders', PurchaseOrderViewSet, basename='purchaseorder')
+router.register(r'stock-audits', StockAuditViewSet, basename='stockaudit')
 
 # API patterns
 urlpatterns = [
@@ -34,6 +39,10 @@ urlpatterns = [
     path('auth/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('auth/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    path('auth/user/profile/', user_profile, name='user_profile'),
+    path('auth/user/update/', update_profile, name='update_profile'),
+    path('auth/user/permissions/', user_permissions, name='user_permissions'),
+    path('auth/user/check-permission/', check_permission, name='check_permission'),
 
     # API Documentation endpoints
     path('schema/', SpectacularAPIView.as_view(), name='schema'),

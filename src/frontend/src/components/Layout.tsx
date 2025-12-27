@@ -24,6 +24,10 @@ import {
   IconUser,
   IconSettings,
   IconChevronDown,
+  IconClipboardList,
+  IconShoppingCart,
+  IconUsersGroup,
+  IconCog,
 } from '@tabler/icons-react';
 import { useAuth, useUserRole } from '@/states/authState';
 
@@ -58,12 +62,38 @@ const Layout: React.FC = () => {
     {
       label: 'Reservations',
       icon: IconReservedLine,
-      path: '/stock/reservations',
+      path: '/reservations',
+      children: [
+        { label: 'All Reservations', path: '/reservations' },
+        { label: 'Create Reservation', path: '/reservations/create' },
+      ],
     },
     {
       label: 'Transfers',
       icon: IconArrowsExchange,
-      path: '/stock/transfers',
+      path: '/transfers',
+      children: [
+        { label: 'All Transfers', path: '/transfers' },
+        { label: 'Create Transfer', path: '/transfers/create' },
+      ],
+    },
+    {
+      label: 'Stocktake',
+      icon: IconClipboardList,
+      path: '/stocktake',
+      children: [
+        { label: 'All Stocktakes', path: '/stocktake' },
+        { label: 'Create Stocktake', path: '/stocktake/create' },
+      ],
+    },
+    {
+      label: 'Purchase Orders',
+      icon: IconShoppingCart,
+      path: '/purchase-orders',
+      children: [
+        { label: 'All POs', path: '/purchase-orders' },
+        { label: 'Create PO', path: '/purchase-orders/create' },
+      ],
     },
   ];
 

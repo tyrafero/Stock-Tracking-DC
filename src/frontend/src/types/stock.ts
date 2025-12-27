@@ -293,3 +293,96 @@ export interface StockTransferForm {
   customer_phone?: string;
   notes?: string;
 }
+
+// Stocktake types
+export interface StocktakeItem {
+  id: number;
+  stock: Stock;
+  stock_id: number;
+  expected_quantity: number;
+  actual_quantity?: number;
+  variance: number;
+  notes?: string;
+  counted_by?: User;
+  counted_at?: string;
+  status: 'pending' | 'counted' | 'verified' | 'discrepancy';
+}
+
+export interface Stocktake {
+  id: number;
+  name: string;
+  description?: string;
+  location?: Store;
+  location_id?: number;
+  status: 'planning' | 'in_progress' | 'completed' | 'cancelled';
+  created_by: User;
+  started_by?: User;
+  completed_by?: User;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  items: StocktakeItem[];
+
+  // Computed properties
+  total_items: number;
+  items_counted: number;
+  items_pending: number;
+  total_variance: number;
+  progress_percentage: number;
+}
+
+export interface StocktakeForm {
+  name: string;
+  description?: string;
+  location_id?: number;
+  stock_ids?: number[];
+}
+
+// Purchase Order types
+export interface PurchaseOrderItem {
+  id: number;
+  product: string;
+  associated_order_number?: string;
+  price_inc: number;
+  quantity: number;
+  discount_percent: number;
+  received_quantity: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PurchaseOrder {
+  id: number;
+  reference_number: string;
+  manufacturer: string;
+  delivery_person?: string;
+  delivery_type?: string;
+  creating_store?: string;
+  store?: string;
+  status: 'draft' | 'sent' | 'confirmed' | 'partially_received' | 'received' | 'cancelled';
+  note_for_manufacturer?: string;
+  expected_delivery_date?: string;
+  delivery_date?: string;
+  created_by: User;
+  created_at: string;
+  updated_at: string;
+  submitted_at?: string;
+  sent_at?: string;
+  items: PurchaseOrderItem[];
+}
+
+export interface PurchaseOrderForm {
+  supplier_name: string;
+  supplier_email?: string;
+  supplier_phone?: string;
+  supplier_address?: string;
+  expected_delivery_date?: string;
+  notes?: string;
+  items: Array<{
+    item_name: string;
+    description?: string;
+    quantity: number;
+    unit_price: number;
+    notes?: string;
+  }>;
+}

@@ -2,7 +2,8 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from stock.models import (
     Stock, Category, StockHistory, CommittedStock, StockReservation,
-    StockLocation, Store, StockTransfer, UserRole
+    StockLocation, Store, StockTransfer, UserRole, PurchaseOrder, PurchaseOrderItem,
+    StockAudit, StockAuditItem
 )
 
 
@@ -306,3 +307,136 @@ class StockReceiveSerializer(serializers.Serializer):
     note = serializers.CharField(max_length=255, required=False, allow_blank=True)
     location_id = serializers.IntegerField(required=False, allow_null=True)
     aisle = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
+
+class PurchaseOrderItemSerializer(serializers.ModelSerializer):
+    """Serializer for PurchaseOrderItem model"""
+
+    class Meta:
+        model = PurchaseOrderItem
+        fields = [
+            'id', 'product', 'associated_order_number', 'price_inc', 'quantity',
+            'discount_percent', 'received_quantity', 'created_at', 'updated_at'
+        ]
+
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    """Serializer for PurchaseOrder model"""
+    items = PurchaseOrderItemSerializer(many=True, read_only=True)
+    created_by = UserSerializer(read_only=True)
+    manufacturer = serializers.StringRelatedField(read_only=True)
+    delivery_person = serializers.StringRelatedField(read_only=True)
+    store = serializers.StringRelatedField(read_only=True)
+    creating_store = serializers.StringRelatedField(read_only=True)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = [
+            'id', 'reference_number', 'note_for_manufacturer', 'manufacturer',
+            'delivery_person', 'delivery_type', 'creating_store', 'store',
+            'status', 'created_by', 'created_at', 'updated_at', 'submitted_at',
+            'sent_at', 'items'
+        ]
+        read_only_fields = [
+            'reference_number', 'created_at', 'updated_at', 'submitted_at', 'sent_at'
+        ]
+
+
+class StockAuditItemSerializer(serializers.ModelSerializer):
+    """Serializer for StockAuditItem model"""
+    stock = StockSerializer(read_only=True)
+    stock_id = serializers.IntegerField(write_only=True)
+    counted_by = UserSerializer(read_only=True)
+
+    class Meta:
+        model = StockAuditItem
+        fields = [
+            'id', 'audit', 'stock', 'stock_id', 'system_quantity', 'committed_quantity',
+            'reserved_quantity', 'physical_count', 'variance_quantity', 'counted_by',
+            'count_date', 'variance_reason', 'variance_notes', 'adjustment_applied',
+            'adjustment_date', 'audit_location', 'audit_aisle', 'created_at', 'updated_at'
+        ]
+        read_only_fields = [
+            'variance_quantity', 'count_date', 'adjustment_date', 'created_at', 'updated_at'
+        ]
+
+
+class StockAuditSerializer(serializers.ModelSerializer):
+    """Serializer for StockAudit model"""
+    created_by = UserSerializer(read_only=True)
+    approved_by = UserSerializer(read_only=True)
+    assigned_auditors = UserSerializer(many=True, read_only=True)
+    audit_locations = StoreSerializer(many=True, read_only=True)
+    audit_categories = CategorySerializer(many=True, read_only=True)
+    audit_items = StockAuditItemSerializer(many=True, read_only=True)
+
+    # For write operations
+    audit_location_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=Store.objects.all(),
+        source='audit_locations', required=False
+    )
+    audit_category_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=Category.objects.all(),
+        source='audit_categories', required=False
+    )
+    assigned_auditor_ids = serializers.PrimaryKeyRelatedField(
+        many=True, write_only=True, queryset=User.objects.all(),
+        source='assigned_auditors', required=False
+    )
+
+    # Computed properties
+    progress_percentage = serializers.SerializerMethodField()
+    items_counted = serializers.SerializerMethodField()
+    total_items = serializers.SerializerMethodField()
+
+    # Display fields
+    audit_type_display = serializers.CharField(source='get_audit_type_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    # Workflow properties
+    can_start = serializers.ReadOnlyField()
+    can_complete = serializers.ReadOnlyField()
+
+    class Meta:
+        model = StockAudit
+        fields = [
+            'id', 'audit_reference', 'audit_type', 'audit_type_display', 'status',
+            'status_display', 'title', 'description', 'audit_locations', 'audit_categories',
+            'planned_start_date', 'planned_end_date', 'actual_start_date', 'actual_end_date',
+            'created_by', 'assigned_auditors', 'approved_by', 'total_items_planned',
+            'total_items_counted', 'items_with_variances', 'total_variance_value',
+            'created_at', 'updated_at', 'audit_items', 'audit_location_ids',
+            'audit_category_ids', 'assigned_auditor_ids', 'progress_percentage',
+            'items_counted', 'total_items', 'can_start', 'can_complete'
+        ]
+        read_only_fields = [
+            'audit_reference', 'status', 'actual_start_date', 'actual_end_date',
+            'total_items_planned', 'total_items_counted', 'items_with_variances',
+            'total_variance_value', 'created_at', 'updated_at', 'can_start', 'can_complete'
+        ]
+
+    def get_progress_percentage(self, obj):
+        """Calculate progress percentage"""
+        if obj.total_items_planned == 0:
+            return 0
+        return round((obj.total_items_counted / obj.total_items_planned) * 100, 2)
+
+    def get_items_counted(self, obj):
+        """Get number of items counted"""
+        return obj.audit_items.filter(physical_count__isnull=False).count()
+
+    def get_total_items(self, obj):
+        """Get total number of items in audit"""
+        return obj.audit_items.count()
+
+    def validate(self, data):
+        """Validate audit data"""
+        planned_start = data.get('planned_start_date')
+        planned_end = data.get('planned_end_date')
+
+        if planned_start and planned_end and planned_start >= planned_end:
+            raise serializers.ValidationError(
+                "Planned end date must be after planned start date."
+            )
+
+        return data
