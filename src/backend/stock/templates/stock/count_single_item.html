@@ -1,0 +1,243 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <div class="nk-block-head-sub">
+                                <a class="back-to" href="{% url 'audit_detail' audit.pk %}">
+                                    <em class="icon ni ni-arrow-left"></em><span>Back to Audit</span>
+                                </a>
+                            </div>
+                            <h3 class="nk-block-title page-title">Count Item: {{ audit_item.stock.item_name }}</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>{{ audit.audit_reference }} - Record physical count for this item</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-lg-8">
+                            <!-- Count Form -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Physical Count</h5>
+                                    </div>
+                                    <form method="post" class="form-validate">
+                                        {% csrf_token %}
+                                        <div class="row g-4">
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="{{ form.physical_count.id_for_label }}">Physical Count *</label>
+                                                    {{ form.physical_count }}
+                                                    {% if form.physical_count.help_text %}
+                                                    <div class="form-note">{{ form.physical_count.help_text }}</div>
+                                                    {% endif %}
+                                                    {% for error in form.physical_count.errors %}
+                                                    <div class="form-note text-danger">{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="{{ form.variance_reason.id_for_label }}">Variance Reason</label>
+                                                    {{ form.variance_reason }}
+                                                    <div class="form-note">Select if there's a variance between system and physical count</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="{{ form.audit_location.id_for_label }}">Physical Location</label>
+                                                    {{ form.audit_location }}
+                                                    <div class="form-note">Where you found this item during the count</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="{{ form.audit_aisle.id_for_label }}">Aisle/Section</label>
+                                                    {{ form.audit_aisle }}
+                                                    <div class="form-note">Specific aisle or section</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-12">
+                                                <div class="form-group">
+                                                    <label class="form-label" for="{{ form.variance_notes.id_for_label }}">Variance Notes</label>
+                                                    {{ form.variance_notes }}
+                                                    <div class="form-note">Additional notes about any variances or issues</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="form-group mt-4">
+                                            <button type="submit" class="btn btn-primary">
+                                                <em class="icon ni ni-save"></em><span>Save Count</span>
+                                            </button>
+                                            <a href="{% url 'audit_detail' audit.pk %}" class="btn btn-outline-light">Cancel</a>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <!-- Item Information -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Item Details</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <span class="sub-text">Item Name</span>
+                                            <span class="caption-text">{{ audit_item.stock.item_name }}</span>
+                                        </div>
+                                        <div class="col-12">
+                                            <span class="sub-text">Category</span>
+                                            <span class="caption-text">{{ audit_item.stock.category.group|default:"No Category" }}</span>
+                                        </div>
+                                        <div class="col-12">
+                                            <span class="sub-text">Current Location</span>
+                                            <span class="caption-text">{{ audit_item.stock.location.name|default:"No Location" }}</span>
+                                        </div>
+                                        {% if audit_item.stock.aisle %}
+                                        <div class="col-12">
+                                            <span class="sub-text">Current Aisle</span>
+                                            <span class="caption-text">{{ audit_item.stock.aisle }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- System Quantities -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">System Quantities</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <div class="data-item">
+                                                <div class="data-col">
+                                                    <span class="data-label">System Qty</span>
+                                                    <span class="data-value h4 text-primary">{{ audit_item.system_quantity }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="data-item">
+                                                <div class="data-col">
+                                                    <span class="data-label">Committed</span>
+                                                    <span class="data-value h6 text-warning">{{ audit_item.committed_quantity }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="data-item">
+                                                <div class="data-col">
+                                                    <span class="data-label">Reserved</span>
+                                                    <span class="data-value h6 text-info">{{ audit_item.reserved_quantity }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="data-item">
+                                                <div class="data-col">
+                                                    <span class="data-label">Available</span>
+                                                    <span class="data-value h6 text-success">
+                                                        {{ audit_item.system_quantity|add:audit_item.committed_quantity|add:audit_item.reserved_quantity|default:0 }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {% if audit_item.physical_count is not None %}
+                            <!-- Current Count Status -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Current Count</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <span class="sub-text">Physical Count</span>
+                                            <span class="caption-text h5">{{ audit_item.physical_count }}</span>
+                                        </div>
+                                        <div class="col-12">
+                                            <span class="sub-text">Variance</span>
+                                            <span class="caption-text h5 {% if audit_item.variance_quantity > 0 %}text-success{% elif audit_item.variance_quantity < 0 %}text-danger{% else %}text-muted{% endif %}">
+                                                {% if audit_item.variance_quantity > 0 %}+{% endif %}{{ audit_item.variance_quantity }}
+                                            </span>
+                                        </div>
+                                        {% if audit_item.counted_by %}
+                                        <div class="col-12">
+                                            <span class="sub-text">Counted By</span>
+                                            <span class="caption-text">{{ audit_item.counted_by.username }}</span>
+                                        </div>
+                                        <div class="col-12">
+                                            <span class="sub-text">Count Date</span>
+                                            <span class="caption-text">{{ audit_item.count_date|date:"M d, Y H:i" }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-focus on physical count input
+    const countInput = document.querySelector('#{{ form.physical_count.id_for_label }}');
+    if (countInput) {
+        countInput.focus();
+        countInput.select();
+    }
+
+    // Calculate and show variance in real-time
+    const systemQty = {{ audit_item.system_quantity }};
+    if (countInput) {
+        countInput.addEventListener('input', function() {
+            const physicalCount = parseInt(this.value) || 0;
+            const variance = physicalCount - systemQty;
+            
+            // You could add a variance display element here if needed
+            console.log('Variance:', variance);
+        });
+    }
+
+    // Auto-select variance reason if there's a variance
+    const varianceReasonSelect = document.querySelector('#{{ form.variance_reason.id_for_label }}');
+    if (countInput && varianceReasonSelect) {
+        countInput.addEventListener('change', function() {
+            const physicalCount = parseInt(this.value) || 0;
+            const variance = physicalCount - systemQty;
+            
+            if (variance !== 0 && varianceReasonSelect.value === '') {
+                // Focus on variance reason if there's a variance and no reason is selected
+                varianceReasonSelect.focus();
+            }
+        });
+    }
+});
+</script>
+
+{% include 'stock/footers.html' %}

@@ -1,0 +1,121 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Fulfill Reservation</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Convert reservation to sale or commitment: <strong>{{ reservation.stock.item_name }}</strong></p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-outline-primary">
+                                <em class="icon ni ni-arrow-left"></em><span>Back to Reservation</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fulfillment Options -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Choose Fulfillment Option</h5>
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <div class="alert-text">
+                                            <h6>Reservation Details:</h6>
+                                            <p><strong>Stock Item:</strong> {{ reservation.stock.item_name }}</p>
+                                            <p><strong>Customer:</strong> {{ reservation.customer_name|default:"No Customer" }}</p>
+                                            <p><strong>Quantity:</strong> {{ reservation.quantity }} units</p>
+                                            <p><strong>Available Stock:</strong> {{ reservation.stock.available_for_sale }} units</p>
+                                            {% if reservation.reference_number %}
+                                            <p><strong>Reference:</strong> {{ reservation.reference_number }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="card card-bordered">
+                                                <div class="card-inner">
+                                                    <h6 class="card-title">Convert to Customer Commitment</h6>
+                                                    <p class="card-text">Create a formal commitment with customer deposit and order details.</p>
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="commit">
+                                                        <button type="submit" class="btn btn-warning">
+                                                            <em class="icon ni ni-user-add"></em> Create Commitment
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="card card-bordered">
+                                                <div class="card-inner">
+                                                    <h6 class="card-title">Complete as Direct Sale</h6>
+                                                    <p class="card-text">Fulfill the reservation and immediately issue the stock.</p>
+                                                    <form method="post">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="action" value="complete">
+                                                        <button type="submit" class="btn btn-success" onclick="return confirm('This will issue {{ reservation.quantity }} units from stock. Continue?')">
+                                                            <em class="icon ni ni-check-circle"></em> Complete Sale
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Reservation History</h5>
+                                    </div>
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item">
+                                            <strong>Reserved:</strong><br>
+                                            {{ reservation.reserved_at|date:"M d, Y H:i" }}<br>
+                                            <small class="text-muted">by {{ reservation.reserved_by.username }}</small>
+                                        </li>
+                                        <li class="list-group-item">
+                                            <strong>Expires:</strong><br>
+                                            {{ reservation.expires_at|date:"M d, Y H:i" }}<br>
+                                            <small class="{% if reservation.days_until_expiry <= 1 %}text-danger{% else %}text-muted{% endif %}">
+                                                {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left
+                                            </small>
+                                        </li>
+                                        {% if reservation.reason %}
+                                        <li class="list-group-item">
+                                            <strong>Reason:</strong><br>
+                                            {{ reservation.reason }}
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

@@ -1,0 +1,139 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-lg mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{ title }}</h4>
+                                <p>Items awaiting receipt from suppliers</p>
+                            </div>
+                        </div>
+
+                        {% if purchase_orders %}
+                            {% for po in purchase_orders %}
+                            <div class="card mb-4">
+                                <div class="card-inner">
+                                    <div class="card-title-group align-start mb-3">
+                                        <div class="card-title">
+                                            <h6 class="title">{{ po.reference_number }}</h6>
+                                            <p class="text-soft">
+                                                <span class="badge badge-pill 
+                                                    {% if po.status == 'submitted' %}badge-info
+                                                    {% elif po.status == 'sent' %}badge-warning
+                                                    {% elif po.status == 'confirmed' %}badge-success
+                                                    {% else %}badge-secondary{% endif %}">
+                                                    {{ po.status|title }}
+                                                </span>
+                                            </p>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="drodown">
+                                                <a href="#" class="dropdown-toggle btn btn-sm btn-icon btn-outline-light" data-toggle="dropdown">
+                                                    <em class="icon ni ni-more-h"></em>
+                                                </a>
+                                                <div class="dropdown-menu dropdown-menu-right">
+                                                    <ul class="link-list-opt no-bdr">
+                                                        <li><a href="{% url 'purchase_order_detail' po.id %}"><em class="icon ni ni-eye"></em><span>View Details</span></a></li>
+                                                        <li><a href="{% url 'receive_purchase_order_items' po.id %}"><em class="icon ni ni-package"></em><span>Receive Items</span></a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Supplier Information -->
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <h6 class="text-soft">Manufacturer</h6>
+                                            <p class="fw-bold">{{ po.manufacturer.company_name }}</p>
+                                            <p class="text-soft small">{{ po.manufacturer.company_email }}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6 class="text-soft">Delivery Person</h6>
+                                            <p>{{ po.delivery_person.name }}</p>
+                                            <p class="text-soft small">{{ po.delivery_person.phone_number }}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <h6 class="text-soft">Delivery Details</h6>
+                                            <p>{{ po.get_delivery_type_display }}</p>
+                                            {% if po.store %}
+                                                <p class="text-soft small">{{ po.store.get_name_display }}</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <!-- Items to Receive -->
+                                    <h6 class="mb-3">Items to Receive</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Product</th>
+                                                    <th>Order #</th>
+                                                    <th>Ordered</th>
+                                                    <th>Received</th>
+                                                    <th>Remaining</th>
+                                                    <th>Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for item in po.items %}
+                                                <tr>
+                                                    <td>
+                                                        <strong>{{ item.product }}</strong>
+                                                    </td>
+                                                    <td>{{ item.associated_order_number|default:"—" }}</td>
+                                                    <td>{{ item.quantity }}</td>
+                                                    <td>{{ item.received_quantity }}</td>
+                                                    <td>
+                                                        <strong class="text-warning">{{ item.remaining_quantity }}</strong>
+                                                    </td>
+                                                    <td>
+                                                        {% if item.received_quantity == 0 %}
+                                                            <span class="badge badge-danger">Not Started</span>
+                                                        {% elif item.remaining_quantity > 0 %}
+                                                            <span class="badge badge-warning">Partial</span>
+                                                        {% else %}
+                                                            <span class="badge badge-success">Complete</span>
+                                                        {% endif %}
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <!-- Notes -->
+                                    {% if po.note_for_manufacturer %}
+                                    <div class="mt-3">
+                                        <h6 class="text-soft">Notes for Manufacturer</h6>
+                                        <p class="text-soft">{{ po.note_for_manufacturer }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="card">
+                                <div class="card-inner text-center">
+                                    <em class="icon ni ni-package" style="font-size: 3rem; opacity: 0.3;"></em>
+                                    <h5 class="mt-3">No Items to Receive</h5>
+                                    <p class="text-soft">All purchase order items have been received.</p>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

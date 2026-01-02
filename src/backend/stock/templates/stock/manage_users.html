@@ -1,0 +1,128 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-lg mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        
+                        <div class="nk-block-head">
+                            <div class="nk-block-between">
+                                <div class="nk-block-head-content">
+                                    <h4 class="nk-block-title">{{ title }}</h4>
+                                    <p>Manage user accounts and access control</p>
+                                </div>
+                                <div class="nk-block-head-content">
+                                    <a href="{% url 'add_user' %}" class="btn btn-primary">
+                                        <i class="icon ni ni-plus"></i> Add New User
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Search Form -->
+                        <div class="card mb-4">
+                            <div class="card-inner">
+                                <form method="get" class="form-inline">
+                                    {{ form|crispy }}
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Users Table -->
+                        <div class="card">
+                            <div class="card-inner">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Username</th>
+                                            <th>Full Name</th>
+                                            <th>Email</th>
+                                            <th>Role</th>
+                                            <th>Status</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for user in users %}
+                                        <tr>
+                                            <td>
+                                                <strong>{{ user.username }}</strong>
+                                                {% if user.is_superuser %}
+                                                <span class="badge badge-success">Superuser</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ user.first_name }} {{ user.last_name|default:"" }}</td>
+                                            <td>{{ user.email|default:"—" }}</td>
+                                            <td>
+                                                <span class="badge badge-pill 
+                                                    {% if user.role.role == 'admin' %}badge-danger
+                                                    {% elif user.role.role == 'owner' %}badge-primary
+                                                    {% elif user.role.role == 'logistics' %}badge-info
+                                                    {% elif user.role.role == 'warehouse' %}badge-warning
+                                                    {% else %}badge-secondary{% endif %}">
+                                                    {{ user.role.get_role_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                {% if user.is_active %}
+                                                <span class="badge badge-success">Active</span>
+                                                {% else %}
+                                                <span class="badge badge-danger">Inactive</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ user.role.created_at|date:"M d, Y" }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'edit_user' user.id %}" class="btn btn-sm btn-outline-primary">
+                                                        <i class="icon ni ni-edit"></i> Edit
+                                                    </a>
+                                                    {% if not user.is_superuser and user != request.user %}
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" 
+                                                            onclick="confirmDelete('{{ user.username }}', {% url 'delete_user' user.id %})">
+                                                        <i class="icon ni ni-trash"></i> Delete
+                                                    </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="7" class="text-center">No users found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script>
+function confirmDelete(username, deleteUrl) {
+    if (confirm(`Are you sure you want to delete user "${username}"? This action cannot be undone.`)) {
+        fetch(deleteUrl, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        }).then(response => {
+            if (response.ok) {
+                location.reload();
+            }
+        });
+    }
+}
+</script>

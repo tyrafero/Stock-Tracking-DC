@@ -1,0 +1,148 @@
+# Stock Tracking DC - Production Docker Compose
+# Based on InvenTree architecture with 5 services
+
+services:
+  # MySQL Database
+  db:
+    image: mysql:8.0
+    container_name: stockdc-db
+    restart: unless-stopped
+    volumes:
+      - db_data:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-stock_tracking_db}
+      MYSQL_USER: ${MYSQL_USER:-stock_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    ports:
+      - "3306:3306"
+    networks:
+      - stockdc-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache & Session Store
+  redis:
+    image: redis:7-alpine
+    container_name: stockdc-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - stockdc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Django Backend API (Gunicorn)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: production
+    container_name: stockdc-backend
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - |
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn stockmgtr.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile -
+    volumes:
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-stock_tracking_db}
+      - MYSQL_USER=${MYSQL_USER:-stock_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - DATABASE_URL=mysql://${MYSQL_USER:-stock_user}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-stock_tracking_db}
+      - REDIS_URL=redis://redis:6379/0
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    networks:
+      - stockdc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Celery Background Worker
+  worker:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+      target: production
+    container_name: stockdc-worker
+    restart: unless-stopped
+    command: celery -A stockmgtr worker -l info --concurrency=2
+    volumes:
+      - media_data:/app/media
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=${DEBUG:-False}
+      - SECRET_KEY=${SECRET_KEY}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-stock_tracking_db}
+      - MYSQL_USER=${MYSQL_USER:-stock_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - DATABASE_URL=mysql://${MYSQL_USER:-stock_user}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-stock_tracking_db}
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - stockdc-network
+
+  # React Frontend (Production - nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend/Dockerfile
+      target: production
+    container_name: stockdc-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - stockdc-network
+    environment:
+      - VITE_API_URL=http://backend:8000/api/v1
+
+volumes:
+  db_data:
+    driver: local
+  static_data:
+    driver: local
+  media_data:
+    driver: local
+
+networks:
+  stockdc-network:
+    driver: bridge

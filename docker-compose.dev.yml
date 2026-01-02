@@ -1,0 +1,59 @@
+# Stock Tracking DC - Development Docker Compose Override
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+services:
+  # Backend in development mode
+  backend:
+    build:
+      target: development
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./src/backend:/app
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    environment:
+      - DEBUG=True
+      - DJANGO_SETTINGS_MODULE=stockmgtr.settings
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-stock_tracking_db}
+      - MYSQL_USER=${MYSQL_USER:-stock_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - DATABASE_URL=mysql://${MYSQL_USER:-stock_user}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-stock_tracking_db}
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+
+  # Worker in development mode
+  worker:
+    build:
+      target: development
+    volumes:
+      - ./src/backend:/app
+      - media_data:/app/media
+    environment:
+      - DEBUG=True
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-stock_tracking_db}
+      - MYSQL_USER=${MYSQL_USER:-stock_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - DATABASE_URL=mysql://${MYSQL_USER:-stock_user}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE:-stock_tracking_db}
+      - REDIS_URL=redis://redis:6379/0
+    command: celery -A stockmgtr worker -l debug --concurrency=1
+
+  # Frontend in development mode (Vite dev server)
+  frontend:
+    build:
+      target: development
+    command: npm run dev -- --host 0.0.0.0
+    volumes:
+      - ./src/frontend:/app
+      - /app/node_modules  # Anonymous volume for node_modules
+    ports:
+      - "5173:5173"  # Vite dev server
+    environment:
+      - VITE_API_URL=http://localhost:8000/api/v1
+      - NODE_ENV=development

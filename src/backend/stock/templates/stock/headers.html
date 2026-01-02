@@ -1,0 +1,1595 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en" class="js">
+<script>
+// Apply permanent dark mode immediately and clean up any theme preferences
+(function() {
+    // Clean up any existing theme preferences
+    localStorage.removeItem('theme');
+    
+    // Always apply dark mode - no theme switching
+    document.documentElement.classList.add('dark-mode');
+    if (document.body) {
+        document.body.classList.add('dark-mode');
+    }
+    
+    // Ensure body gets the class after it's available
+    document.addEventListener('DOMContentLoaded', function() {
+        document.body.classList.add('dark-mode');
+        // Remove any light mode classes that might exist
+        document.body.classList.remove('light-mode', 'nk-body-light');
+    });
+})();
+</script>
+
+<head>
+    <base href="../">
+    <meta charset="utf-8">
+    <meta name="author" content="Softnio">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="A powerful and conceptual apps base dashboard template that especially build for developers and programmers.">
+    <!-- Fav Icon  -->
+    <link rel="shortcut icon" href="./images/favicon.png">
+    <!-- Page Title  -->
+    <title></title>
+    <!-- StyleSheets  -->
+    <link rel="stylesheet" href="{% static 'css/dashlite.css' %}">
+    <link id="skin-default" rel="stylesheet" href="{% static 'css/theme.css' %}">
+    <link href="{% static 'js/jquery-ui-1.12.1/jquery-ui.min.css' %}" rel="stylesheet">
+    <link href="{% static 'js/jquery-ui-1.12.1/jquery-ui.structure.min.css' %}" rel="stylesheet">
+    <link href="{% static 'js/jquery-ui-1.12.1/jquery-ui.theme.min.css' %}" rel="stylesheet">
+     <link href="{% static 'css/all.css' %}" rel="stylesheet">
+    <link href="{% static 'css/sweetalert2.min.css' %}" rel="stylesheet">
+     <link href="{% static 'css/navbar-top-fixed.css' %}" rel="stylesheet">
+     <style>
+         /* Permanent dark mode styles */
+         :root {
+             --background-color: #1c2b3e;
+             --text-color: #c4cefe;
+             --sidebar-bg: #162031;
+             --header-bg: #162031;
+         }
+         
+         /* Apply dark mode styles globally */
+         html, body {
+             background-color: #1c2b3e !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Dark mode overrides for main elements */
+         .dark-mode body {
+             background-color: #1c2b3e !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .nk-sidebar {
+             background: #101924 !important;
+             border-right-color: #203247 !important;
+         }
+         
+         .dark-mode .nk-header {
+             background: #101924 !important;
+             border-color: #203247 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-link {
+             color: #8699b2 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-link:hover,
+         .dark-mode .nk-sidebar .active > .nk-menu-link {
+             background: #182536 !important;
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-icon {
+             color: #9faec2 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-text {
+             color: #8699b2 !important;
+         }
+         
+         .dark-mode .nk-sidebar .nk-menu-link:hover .nk-menu-text,
+         .dark-mode .nk-sidebar .active > .nk-menu-link .nk-menu-text {
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .card {
+             background: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .form-control {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .form-control:focus {
+             background-color: #1e2d3f !important;
+             border-color: #854fff !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Additional form element styling for dark mode */
+         .dark-mode input[type="text"],
+         .dark-mode input[type="email"],
+         .dark-mode input[type="password"],
+         .dark-mode input[type="number"],
+         .dark-mode input[type="date"],
+         .dark-mode input[type="datetime-local"],
+         .dark-mode input[type="tel"],
+         .dark-mode input[type="url"],
+         .dark-mode textarea,
+         .dark-mode select {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode input[type="text"]:focus,
+         .dark-mode input[type="email"]:focus,
+         .dark-mode input[type="password"]:focus,
+         .dark-mode input[type="number"]:focus,
+         .dark-mode input[type="date"]:focus,
+         .dark-mode input[type="datetime-local"]:focus,
+         .dark-mode input[type="tel"]:focus,
+         .dark-mode input[type="url"]:focus,
+         .dark-mode textarea:focus,
+         .dark-mode select:focus {
+             background-color: #1e2d3f !important;
+             border-color: #854fff !important;
+             color: #c4cefe !important;
+             outline: none !important;
+             box-shadow: 0 0 0 0.2rem rgba(133, 79, 255, 0.25) !important;
+         }
+         
+         /* Form labels and text styling */
+         .dark-mode .form-label,
+         .dark-mode label {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .form-text,
+         .dark-mode .text-muted,
+         .dark-mode small {
+             color: #8699b2 !important;
+         }
+         
+         /* Select dropdown styling */
+         .dark-mode select option {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Placeholder text */
+         .dark-mode input::placeholder,
+         .dark-mode textarea::placeholder {
+             color: #8699b2 !important;
+             opacity: 1 !important;
+         }
+         
+         /* Additional input styling */
+         .dark-mode .input-group-text {
+             background-color: #374659 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Bootstrap form styling overrides */
+         .dark-mode .form-select,
+         .dark-mode .custom-select {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Crispy forms styling */
+         .dark-mode .crispy-field input,
+         .dark-mode .crispy-field select,
+         .dark-mode .crispy-field textarea {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* File inputs */
+         .dark-mode input[type="file"] {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Checkboxes and radios */
+         .dark-mode .form-check-input {
+             background-color: #1e2d3f !important;
+             border-color: #374659 !important;
+         }
+         
+         .dark-mode .form-check-input:checked {
+             background-color: #854fff !important;
+             border-color: #854fff !important;
+         }
+         
+         .dark-mode .form-check-label {
+             color: #c4cefe !important;
+         }
+         
+         /* More aggressive form styling for all contexts */
+         body.dark-mode input,
+         body.dark-mode textarea,
+         body.dark-mode select {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #374659 !important;
+         }
+         
+         body.dark-mode input:focus,
+         body.dark-mode textarea:focus,
+         body.dark-mode select:focus {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #854fff !important;
+             outline: none !important;
+             box-shadow: 0 0 0 0.2rem rgba(133, 79, 255, 0.25) !important;
+         }
+         
+         /* Target specific form elements that might have white backgrounds */
+         body.dark-mode input[id^="id_"],
+         body.dark-mode textarea[id^="id_"],
+         body.dark-mode select[id^="id_"] {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #374659 !important;
+         }
+         
+         /* Force styling on payment and invoice forms */
+         body.dark-mode .row input,
+         body.dark-mode .row textarea,
+         body.dark-mode .row select,
+         body.dark-mode .col-md-6 input,
+         body.dark-mode .col-md-6 textarea,
+         body.dark-mode .col-md-6 select {
+             background-color: #1e2d3f !important;
+             color: #c4cefe !important;
+             border-color: #374659 !important;
+         }
+         
+         /* Fix white background sections in invoice forms */
+         .dark-mode .form-section {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .po-summary-card {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .payment-summary,
+         .dark-mode .bg-light {
+             background-color: #243447 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .alert-info {
+             background-color: #1e3a52 !important;
+             border-color: #2c5aa0 !important;
+             color: #c4cefe !important;
+         }
+         
+         /* Card styling for dark mode */
+         .dark-mode .card {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .card-inner {
+             background-color: #243447 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .table {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .table-bordered th,
+         .dark-mode .table-bordered td {
+             border-color: #374659 !important;
+         }
+         
+         .dark-mode .btn-white {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .btn-light {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .modal-content {
+             background-color: #243447 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .dropdown-menu {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .dropdown-item {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode .dropdown-item:hover {
+             background-color: #1e2d3f !important;
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .nk-content {
+             background-color: #1c2b3e !important;
+         }
+         
+         /* User dropdown menu styling for dark mode */
+         .dark-mode .link-list li a {
+             color: #c4cefe !important;
+             padding: 0.75rem 1.25rem;
+             display: flex;
+             align-items: center;
+             text-decoration: none;
+             transition: background-color 0.15s ease;
+         }
+         
+         .dark-mode .link-list li a:hover {
+             background-color: #1e2d3f !important;
+             color: #98a3ff !important;
+         }
+         
+         .dark-mode .link-list li a .icon {
+             margin-right: 0.5rem;
+             color: #9faec2 !important;
+         }
+         
+         .dark-mode .link-list li a:hover .icon {
+             color: #98a3ff !important;
+         }
+         
+         .search-wrapper {
+             position: relative;
+         }
+         .search-form {
+             position: relative;
+             display: flex;
+             align-items: center;
+         }
+         .search-form .search-icon {
+             position: absolute;
+             left: 15px;
+             z-index: 1;
+             color: #999;
+             transition: color 0.3s ease;
+         }
+         .search-form .search-icon:hover {
+             color: #007bff;
+         }
+         .search-form input {
+             padding-left: 45px;
+             transition: box-shadow 0.3s ease;
+         }
+         .search-form input:focus {
+             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+         }
+         
+         /* Desktop search bar - make it bigger */
+         @media (min-width: 1200px) {
+             .nk-header-search {
+                 flex: 1;
+                 max-width: 500px; /* Increased from default */
+                 margin-left: 2rem;
+                 margin-right: 2rem;
+             }
+             .search-form input {
+                 min-width: 400px; /* Minimum width for desktop */
+             }
+         }
+         
+         /* Mobile search improvements */
+         @media (max-width: 1199.98px) {
+             .nk-header-search {
+                 display: none; /* Hide default search bar on mobile */
+             }
+             .mobile-search-toggle {
+                 display: inline-block !important;
+             }
+             .mobile-search-overlay {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 right: 0;
+                 bottom: 0;
+                 background: rgba(0, 0, 0, 0.5);
+                 z-index: 9999;
+                 display: none;
+             }
+             .mobile-search-container {
+                 position: fixed;
+                 top: 0;
+                 left: 0;
+                 right: 0;
+                 background: white;
+                 z-index: 10000;
+                 padding: 1rem;
+                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                 display: none;
+             }
+             .mobile-search-container.show {
+                 display: block;
+             }
+             .mobile-search-overlay.show {
+                 display: block;
+             }
+             .mobile-search-form {
+                 display: flex;
+                 align-items: center;
+                 gap: 1rem;
+             }
+             .mobile-search-form input {
+                 flex: 1;
+                 padding: 12px 45px 12px 15px;
+                 border: 1px solid #e3e7f1;
+                 border-radius: 8px;
+                 font-size: 16px; /* Prevent zoom on iOS */
+             }
+             .mobile-search-close {
+                 background: none;
+                 border: none;
+                 font-size: 18px;
+                 color: #666;
+                 cursor: pointer;
+             }
+         }
+         
+         /* Hide mobile search toggle on desktop */
+         @media (min-width: 1200px) {
+             .mobile-search-toggle {
+                 display: none !important;
+             }
+         }
+         
+         /* Live Search Suggestions */
+         .search-suggestions {
+             position: absolute;
+             top: 100%;
+             left: 0;
+             right: 0;
+             background: white;
+             border: 1px solid #e3e7f1;
+             border-radius: 8px;
+             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+             z-index: 1000;
+             max-height: 400px;
+             overflow-y: auto;
+             display: none;
+         }
+         .search-suggestions.show {
+             display: block;
+         }
+         .suggestion-item {
+             display: flex;
+             align-items: center;
+             padding: 12px 16px;
+             cursor: pointer;
+             transition: background-color 0.2s ease;
+             border-bottom: 1px solid #f5f6fa;
+         }
+         .suggestion-item:hover, .suggestion-item.highlighted {
+             background-color: #f8f9fc;
+         }
+         .suggestion-item:last-child {
+             border-bottom: none;
+         }
+         .suggestion-image {
+             width: 40px;
+             height: 40px;
+             border-radius: 4px;
+             object-fit: cover;
+             margin-right: 12px;
+             background-color: #f5f6fa;
+         }
+         .suggestion-content {
+             flex: 1;
+         }
+         .suggestion-title {
+             font-weight: 600;
+             color: #1c1c28;
+             margin-bottom: 2px;
+         }
+         .suggestion-title.low-stock {
+             color: #e85347;
+         }
+         .suggestion-meta {
+             font-size: 12px;
+             color: #8094ae;
+         }
+         .suggestion-quantity {
+             font-size: 12px;
+             color: #526484;
+             background: #e3e7f1;
+             padding: 2px 8px;
+             border-radius: 4px;
+             margin-left: 8px;
+         }
+         .suggestion-quantity.low-stock {
+             background: #ffeaea;
+             color: #e85347;
+         }
+         .no-suggestions {
+             padding: 16px;
+             text-align: center;
+             color: #8094ae;
+             font-size: 14px;
+         }
+         
+         /* Notification Dropdown Styles */
+         .dark-mode #notifications-dropdown {
+             background-color: #243447 !important;
+             border-color: #374659 !important;
+             color: #c4cefe !important;
+             min-width: 350px;
+             max-width: 400px;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head {
+             background-color: #1e2d3f !important;
+             border-bottom: 1px solid #374659 !important;
+             padding: 0.75rem 1.25rem;
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head h6 {
+             color: #c4cefe !important;
+             margin: 0;
+             font-weight: 600;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head a {
+             color: #98a3ff !important;
+             font-size: 0.875rem;
+             text-decoration: none;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-head a:hover {
+             color: #c4cefe !important;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-body {
+             max-height: 350px;
+             overflow-y: auto;
+             padding: 0;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-foot {
+             background-color: #1e2d3f !important;
+             border-top: 1px solid #374659 !important;
+             padding: 0.75rem 1.25rem;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-foot a {
+             color: #98a3ff !important;
+             text-decoration: none;
+             font-size: 0.875rem;
+         }
+         
+         .dark-mode #notifications-dropdown .dropdown-foot a:hover {
+             color: #c4cefe !important;
+         }
+         
+         .notification-item {
+             padding: 0.75rem 1.25rem;
+             border-bottom: 1px solid #374659;
+             cursor: pointer;
+             transition: background-color 0.15s ease;
+             display: flex;
+             align-items: flex-start;
+             gap: 0.75rem;
+         }
+         
+         .dark-mode .notification-item:hover {
+             background-color: #1e2d3f !important;
+         }
+         
+         .dark-mode .notification-item:last-child {
+             border-bottom: none;
+         }
+         
+         .notification-icon {
+             width: 32px;
+             height: 32px;
+             border-radius: 50%;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             flex-shrink: 0;
+             font-size: 14px;
+         }
+         
+         .notification-icon.priority-low {
+             background-color: #e3f2fd;
+             color: #1976d2;
+         }
+         
+         .notification-icon.priority-medium {
+             background-color: #fff3e0;
+             color: #f57c00;
+         }
+         
+         .notification-icon.priority-high {
+             background-color: #ffebee;
+             color: #d32f2f;
+         }
+         
+         .notification-icon.priority-urgent {
+             background-color: #f3e5f5;
+             color: #7b1fa2;
+         }
+         
+         .dark-mode .notification-icon.priority-low {
+             background-color: #1e3a52;
+             color: #64b5f6;
+         }
+         
+         .dark-mode .notification-icon.priority-medium {
+             background-color: #2e2310;
+             color: #ffb74d;
+         }
+         
+         .dark-mode .notification-icon.priority-high {
+             background-color: #3e1419;
+             color: #f48fb1;
+         }
+         
+         .dark-mode .notification-icon.priority-urgent {
+             background-color: #2e1434;
+             color: #ce93d8;
+         }
+         
+         .notification-content {
+             flex: 1;
+             min-width: 0;
+         }
+         
+         .notification-title {
+             font-weight: 600;
+             color: #c4cefe;
+             margin-bottom: 0.25rem;
+             font-size: 0.875rem;
+             line-height: 1.3;
+         }
+         
+         .notification-message {
+             color: #8699b2;
+             font-size: 0.8rem;
+             line-height: 1.4;
+             margin-bottom: 0.25rem;
+         }
+         
+         .notification-time {
+             color: #8699b2;
+             font-size: 0.75rem;
+         }
+         
+         .notification-count-badge {
+             position: relative;
+             top: -8px;
+             right: -8px;
+             background-color: #e74c3c;
+             color: white;
+             border-radius: 50%;
+             font-size: 0.7rem;
+             min-width: 18px;
+             height: 18px;
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             font-weight: bold;
+         }
+         
+         .no-notifications {
+             padding: 2rem 1.25rem;
+             text-align: center;
+             color: #8699b2;
+         }
+         
+         .no-notifications em {
+             font-size: 2rem;
+             opacity: 0.5;
+             margin-bottom: 0.5rem;
+             display: block;
+         }
+     </style>
+     <script>
+         document.addEventListener('DOMContentLoaded', function() {
+             const searchInput = document.getElementById('search-input');
+             const suggestionsContainer = document.getElementById('search-suggestions');
+             let searchTimeout;
+             let selectedIndex = -1;
+             
+             if (!searchInput || !suggestionsContainer) return;
+
+             // Handle input changes for live search
+             searchInput.addEventListener('input', function(e) {
+                 const query = e.target.value.trim();
+                 clearTimeout(searchTimeout);
+                 
+                 if (query.length < 2) {
+                     hideSuggestions();
+                     return;
+                 }
+                 
+                 // Debounce the search requests
+                 searchTimeout = setTimeout(function() {
+                     performLiveSearch(query);
+                 }, 300);
+             });
+
+             // Handle keyboard navigation
+             searchInput.addEventListener('keydown', function(e) {
+                 const suggestions = suggestionsContainer.querySelectorAll('.suggestion-item');
+                 
+                 if (e.key === 'ArrowDown') {
+                     e.preventDefault();
+                     selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+                     updateHighlight(suggestions);
+                 } else if (e.key === 'ArrowUp') {
+                     e.preventDefault();
+                     selectedIndex = Math.max(selectedIndex - 1, -1);
+                     updateHighlight(suggestions);
+                 } else if (e.key === 'Enter') {
+                     e.preventDefault();
+                     if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                         suggestions[selectedIndex].click();
+                     } else {
+                         document.getElementById('global-search-form').submit();
+                     }
+                 } else if (e.key === 'Escape') {
+                     hideSuggestions();
+                 }
+             });
+
+             // Hide suggestions when clicking outside
+             document.addEventListener('click', function(e) {
+                 if (!e.target.closest('.search-wrapper')) {
+                     hideSuggestions();
+                 }
+             });
+
+             function performLiveSearch(query) {
+                 fetch(`/api/live-search/?q=${encodeURIComponent(query)}`)
+                     .then(response => response.json())
+                     .then(data => {
+                         displaySuggestions(data.suggestions);
+                     })
+                     .catch(error => {
+                         console.error('Search error:', error);
+                         hideSuggestions();
+                     });
+             }
+
+             function displaySuggestions(suggestions) {
+                 selectedIndex = -1;
+                 
+                 if (suggestions.length === 0) {
+                     suggestionsContainer.innerHTML = '<div class="no-suggestions">No items found</div>';
+                 } else {
+                     suggestionsContainer.innerHTML = suggestions.map(item => `
+                         <div class="suggestion-item" data-id="${item.id}" onclick="goToItem(${item.id})">
+                             ${item.image_url ? 
+                                 `<img src="${item.image_url}" alt="${item.item_name}" class="suggestion-image">` : 
+                                 '<div class="suggestion-image"></div>'
+                             }
+                             <div class="suggestion-content">
+                                 <div class="suggestion-title ${item.low_stock ? 'low-stock' : ''}">${item.item_name}</div>
+                                 <div class="suggestion-meta">
+                                     ${item.category}
+                                     ${item.condition === 'new' ? 
+                                         `<span class="badge badge-success" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                         item.condition === 'bstock' ? 
+                                         `<span class="badge badge-warning" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                         item.condition === 'demo_unit' ?
+                                         `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                         `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
+                                     }
+                                     <br><small style="color: #8094ae;">Total: ${item.quantity} units</small>
+                                 </div>
+                             </div>
+                             <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
+                         </div>
+                     `).join('');
+                 }
+                 
+                 showSuggestions();
+             }
+
+             function updateHighlight(suggestions) {
+                 suggestions.forEach((item, index) => {
+                     item.classList.toggle('highlighted', index === selectedIndex);
+                 });
+             }
+
+             function showSuggestions() {
+                 suggestionsContainer.classList.add('show');
+             }
+
+             function hideSuggestions() {
+                 suggestionsContainer.classList.remove('show');
+                 selectedIndex = -1;
+             }
+
+             // Global function to handle item clicks
+             window.goToItem = function(itemId) {
+                 window.location.href = `/stock_detail/${itemId}/`;
+             };
+
+             // Mobile Search Functionality
+             const mobileSearchBtn = document.getElementById('mobile-search-btn');
+             const mobileSearchContainer = document.getElementById('mobile-search-container');
+             const mobileSearchOverlay = document.getElementById('mobile-search-overlay');
+             const mobileSearchClose = document.getElementById('mobile-search-close');
+             const mobileSearchInput = document.getElementById('mobile-search-input');
+             const mobileSearchSuggestions = document.getElementById('mobile-search-suggestions');
+
+             function showMobileSearch() {
+                 mobileSearchContainer.classList.add('show');
+                 mobileSearchOverlay.classList.add('show');
+                 document.body.style.overflow = 'hidden';
+                 setTimeout(() => mobileSearchInput.focus(), 100);
+             }
+
+             function hideMobileSearch() {
+                 mobileSearchContainer.classList.remove('show');
+                 mobileSearchOverlay.classList.remove('show');
+                 document.body.style.overflow = '';
+                 mobileSearchSuggestions.classList.remove('show');
+             }
+
+             if (mobileSearchBtn) {
+                 mobileSearchBtn.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     showMobileSearch();
+                 });
+             }
+
+             if (mobileSearchClose) {
+                 mobileSearchClose.addEventListener('click', hideMobileSearch);
+             }
+
+             if (mobileSearchOverlay) {
+                 mobileSearchOverlay.addEventListener('click', hideMobileSearch);
+             }
+
+             // Mobile search input functionality (similar to desktop)
+             if (mobileSearchInput && mobileSearchSuggestions) {
+                 let mobileSearchTimeout;
+                 let mobileSelectedIndex = -1;
+
+                 mobileSearchInput.addEventListener('input', function(e) {
+                     const query = e.target.value.trim();
+                     clearTimeout(mobileSearchTimeout);
+                     
+                     if (query.length < 2) {
+                         hideMobileSuggestions();
+                         return;
+                     }
+                     
+                     mobileSearchTimeout = setTimeout(function() {
+                         performMobileLiveSearch(query);
+                     }, 300);
+                 });
+
+                 mobileSearchInput.addEventListener('keydown', function(e) {
+                     const suggestions = mobileSearchSuggestions.querySelectorAll('.suggestion-item');
+                     
+                     if (e.key === 'ArrowDown') {
+                         e.preventDefault();
+                         mobileSelectedIndex = Math.min(mobileSelectedIndex + 1, suggestions.length - 1);
+                         updateMobileHighlight(suggestions);
+                     } else if (e.key === 'ArrowUp') {
+                         e.preventDefault();
+                         mobileSelectedIndex = Math.max(mobileSelectedIndex - 1, -1);
+                         updateMobileHighlight(suggestions);
+                     } else if (e.key === 'Enter') {
+                         e.preventDefault();
+                         if (mobileSelectedIndex >= 0 && suggestions[mobileSelectedIndex]) {
+                             suggestions[mobileSelectedIndex].click();
+                         } else {
+                             document.getElementById('mobile-search-form').submit();
+                         }
+                     } else if (e.key === 'Escape') {
+                         hideMobileSearch();
+                     }
+                 });
+
+                 function performMobileLiveSearch(query) {
+                     fetch(`/api/live-search/?q=${encodeURIComponent(query)}`)
+                         .then(response => response.json())
+                         .then(data => {
+                             displayMobileSuggestions(data.suggestions);
+                         })
+                         .catch(error => {
+                             console.error('Mobile search error:', error);
+                             hideMobileSuggestions();
+                         });
+                 }
+
+                 function displayMobileSuggestions(suggestions) {
+                     mobileSelectedIndex = -1;
+                     
+                     if (suggestions.length === 0) {
+                         mobileSearchSuggestions.innerHTML = '<div class="no-suggestions">No items found</div>';
+                     } else {
+                         mobileSearchSuggestions.innerHTML = suggestions.map(item => `
+                             <div class="suggestion-item" data-id="${item.id}" onclick="goToItem(${item.id})">
+                                 ${item.image_url ? 
+                                     `<img src="${item.image_url}" alt="${item.item_name}" class="suggestion-image">` : 
+                                     '<div class="suggestion-image"></div>'
+                                 }
+                                 <div class="suggestion-content">
+                                     <div class="suggestion-title ${item.low_stock ? 'low-stock' : ''}">${item.item_name}</div>
+                                     <div class="suggestion-meta">
+                                         ${item.category}
+                                         ${item.condition === 'new' ? 
+                                             `<span class="badge badge-success" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                             item.condition === 'bstock' ? 
+                                             `<span class="badge badge-warning" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                             item.condition === 'demo_unit' ?
+                                             `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                             `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
+                                         }
+                                         <br><small style="color: #8094ae;">Total: ${item.quantity} units</small>
+                                     </div>
+                                 </div>
+                                 <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
+                             </div>
+                         `).join('');
+                     }
+                     
+                     showMobileSuggestions();
+                 }
+
+                 function updateMobileHighlight(suggestions) {
+                     suggestions.forEach((item, index) => {
+                         item.classList.toggle('highlighted', index === mobileSelectedIndex);
+                     });
+                 }
+
+                 function showMobileSuggestions() {
+                     mobileSearchSuggestions.classList.add('show');
+                 }
+
+                 function hideMobileSuggestions() {
+                     mobileSearchSuggestions.classList.remove('show');
+                     mobileSelectedIndex = -1;
+                 }
+             }
+         });
+     </script>
+    
+    <script>
+        function initializeNotifications() {
+            let notificationCheckInterval;
+            
+            // Elements
+            const notificationsBell = document.getElementById('notifications-bell');
+            const notificationsDropdown = document.getElementById('notifications-dropdown');
+            const notificationsList = document.getElementById('notifications-list');
+            const notificationCount = document.getElementById('notification-count');
+            const markAllReadBtn = document.getElementById('mark-all-read');
+            
+            if (!notificationsBell || !notificationsList) {
+                console.log('Notification elements not found');
+                return;
+            }
+            
+            // Load notifications when dropdown is opened
+            notificationsBell.addEventListener('click', function(e) {
+                e.preventDefault();
+                loadNotifications();
+            });
+            
+            // Mark all as read functionality
+            markAllReadBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                markAllNotificationsRead();
+            });
+            
+            // Load initial notification count
+            updateNotificationCount();
+            
+            // Set up periodic checking for new notifications (every 30 seconds)
+            notificationCheckInterval = setInterval(updateNotificationCount, 30000);
+            
+            function loadNotifications() {
+                // Show loading state
+                notificationsList.innerHTML = `
+                    <div class="text-center py-4">
+                        <em class="icon ni ni-loader"></em>
+                        <span>Loading notifications...</span>
+                    </div>
+                `;
+                
+                fetch('/api/notifications/')
+                    .then(response => response.json())
+                    .then(data => {
+                        displayNotifications(data.notifications);
+                    })
+                    .catch(error => {
+                        console.error('Error loading notifications:', error);
+                        notificationsList.innerHTML = `
+                            <div class="no-notifications">
+                                <em class="icon ni ni-alert-circle"></em>
+                                <p>Failed to load notifications</p>
+                            </div>
+                        `;
+                    });
+            }
+            
+            function displayNotifications(notifications) {
+                if (!notifications || notifications.length === 0) {
+                    notificationsList.innerHTML = `
+                        <div class="no-notifications">
+                            <em class="icon ni ni-bell-off"></em>
+                            <p>No new notifications</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '';
+                notifications.forEach(notification => {
+                    html += createNotificationHTML(notification);
+                });
+                
+                notificationsList.innerHTML = html;
+                
+                // Add click handlers for notification items
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const notificationId = this.dataset.notificationId;
+                        const actionUrl = this.dataset.actionUrl;
+                        
+                        // Update UI immediately before marking as read
+                        const countElement = document.getElementById('notification-count');
+                        if (countElement) {
+                            const currentCount = parseInt(countElement.textContent) || 0;
+                            const newCount = Math.max(0, currentCount - 1);
+                            
+                            console.log('Updating count from', currentCount, 'to', newCount); // Debug log
+                            
+                            if (newCount > 0) {
+                                countElement.textContent = newCount > 99 ? '99+' : newCount;
+                                countElement.style.display = 'block';
+                            } else {
+                                countElement.style.display = 'none';
+                            }
+                        }
+                        
+                        // Remove this notification from the dropdown
+                        this.remove();
+                        
+                        // Mark as read (async, don't wait for response)
+                        markNotificationRead(notificationId);
+                        
+                        // Small delay to ensure UI update is visible before redirect
+                        setTimeout(() => {
+                            // Navigate to action URL if available, otherwise go to notifications list
+                            if (actionUrl && actionUrl !== 'null' && actionUrl !== '#' && actionUrl !== 'None') {
+                                window.location.href = actionUrl;
+                            } else {
+                                // If no specific action URL, go to notifications list
+                                window.location.href = '/notifications/';
+                            }
+                        }, 100); // 100ms delay
+                    });
+                });
+            }
+            
+            function createNotificationHTML(notification) {
+                const iconClass = notification.icon_class || 'ni ni-bell';
+                const priorityClass = `priority-${notification.priority}`;
+                const actionUrl = notification.action_url || '#';
+                
+                return `
+                    <div class="notification-item" data-notification-id="${notification.id}" data-action-url="${actionUrl}">
+                        <div class="notification-icon ${priorityClass}">
+                            <em class="icon ${iconClass}"></em>
+                        </div>
+                        <div class="notification-content">
+                            <div class="notification-title">${escapeHtml(notification.title)}</div>
+                            <div class="notification-message">${escapeHtml(notification.message)}</div>
+                            <div class="notification-time">${notification.time_ago}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            function updateNotificationCount() {
+                fetch('/api/notifications/count/')
+                    .then(response => response.json())
+                    .then(data => {
+                        const count = data.count;
+                        if (count > 0) {
+                            notificationCount.textContent = count > 99 ? '99+' : count;
+                            notificationCount.style.display = 'block';
+                        } else {
+                            notificationCount.style.display = 'none';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error getting notification count:', error);
+                    });
+            }
+            
+            function markNotificationRead(notificationId) {
+                const formData = new FormData();
+                formData.append('notification_id', notificationId);
+                formData.append('csrfmiddlewaretoken', getCsrfToken());
+                
+                fetch('/api/notifications/mark-read/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the count immediately
+                        updateNotificationCount();
+                        // Also remove the notification from the dropdown
+                        const notificationElement = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                        if (notificationElement) {
+                            notificationElement.remove();
+                        }
+                        // If no notifications left, show empty state
+                        const remainingNotifications = document.querySelectorAll('.notification-item');
+                        if (remainingNotifications.length === 0) {
+                            notificationsList.innerHTML = `
+                                <div class="no-notifications">
+                                    <em class="icon ni ni-bell-off"></em>
+                                    <p>No new notifications</p>
+                                </div>
+                            `;
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error marking notification as read:', error);
+                });
+            }
+            
+            function markAllNotificationsRead() {
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', getCsrfToken());
+                
+                fetch('/api/notifications/mark-all-read/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Update the count immediately
+                        updateNotificationCount();
+                        // Show empty state in dropdown
+                        notificationsList.innerHTML = `
+                            <div class="no-notifications">
+                                <em class="icon ni ni-bell-off"></em>
+                                <p>No new notifications</p>
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error marking all notifications as read:', error);
+                });
+            }
+            
+            function getCsrfToken() {
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const [name, value] = cookie.trim().split('=');
+                    if (name === 'csrftoken') {
+                        return value;
+                    }
+                }
+                return '';
+            }
+            
+            function escapeHtml(text) {
+                if (!text) return '';
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+        }
+        
+        // Initialize notifications when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeNotifications();
+        });
+    </script>
+</head>
+<body class="nk-body npc-default has-sidebar dark-mode">
+ <div class="nk-app-root">
+        <!-- main @s -->
+        <div class="nk-main ">
+             <!-- sidebar @s -->
+            <div class="nk-sidebar nk-sidebar-fixed is-light " data-content="sidebarMenu">
+                <div class="nk-sidebar-element nk-sidebar-head">
+                    <div class="nk-sidebar-brand">
+                        <a href="/" class="logo-link nk-sidebar-logo">
+                            <img class="logo-light logo-img" src="{% static 'images/logo.png' %}"  alt="logo">
+                            <img class="logo-dark logo-img" src="{% static 'images/logo-dark.png' %}"  alt="logo-dark">
+                            <img class="logo-small logo-img logo-img-small" src="{% static 'images/logo-small.png' %}"  alt="logo-small">
+                        </a>
+                    </div>
+                    <div class="nk-menu-trigger mr-n2">
+                        <a href="#" class="nk-nav-toggle nk-quick-nav-icon d-xl-none" data-target="sidebarMenu"><em class="icon ni ni-arrow-left"></em></a>
+                        <a href="#" class="nk-nav-compact nk-quick-nav-icon d-none d-xl-inline-flex" data-target="sidebarMenu"><em class="icon ni ni-menu"></em></a>
+                    </div>
+                </div><!-- .nk-sidebar-element -->
+                <div class="nk-sidebar-element">
+                    <div class="nk-sidebar-content">
+                        <div class="nk-sidebar-menu" data-simplebar>
+                            <ul class="nk-menu">
+                                 {% if request.user.is_authenticated %}
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Navigation</h6>
+                                </li><!-- .nk-menu-item -->
+                                  <li class="nk-menu-item">
+                                    <a href="/" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-home-fill"></em></span>
+                                        <span class="nk-menu-text">Home</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                
+                                <!-- Stock Management Section -->
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Stock Management</h6>
+                                </li>
+                                {% if user_permissions.can_create_stock %}
+                                <li class="nk-menu-item">
+                                    <a href="/add_stock" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-cart-fill"></em></span>
+                                        <span class="nk-menu-text">Add Stock</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                <li class="nk-menu-item">
+                                    <a href="/view_stock" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-activity-round-fill"></em></span>
+                                        <span class="nk-menu-text">View Stock</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="/view_history" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-growth-fill"></em></span>
+                                        <span class="nk-menu-text">View History</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'transfer_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-swap"></em></span>
+                                        <span class="nk-menu-text">Stock Transfers</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% if user_role and user_role.role != 'warehouse_boy' %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'reservation_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-clock"></em></span>
+                                        <span class="nk-menu-text">Stock Reservations</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'audit_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-clipboard"></em></span>
+                                        <span class="nk-menu-text">Stock Audits</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% if user_permissions.can_receive_purchase_order or user_permissions.can_receive_stock %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'receive_po_items' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-inbox"></em></span>
+                                        <span class="nk-menu-text">Receive PO Items</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% if user_role and user_role.role == 'warehouse' %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'warehouse_receiving' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-package"></em></span>
+                                        <span class="nk-menu-text">Items to Receive</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                
+                                <!-- Purchase Orders Section -->
+                                {% if user_permissions.can_view_purchase_order or user_permissions.can_create_purchase_order %}
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Purchase Orders</h6>
+                                </li>
+                                {% if user_permissions.can_view_purchase_order %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'purchase_order_list' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-list-check"></em></span>
+                                        <span class="nk-menu-text">All Purchase Orders</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% if user_permissions.can_create_purchase_order %}
+                                <li class="nk-menu-item">
+                                    <a href="{% url 'create_purchase_order' %}" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-plus-circle"></em></span>
+                                        <span class="nk-menu-text">Create Purchase Order</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                {% endif %}
+                                
+                                <!-- Management Section - Hide from Warehouse, Stock Take Managers, and Warehouse Boys -->
+                                {% if user_role and user_role.role not in 'warehouse,stocktake_manager,warehouse_boy' %}
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Management</h6>
+                                </li>
+                                <li class="nk-menu-item has-sub">
+                                    <a href="#" class="nk-menu-link nk-menu-toggle">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-setting"></em></span>
+                                        <span class="nk-menu-text">Manage</span>
+                                    </a>
+                                    <ul class="nk-menu-sub">
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_manufacturers' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Manufacturers</span>
+                                            </a>
+                                        </li>
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_delivery_persons' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Delivery Persons</span>
+                                            </a>
+                                        </li>
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_stores' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Stores</span>
+                                            </a>
+                                        </li>
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_categories' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Categories</span>
+                                            </a>
+                                        </li>
+                                        {% if user_role and user_role.role == 'admin' %}
+                                        <li class="nk-menu-item">
+                                            <a href="{% url 'manage_users' %}" class="nk-menu-link">
+                                                <span class="nk-menu-text">Access Control</span>
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                                
+                                <!-- Other Sections -->
+                                <li class="nk-menu-heading">
+                                    <h6 class="overline-title text-primary-alt">Other</h6>
+                                </li>
+                                <li class="nk-menu-item">
+                                    <a href="/dependent_forms" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-user-list-fill"></em></span>
+                                        <span class="nk-menu-text">Dependent Forms</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li class="nk-menu-item">
+                                    <a href="/depend_form_view" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-table-view-fill"></em></span>
+                                        <span class="nk-menu-text">View Dependent Forms</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                <li style="display:none" class="nk-menu-item">
+                                    <a href="/scrumboard" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-note-add"></em></span>
+                                        <span class="nk-menu-text">Scrumboard</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                 <li class="nk-menu-item">
+                                    <a href="/contacts" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="icon ni ni-note-add"></em></span>
+                                        <span class="nk-menu-text">Contacts</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                  {% endif %}
+                                {% if request.user.is_authenticated %}
+                                <li style="display:none" class="nk-menu-item">
+                                    <a href="/register" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="ni ni-signin"></em></span>
+                                        <span class="nk-menu-text">Register</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                 {% else %}
+                                <li class="nk-menu-item">
+                                    <a href="/register" class="nk-menu-link">
+                                        <span class="nk-menu-icon"><em class="ni ni-signin"></em></span>
+                                        <span class="nk-menu-text">Register</span>
+                                    </a>
+                                </li><!-- .nk-menu-item -->
+                                {% endif %}
+                            </ul><!-- .nk-menu -->
+                        </div><!-- .nk-sidebar-menu -->
+                    </div><!-- .nk-sidebar-content -->
+                </div><!-- .nk-sidebar-element -->
+            </div>
+            <!-- sidebar @e -->
+            <!-- wrap @s -->
+            <div class="nk-wrap ">
+                <!-- main header @s -->
+                <div class="nk-header nk-header-fixed is-light">
+                    <div class="container-fluid">
+                        <div class="nk-header-wrap">
+                            <div class="nk-menu-trigger d-xl-none ml-n1">
+                                <a href="#" class="nk-nav-toggle nk-quick-nav-icon" data-target="sidebarMenu"><em class="icon ni ni-menu"></em></a>
+                            </div>
+                            <div class="nk-header-brand d-xl-none">
+                                <a href="/" class="logo-link">
+                                    <img class="logo-light logo-img" src="{% static 'images/logo.png' %}"  alt="logo">
+                                    <img class="logo-dark logo-img" src="{% static 'images/logo-dark.png' %}"  alt="logo-dark">
+                                </a>
+                            </div><!-- .nk-header-brand -->
+                            <div class="nk-header-search ml-3 ml-xl-0">
+                                <div class="search-wrapper">
+                                    <form method="GET" action="{% url 'global_search' %}" class="search-form" id="global-search-form">
+                                        <em class="icon ni ni-search search-icon" onclick="document.getElementById('global-search-form').submit();" style="cursor: pointer;"></em>
+                                        <input type="text" name="q" class="form-control border-transparent form-focus-none" placeholder="Search anything" value="{{ request.GET.q }}" id="search-input" autocomplete="off">
+                                    </form>
+                                    <div id="search-suggestions" class="search-suggestions"></div>
+                                </div>
+                            </div><!-- .nk-header-news -->
+                            <div class="nk-header-tools">
+                                <ul class="nk-quick-nav">
+                                    <!-- Mobile Search Toggle (replaces cart on mobile) -->
+                                    {% if request.user.is_authenticated %}
+                                    <li class="mobile-search-toggle d-xl-none">
+                                        <a href="#" class="nk-quick-nav-icon" id="mobile-search-btn">
+                                            <em class="icon ni ni-search"></em>
+                                        </a>
+                                    </li>
+                                    <!-- Notifications Bell -->
+                                    <li class="dropdown">
+                                        <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown" id="notifications-bell">
+                                            <em class="icon ni ni-bell"></em>
+                                            <span class="badge badge-danger" id="notification-count" style="display: none;"></span>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-md dropdown-menu-right" id="notifications-dropdown">
+                                            <div class="dropdown-head">
+                                                <h6 class="d-none d-sm-block">Notifications</h6>
+                                                <a href="#" class="dropdown-toggle" id="mark-all-read">Mark All as Read</a>
+                                            </div>
+                                            <div class="dropdown-body" id="notifications-list">
+                                                <div class="text-center py-4">
+                                                    <em class="icon ni ni-loader" id="notifications-loading"></em>
+                                                    <span>Loading notifications...</span>
+                                                </div>
+                                            </div>
+                                            <div class="dropdown-foot text-center">
+                                                <a href="{% url 'notifications_list' %}" class="dropdown-link">View All Notifications</a>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    
+                                    <!-- Desktop Purchase Orders Dropdown (hidden on mobile) -->
+                                    {% if user_permissions.can_view_purchase_order or user_permissions.can_create_purchase_order %}
+                                    <li class="dropdown d-none d-xl-block">
+                                        <a href="#" class="dropdown-toggle nk-quick-nav-icon" data-toggle="dropdown">
+                                            <em class="icon ni ni-cart"></em>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-md dropdown-menu-right">
+                                            <div class="dropdown-inner">
+                                                <ul class="link-list">
+                                                    {% if user_permissions.can_view_purchase_order %}
+                                                    <li><a href="{% url 'purchase_order_list' %}"><em class="icon ni ni-list-check"></em><span>All Purchase Orders</span></a></li>
+                                                    {% endif %}
+                                                    {% if user_permissions.can_create_purchase_order %}
+                                                    <li><a href="{% url 'create_purchase_order' %}"><em class="icon ni ni-plus-circle"></em><span>Create New PO</span></a></li>
+                                                    {% endif %}
+                                                    <li class="divider"></li>
+                                                    {% if user_role and user_role.role not in 'warehouse,stocktake_manager,warehouse_boy' %}
+                                                    <li><a href="{% url 'manage_manufacturers' %}"><em class="icon ni ni-building"></em><span>Manage Manufacturers</span></a></li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </li>
+                                    {% endif %}
+                                    {% endif %}
+                                    
+                                    <li class="dropdown user-dropdown">
+                                        <a href="#" class="dropdown-toggle mr-n1" data-toggle="dropdown">
+                                            <div class="user-toggle">
+                                                <div class="user-avatar sm">
+                                                    <em class="icon ni ni-user-alt"></em>
+                                                </div>
+                                                <div class="user-info d-none d-xl-block">
+                                                    <div class="user-name dropdown-indicator">{{ user }}</div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <div class="dropdown-menu dropdown-menu-md dropdown-menu-right">
+                                            <div class="dropdown-inner user-card-wrap bg-lighter d-none d-md-block">
+                                                <div class="user-card">
+                                                    <div class="user-avatar">
+                                                        <span>AB</span>
+                                                    </div>
+                                                    <div class="user-info">
+                                                        <span class="lead-text">{{ user }}</span>
+                                                        <span class="sub-text">{{ user.email }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <!-- User menu options -->
+                                            <div class="dropdown-inner">
+                                                <ul class="link-list">
+                                                    {% if request.user.is_authenticated %}
+                                                    <li>
+                                                        <a href="/accounts/password/reset/">
+                                                            <em class="icon ni ni-lock-alt"></em>
+                                                            <span>Reset Password</span>
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                </ul>
+                                            </div>
+                                            <div class="dropdown-inner">
+                                                <ul class="link-list">
+                                                      {% if request.user.is_authenticated %}
+<li class="nav-item">
+    <form method="post" action="{% url 'auth_logout' %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">{{ user }} | logout</button>
+    </form>
+</li>
+{% else %}
+<li class="nav-item"><a href="/accounts/login" class="nav-link"><button class="btn btn-danger"> login</button></a></li>
+{% endif %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div><!-- .nk-header-wrap -->
+                    </div><!-- .container-fliud -->
+                </div>
+                <!-- main header @e -->
+                
+                <!-- Mobile Search Overlay -->
+                <div class="mobile-search-overlay" id="mobile-search-overlay"></div>
+                <div class="mobile-search-container" id="mobile-search-container">
+                    <form method="GET" action="{% url 'global_search' %}" class="mobile-search-form" id="mobile-search-form">
+                        <input type="text" name="q" class="mobile-search-input" placeholder="Search products..." value="{{ request.GET.q }}" id="mobile-search-input" autocomplete="off">
+                        <button type="button" class="mobile-search-close" id="mobile-search-close">&times;</button>
+                    </form>
+                    <div id="mobile-search-suggestions" class="search-suggestions"></div>
+                </div>
+                
+                <!-- content @s -->
+
+                <!-- content @e -->
+
+
+            <!-- wrap @e -->

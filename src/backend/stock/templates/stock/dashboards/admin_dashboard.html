@@ -1,0 +1,395 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+               <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Admin Dashboard</h3>
+                            <p class="nk-block-des text-soft">Complete system overview and management</p>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-more-v"></em></a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        <li class="nk-block-tools-opt"><a href="/view_history" class="btn btn-primary"><em class="icon ni ni-reports"></em><span>Reports</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Total Stock Items</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount">{{body}}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Low Stock Alerts</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-warning">{{low_stock_items}}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Active POs</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount">{{recent_pos}}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">System Users</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount">{{count}}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Alerts Section -->
+                {% if pending_transfers or in_transit_transfers or awaiting_collection_transfers or active_commitments %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Stock Alerts & Activities</h5>
+                                <p class="nk-block-des">Items requiring attention across all operations</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        <!-- Include the same alert sections as original home.html -->
+                        {% if pending_transfers %}
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-warning">
+                                                <em class="icon ni ni-clock"></em>
+                                                Pending Transfers ({{ pending_transfers.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for transfer in pending_transfers|slice:":5" %}
+                                        <div class="alert alert-warning alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ transfer.stock.item_name }}</strong><br>
+                                                <small>{{ transfer.quantity }} units from {{ transfer.from_location.name }} → {{ transfer.to_location.name }}</small><br>
+                                                <small class="text-muted">{{ transfer.get_transfer_type_display }} • Created {{ transfer.created_at|timesince }} ago</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'transfer_list' %}" class="btn btn-xs btn-outline-warning">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if active_commitments %}
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-primary">
+                                                <em class="icon ni ni-user-fill"></em>
+                                                Customer Commitments ({{ active_commitments.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text" style="max-height: 400px; overflow-y: auto;">
+                                        {% for commitment in active_commitments|slice:":5" %}
+                                        <div class="alert alert-primary alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ commitment.stock.item_name }}</strong><br>
+                                                <small><strong>Customer:</strong> {{ commitment.customer_name }}</small><br>
+                                                <small><strong>Quantity:</strong> {{ commitment.quantity }} units</small><br>
+                                                <small><strong>Deposit:</strong> ${{ commitment.deposit_amount }}</small><br>
+                                                <small class="text-muted">Committed {{ commitment.committed_at|timesince }} ago</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' commitment.stock.pk %}" class="btn btn-xs btn-outline-primary">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if active_reservations %}
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-clock"></em>
+                                                Stock Reservations ({{ active_reservations.count }})
+                                            </h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text" style="max-height: 400px; overflow-y: auto;">
+                                        {% for reservation in active_reservations|slice:":5" %}
+                                        <div class="alert alert-info alert-pro alert-dismissible" role="alert">
+                                            <div class="alert-text">
+                                                <strong>{{ reservation.stock.item_name }}</strong><br>
+                                                <small><strong>Customer:</strong> {{ reservation.customer_name|default:"No Customer" }}</small><br>
+                                                <small><strong>Quantity:</strong> {{ reservation.quantity }} units</small><br>
+                                                <small><strong>Type:</strong> {{ reservation.get_reservation_type_display }}</small><br>
+                                                <small><strong>Expires:</strong> {{ reservation.expires_at|date:"M d, Y" }}</small><br>
+                                                <small class="{% if reservation.days_until_expiry <= 1 %}text-danger{% else %}text-muted{% endif %}">
+                                                    {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left
+                                                </small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-xs btn-outline-info">View</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if active_reservations.count > 5 %}
+                                        <div class="text-center mt-2">
+                                            <a href="{% url 'reservation_list' %}" class="btn btn-sm btn-outline-info">View All Reservations</a>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Aging Stock Section -->
+                {% if aging_stock %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Aging Stock Analysis</h5>
+                                <p class="nk-block-des">Items that have been in stock for extended periods - identify slow-moving inventory</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        <!-- Old Stock (90+ days) -->
+                        {% if aging_stock.old_stock %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-danger">
+                                                <em class="icon ni ni-alert-circle"></em>
+                                                Old Stock (90+ Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-danger">{{ aging_stock.old_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for item in aging_stock.old_stock|slice:":5" %}
+                                        <div class="alert alert-danger-dim" role="alert">
+                                            <div class="alert-text">
+                                                <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-danger">{{ item.item_name }}</a></strong><br>
+                                                <small>Qty: {{ item.quantity }} • {{ item.days_in_stock }} days in stock</small><br>
+                                                <small class="text-muted">Category: {{ item.category.group|default:"No Category" }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-danger">View Details</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if aging_stock.old_stock|length > 5 %}
+                                        <p class="text-muted small">... and {{ aging_stock.old_stock|length|add:"-5" }} more items</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Medium Age Stock (60-90 days) -->
+                        {% if aging_stock.medium_age_stock %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-warning">
+                                                <em class="icon ni ni-clock"></em>
+                                                Medium Age (60-90 Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-warning">{{ aging_stock.medium_age_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for item in aging_stock.medium_age_stock|slice:":5" %}
+                                        <div class="alert alert-warning-dim" role="alert">
+                                            <div class="alert-text">
+                                                <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-warning">{{ item.item_name }}</a></strong><br>
+                                                <small>Qty: {{ item.quantity }} • {{ item.days_in_stock }} days in stock</small><br>
+                                                <small class="text-muted">Category: {{ item.category.group|default:"No Category" }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-warning">View Details</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if aging_stock.medium_age_stock|length > 5 %}
+                                        <p class="text-muted small">... and {{ aging_stock.medium_age_stock|length|add:"-5" }} more items</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Aging Stock (30-60 days) -->
+                        {% if aging_stock.aging_stock %}
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-info"></em>
+                                                Aging Stock (30-60 Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-info">{{ aging_stock.aging_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        {% for item in aging_stock.aging_stock|slice:":5" %}
+                                        <div class="alert alert-info-dim" role="alert">
+                                            <div class="alert-text">
+                                                <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-info">{{ item.item_name }}</a></strong><br>
+                                                <small>Qty: {{ item.quantity }} • {{ item.days_in_stock }} days in stock</small><br>
+                                                <small class="text-muted">Category: {{ item.category.group|default:"No Category" }}</small>
+                                            </div>
+                                            <div class="alert-action">
+                                                <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-info">View Details</a>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% if aging_stock.aging_stock|length > 5 %}
+                                        <p class="text-muted small">... and {{ aging_stock.aging_stock|length|add:"-5" }} more items</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Charts Section (Keep original charts) -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                         <div class="col-xxl-6">
+                            <div class="card card-full">
+                                <div class="nk-ecwg nk-ecwg8 h-100">
+                                    <div class="card-inner">
+                                        <div class="card-title-group mb-3">
+                                            <div class="card-title">
+                                                <h6 class="title">Stock Statistics by Item</h6>
+                                            </div>
+                                        </div>
+                                        <div class="nk-ecwg8-ck">
+                                          <canvas class="line-chart chartjs-render-monitor" id="solidLineChart" width="327" height="225" style="display: block; height: 180px; width: 262px;"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                         <div class="col-xxl-6">
+                            <div class="card card-full">
+                                <div class="nk-ecwg nk-ecwg8 h-100">
+                                    <div class="card-inner">
+                                        <div class="card-title-group mb-3">
+                                            <div class="card-title">
+                                                <h6 class="title">Stock Statistics by Category</h6>
+                                            </div>
+                                        </div>
+                                        <div class="nk-ecwg8-ck">
+                                          <canvas class="pie-chart chartjs-render-monitor" id="pieItemData" width="327" height="225" style="display: block; height: 180px; width: 262px;"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

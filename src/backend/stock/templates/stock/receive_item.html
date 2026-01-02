@@ -1,0 +1,132 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">{{ title }}</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Add inventory to a specific warehouse location</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="alert alert-info">
+                                    <h6><strong>{{ receive.item_name }}</strong></h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Current Stock Locations:</small><br>
+                                            {% for location in receive.locations.all %}
+                                                {% if location.quantity > 0 %}
+                                                    <div class="mb-1">
+                                                        <strong>{{ location.store.name }}</strong>: {{ location.quantity }} units
+                                                        {% if location.aisle %}
+                                                            <small class="text-muted">({{ location.aisle }})</small>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="text-warning">No stock currently assigned</span>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">Total Stock:</small><br>
+                                            <strong class="text-success">{{ receive.total_across_locations }}</strong>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">Condition:</small><br>
+                                            {% if receive.condition == 'new' %}
+                                                <span class="badge badge-success">{{ receive.get_condition_display }}</span>
+                                            {% elif receive.condition == 'bstock' %}
+                                                <span class="badge badge-warning">{{ receive.get_condition_display }}</span>
+                                            {% elif receive.condition == 'demo_unit' %}
+                                                <span class="badge badge-info">{{ receive.get_condition_display }}</span>
+                                            {% else %}
+                                                <span class="badge badge-primary">{{ receive.get_condition_display }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">Category:</small><br>
+                                            <strong>{{ receive.category|default:"No Category" }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <form method="POST" action="" enctype="multipart/form-data">
+                                    {% csrf_token %}
+                                    
+                                    {% if form.errors %}
+                                        <div class="alert alert-danger">
+                                            <h6>Please correct the following errors:</h6>
+                                            {% for field, errors in form.errors.items %}
+                                                <div><strong>{{ field }}:</strong> {{ errors|join:", " }}</div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% crispy form %}
+                                    <div class="form-group mt-3">
+                                        <input class="btn btn-success btn-lg" type="submit" name="receive_submit" value="Receive Items">
+                                        <a href="{% url 'stock_detail' receive.pk %}" class="btn btn-outline-gray btn-lg ml-2">Cancel</a>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-inner">
+                                <h6 class="card-title">Receiving Guidelines</h6>
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item px-0">
+                                        <em class="icon ni ni-check text-success"></em>
+                                        <span class="ml-2">Select the warehouse/store location</span>
+                                    </li>
+                                    <li class="list-group-item px-0">
+                                        <em class="icon ni ni-check text-success"></em>
+                                        <span class="ml-2">Specify aisle for easy locating</span>
+                                    </li>
+                                    <li class="list-group-item px-0">
+                                        <em class="icon ni ni-check text-success"></em>
+                                        <span class="ml-2">Enter accurate quantity received</span>
+                                    </li>
+                                    <li class="list-group-item px-0">
+                                        <em class="icon ni ni-check text-success"></em>
+                                        <span class="ml-2">Add notes for delivery reference</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="card-inner">
+                                <h6 class="card-title">Quick Actions</h6>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'stock_detail' receive.pk %}" class="btn btn-outline-primary">
+                                        <em class="icon ni ni-eye"></em> View Stock Details
+                                    </a>
+                                    <a href="{% url 'view_stock' %}" class="btn btn-outline-gray">
+                                        <em class="icon ni ni-arrow-left"></em> Back to Stock List
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

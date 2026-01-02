@@ -1,0 +1,138 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Reserve Stock</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Create a temporary reservation for: <strong>{{ stock.item_name }}</strong></p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <a href="{% url 'stock_detail' stock.pk %}" class="btn btn-outline-primary">
+                                <em class="icon ni ni-arrow-left"></em><span>Back to Stock</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Stock Info Card -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="row g-gs">
+                                <div class="col-md-8">
+                                    <h5>{{ stock.item_name }}</h5>
+                                    <div class="row g-3">
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Category:</span>
+                                            <span class="fw-medium">{{ stock.category.group|default:"N/A" }}</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Condition:</span>
+                                            <span class="badge badge-sm badge-dot has-bg badge-success">{{ stock.get_condition_display }}</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Total Stock:</span>
+                                            <span class="fw-medium">{{ stock.total_stock }} units</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Available for Reservation:</span>
+                                            <span class="fw-medium text-success">{{ stock.available_for_sale }} units</span>
+                                        </div>
+                                        {% if stock.committed_stock > 0 %}
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Committed:</span>
+                                            <span class="fw-medium text-warning">{{ stock.committed_stock }} units</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if stock.reserved_quantity > 0 %}
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Already Reserved:</span>
+                                            <span class="fw-medium text-info">{{ stock.reserved_quantity }} units</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    {% if stock.image_url %}
+                                    <div class="user-avatar lg">
+                                        <img src="{{ stock.image_url }}" alt="{{ stock.item_name }}" style="max-width: 100%; height: auto;">
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reservation Form -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <h5 class="card-title">Create Reservation</h5>
+                            </div>
+                            <form method="post">
+                                {% csrf_token %}
+                                {% crispy form %}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Existing Reservations -->
+                {% if stock.reservations.all %}
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="card-head">
+                                <h5 class="card-title">Existing Reservations</h5>
+                            </div>
+                            <div class="nk-tb-list nk-tb-ulist">
+                                <div class="nk-tb-item nk-tb-head">
+                                    <div class="nk-tb-col"><span class="sub-text">Customer</span></div>
+                                    <div class="nk-tb-col tb-col-mb"><span class="sub-text">Quantity</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Type</span></div>
+                                    <div class="nk-tb-col tb-col-lg"><span class="sub-text">Status</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Expires</span></div>
+                                </div>
+                                {% for reservation in stock.reservations.all|slice:":10" %}
+                                <div class="nk-tb-item">
+                                    <div class="nk-tb-col">
+                                        <span class="tb-lead">{{ reservation.customer_name|default:"No Customer" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-mb">
+                                        <span class="tb-amount">{{ reservation.quantity }} units</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ reservation.get_reservation_type_display }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-lg">
+                                        <span class="badge badge-sm badge-dot has-bg badge-{% if reservation.status == 'active' %}success{% elif reservation.status == 'expired' %}warning{% else %}secondary{% endif %} d-sm-inline-flex">
+                                            {{ reservation.get_status_display }}
+                                        </span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ reservation.expires_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

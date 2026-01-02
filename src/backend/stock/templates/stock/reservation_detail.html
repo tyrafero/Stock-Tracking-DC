@@ -1,0 +1,164 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Reservation Details</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>{{ reservation.stock.item_name }} - {{ reservation.quantity }} units</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="{% url 'reservation_list' %}" class="btn btn-outline-primary">
+                                    <em class="icon ni ni-arrow-left"></em><span>Back to List</span>
+                                </a>
+                                {% if reservation.status == 'active' %}
+                                <a href="{% url 'update_reservation' reservation.pk %}" class="btn btn-primary">
+                                    <em class="icon ni ni-edit"></em><span>Update</span>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reservation Details -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Reservation Information</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Stock Item:</span>
+                                            <span class="fw-medium">{{ reservation.stock.item_name }}</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Quantity Reserved:</span>
+                                            <span class="fw-medium">{{ reservation.quantity }} units</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Reservation Type:</span>
+                                            <span class="fw-medium">{{ reservation.get_reservation_type_display }}</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Status:</span>
+                                            <span class="badge badge-sm badge-dot has-bg badge-{% if reservation.status == 'active' %}success{% elif reservation.status == 'expired' %}warning{% elif reservation.status == 'fulfilled' %}info{% else %}secondary{% endif %} d-sm-inline-flex">
+                                                {{ reservation.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Reserved By:</span>
+                                            <span class="fw-medium">{{ reservation.reserved_by.username }}</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Reserved On:</span>
+                                            <span class="fw-medium">{{ reservation.reserved_at|date:"M d, Y H:i" }}</span>
+                                        </div>
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Expires On:</span>
+                                            <span class="fw-medium {% if reservation.days_until_expiry <= 1 %}text-danger{% endif %}">{{ reservation.expires_at|date:"M d, Y H:i" }}</span>
+                                            {% if reservation.status == 'active' %}
+                                            <span class="tb-sub">({{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left)</span>
+                                            {% endif %}
+                                        </div>
+                                        {% if reservation.reference_number %}
+                                        <div class="col-sm-6">
+                                            <span class="sub-text">Reference Number:</span>
+                                            <span class="fw-medium">{{ reservation.reference_number }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if reservation.reason %}
+                                    <div class="mt-4">
+                                        <span class="sub-text">Reason:</span>
+                                        <p class="mt-1">{{ reservation.reason }}</p>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if reservation.notes %}
+                                    <div class="mt-4">
+                                        <span class="sub-text">Notes:</span>
+                                        <p class="mt-1">{{ reservation.notes }}</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <!-- Customer Information -->
+                            {% if reservation.customer_name or reservation.customer_phone or reservation.customer_email %}
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Customer Information</h5>
+                                    </div>
+                                    {% if reservation.customer_name %}
+                                    <div class="mb-2">
+                                        <span class="sub-text">Name:</span>
+                                        <span class="fw-medium d-block">{{ reservation.customer_name }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if reservation.customer_phone %}
+                                    <div class="mb-2">
+                                        <span class="sub-text">Phone:</span>
+                                        <span class="fw-medium d-block">{{ reservation.customer_phone }}</span>
+                                    </div>
+                                    {% endif %}
+                                    {% if reservation.customer_email %}
+                                    <div class="mb-2">
+                                        <span class="sub-text">Email:</span>
+                                        <span class="fw-medium d-block">{{ reservation.customer_email }}</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Actions -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Actions</h5>
+                                    </div>
+                                    <div class="d-flex flex-column gap-2">
+                                        <a href="{% url 'stock_detail' reservation.stock.pk %}" class="btn btn-outline-primary">
+                                            <em class="icon ni ni-package"></em><span>View Stock Details</span>
+                                        </a>
+                                        {% if reservation.status == 'active' %}
+                                        {% if user_permissions.can_commit_stock %}
+                                        <a href="{% url 'fulfill_reservation' reservation.pk %}" class="btn btn-success">
+                                            <em class="icon ni ni-check"></em><span>Fulfill Reservation</span>
+                                        </a>
+                                        {% endif %}
+                                        <a href="{% url 'update_reservation' reservation.pk %}" class="btn btn-primary">
+                                            <em class="icon ni ni-edit"></em><span>Update</span>
+                                        </a>
+                                        <a href="{% url 'cancel_reservation' reservation.pk %}" class="btn btn-danger">
+                                            <em class="icon ni ni-cross"></em><span>Cancel</span>
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

@@ -1,0 +1,479 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+               <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Sales Dashboard</h3>
+                            <p class="nk-block-des text-soft">Stock availability and customer management</p>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-more-v"></em></a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        <li class="nk-block-tools-opt"><a href="/view_stock" class="btn btn-primary"><em class="icon ni ni-package"></em><span>View All Stock</span></a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Key Metrics for Sales -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-xxl-4 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Available Stock</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-success">{{total_available}}</div>
+                                            <div class="info text-soft">Items ready for sale</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-xxl-4 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Customer Commitments</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-warning">{{total_committed}}</div>
+                                            <div class="info text-soft">Items reserved</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Stock Reservations</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-info">{{total_reserved}}</div>
+                                            <div class="info text-soft">Items reserved</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-xxl-3 col-sm-6">
+                            <div class="card">
+                                <div class="nk-ecwg nk-ecwg6">
+                                    <div class="card-inner">
+                                        <div class="card-title-group">
+                                            <div class="card-title">
+                                                <h6 class="title">Awaiting Collection</h6>
+                                            </div>
+                                        </div>
+                                        <div class="data">
+                                            <div class="amount text-primary">{{awaiting_collection.count}}</div>
+                                            <div class="info text-soft">Customer pickups</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Stock Search -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="card-title-group">
+                                <div class="card-title">
+                                    <h6 class="title">Quick Stock Search</h6>
+                                </div>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-lg-8">
+                                    <input type="text" id="stockSearch" class="form-control" placeholder="Search for stock items...">
+                                </div>
+                                <div class="col-lg-4">
+                                    <a href="/search/" class="btn btn-primary">Advanced Search</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customer Commitments -->
+                {% if active_commitments %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Active Customer Commitments</h5>
+                                <p class="nk-block-des">Items reserved with customer deposits</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="nk-tb-list nk-tb-ulist">
+                                <div class="nk-tb-item nk-tb-head">
+                                    <div class="nk-tb-col"><span class="sub-text">Item</span></div>
+                                    <div class="nk-tb-col tb-col-mb"><span class="sub-text">Customer</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Quantity</span></div>
+                                    <div class="nk-tb-col tb-col-lg"><span class="sub-text">Deposit</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Order #</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Date</span></div>
+                                    <div class="nk-tb-col nk-tb-col-tools text-end">Actions</div>
+                                </div>
+                                {% for commitment in active_commitments %}
+                                <div class="nk-tb-item">
+                                    <div class="nk-tb-col">
+                                        <div class="user-card">
+                                            <div class="user-info">
+                                                <span class="tb-lead">{{ commitment.stock.item_name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-mb">
+                                        <span class="tb-amount">{{ commitment.customer_name }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-amount">{{ commitment.quantity }} units</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-lg">
+                                        <span class="tb-amount">${{ commitment.deposit_amount }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ commitment.customer_order_number }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-status">{{ commitment.committed_at|date:"M d, Y" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1">
+                                            <li>
+                                                <a href="{% url 'stock_detail' commitment.stock.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="View Stock">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{% url 'fulfill_commitment' commitment.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Fulfill Order">
+                                                    <em class="icon ni ni-check"></em>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Active Reservations -->
+                {% if active_reservations %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Active Stock Reservations</h5>
+                                <p class="nk-block-des">Temporary holds on stock items</p>
+                            </div>
+                            <div class="nk-block-head-content">
+                                <a href="{% url 'reservation_list' %}" class="btn btn-outline-primary">View All Reservations</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        {% for reservation in active_reservations %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title">{{ reservation.stock.item_name }}</h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <span class="badge badge-sm badge-dot has-bg badge-info d-sm-inline-flex">
+                                                {{ reservation.get_reservation_type_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        <p><strong>Customer:</strong> {{ reservation.customer_name|default:"No Customer" }}</p>
+                                        <p><strong>Quantity:</strong> {{ reservation.quantity }} units</p>
+                                        {% if reservation.reference_number %}
+                                        <p><strong>Reference:</strong> {{ reservation.reference_number }}</p>
+                                        {% endif %}
+                                        <p><strong>Expires:</strong> {{ reservation.expires_at|date:"M d, Y H:i" }}</p>
+                                        <p><strong>Days Left:</strong> 
+                                            <span class="{% if reservation.days_until_expiry <= 1 %}text-danger{% endif %}">
+                                                {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }}
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <div class="card-tools">
+                                        <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-sm btn-primary">View Details</a>
+                                        {% if user_permissions.can_commit_stock %}
+                                        <a href="{% url 'fulfill_reservation' reservation.pk %}" class="btn btn-sm btn-success">Fulfill</a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Available Stock Overview -->
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Available Stock</h5>
+                                <p class="nk-block-des">Items ready for sale (showing first 20)</p>
+                            </div>
+                            <div class="nk-block-head-content">
+                                <a href="/view_stock" class="btn btn-outline-primary">View All Stock</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="nk-tb-list nk-tb-ulist">
+                                <div class="nk-tb-item nk-tb-head">
+                                    <div class="nk-tb-col"><span class="sub-text">Item</span></div>
+                                    <div class="nk-tb-col tb-col-mb"><span class="sub-text">Category</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Available</span></div>
+                                    <div class="nk-tb-col tb-col-lg"><span class="sub-text">Location</span></div>
+                                    <div class="nk-tb-col tb-col-md"><span class="sub-text">Condition</span></div>
+                                    <div class="nk-tb-col nk-tb-col-tools text-end">Actions</div>
+                                </div>
+                                {% for stock in available_stock %}
+                                <div class="nk-tb-item">
+                                    <div class="nk-tb-col">
+                                        <div class="user-card">
+                                            <div class="user-info">
+                                                <span class="tb-lead">{{ stock.item_name }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-mb">
+                                        <span class="tb-amount">{{ stock.category.group|default:"N/A" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="tb-amount">{{ stock.available_for_sale }} units</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-lg">
+                                        <span class="tb-amount">{{ stock.location.name|default:"N/A" }}</span>
+                                    </div>
+                                    <div class="nk-tb-col tb-col-md">
+                                        <span class="badge badge-sm badge-dot has-bg badge-{{ stock.condition|yesno:'success,warning,danger' }} d-none d-sm-inline-flex">
+                                            {{ stock.get_condition_display }}
+                                        </span>
+                                    </div>
+                                    <div class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1">
+                                            <li>
+                                                <a href="{% url 'stock_detail' stock.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="View Details">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{% url 'reserve_stock' stock.pk %}" class="btn btn-trigger btn-icon btn-info" data-bs-toggle="tooltip" title="Reserve Stock">
+                                                    <em class="icon ni ni-clock"></em>
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a href="{% url 'commit_stock' stock.pk %}" class="btn btn-trigger btn-icon" data-bs-toggle="tooltip" title="Commit for Customer">
+                                                    <em class="icon ni ni-user-add"></em>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Awaiting Customer Collection -->
+                {% if awaiting_collection %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-head-content">
+                            <h5 class="nk-block-title">Awaiting Customer Collection</h5>
+                            <p class="nk-block-des">Items ready for customer pickup</p>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        {% for transfer in awaiting_collection %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-success">{{ transfer.stock.item_name }}</h6>
+                                        </div>
+                                    </div>
+                                    <div class="card-text">
+                                        <p><strong>Customer:</strong> {{ transfer.customer_name|default:"N/A" }}</p>
+                                        <p><strong>Quantity:</strong> {{ transfer.quantity }} units</p>
+                                        <p><strong>Location:</strong> {{ transfer.to_location.name }}</p>
+                                        <p><strong>Ready Since:</strong> {{ transfer.completed_at|timesince }} ago</p>
+                                    </div>
+                                    <div class="card-tools">
+                                        <a href="{% url 'mark_collected' transfer.pk %}" class="btn btn-sm btn-success">Mark Collected</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Aging Stock Section for Sales -->
+                {% if aging_stock %}
+                <div class="nk-block">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h5 class="nk-block-title">Aging Stock - Sales Opportunity</h5>
+                                <p class="nk-block-des">Long-standing inventory items - potential for promotions or clearance sales</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-gs">
+                        {% if aging_stock.old_stock %}
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-warning">
+                                                <em class="icon ni ni-trend-down"></em>
+                                                Slow-Moving Stock - Clearance Candidates (90+ Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-warning">{{ aging_stock.old_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        {% for item in aging_stock.old_stock|slice:":6" %}
+                                        <div class="col-md-4">
+                                            <div class="alert alert-warning-dim" role="alert">
+                                                <div class="alert-text">
+                                                    <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-warning">{{ item.item_name }}</a></strong><br>
+                                                    <small>Available: {{ item.quantity }} units</small><br>
+                                                    <small class="text-muted">{{ item.days_in_stock }} days in stock</small><br>
+                                                    <small class="text-info">💡 Consider promotional pricing</small>
+                                                </div>
+                                                <div class="alert-action mt-2">
+                                                    <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-warning">Promote Sale</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% if aging_stock.old_stock|length > 6 %}
+                                    <div class="text-center mt-3">
+                                        <span class="text-muted">... and {{ aging_stock.old_stock|length|add:"-6" }} more items need attention</span>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {% if aging_stock.medium_age_stock %}
+                        <div class="col-lg-12">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-title-group">
+                                        <div class="card-title">
+                                            <h6 class="title text-info">
+                                                <em class="icon ni ni-eye"></em>
+                                                Watch List - Medium Age Stock (60-90 Days)
+                                            </h6>
+                                        </div>
+                                        <div class="card-tools">
+                                            <div class="badge badge-info">{{ aging_stock.medium_age_stock|length }} items</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        {% for item in aging_stock.medium_age_stock|slice:":6" %}
+                                        <div class="col-md-4">
+                                            <div class="alert alert-info-dim" role="alert">
+                                                <div class="alert-text">
+                                                    <strong><a href="{% url 'stock_detail' item.id %}" class="alert-link text-info">{{ item.item_name }}</a></strong><br>
+                                                    <small>Available: {{ item.quantity }} units</small><br>
+                                                    <small class="text-muted">{{ item.days_in_stock }} days in stock</small>
+                                                </div>
+                                                <div class="alert-action mt-2">
+                                                    <a href="{% url 'stock_detail' item.id %}" class="btn btn-xs btn-outline-info">View Details</a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Basic stock search functionality
+document.getElementById('stockSearch').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    const stockRows = document.querySelectorAll('.nk-tb-item:not(.nk-tb-head)');
+    
+    stockRows.forEach(row => {
+        const stockName = row.querySelector('.tb-lead').textContent.toLowerCase();
+        if (stockName.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+</script>
+
+{% include 'stock/footers.html' %}

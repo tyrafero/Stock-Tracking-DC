@@ -1,0 +1,430 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">Stock Details - {{ detail.item_name }}</h4>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="pt-5 pb-3">
+                            <a href="{% url 'issue_item' detail.id %}"><div class='btn btn-primary'>ISSUE THIS ITEM</div></a>
+                            <a href="{% url 'receive_item' detail.id %}"><div class='btn btn-success'>RECEIVE THIS ITEM</div></a>
+                            <a href="{% url 'commit_stock' detail.id %}"><div class='btn btn-warning'>COMMIT THIS ITEM</div></a>
+                            <a href="{% url 'reserve_stock' detail.id %}"><div class='btn btn-info'>RESERVE THIS ITEM</div></a>
+                            <a href="{% url 'transfer_stock' detail.id %}"><div class='btn btn-secondary'>TRANSFER THIS ITEM</div></a>
+                        </div>
+
+                        <!-- Current Stock Overview -->
+                        <div class="card mb-4">
+                            <div class="card-inner">
+                                <h5 class="card-title">Current Stock Status</h5>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-group">
+                                            <label class="form-label">Item Name</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control">{{ detail.item_name }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Total Stock</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control text-success"><strong>{{ detail.total_stock }}</strong></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Committed</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control text-warning"><strong>{{ detail.committed_stock }}</strong></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Reserved</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control text-info"><strong>{{ detail.reserved_quantity }}</strong></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Available</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control {% if detail.is_low_stock %}text-danger{% else %}text-primary{% endif %}"><strong>{{ detail.available_for_sale }}</strong></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-group">
+                                            <label class="form-label">Condition</label>
+                                            <div class="form-control-wrap">
+                                                {% if detail.condition == 'new' %}
+                                                    <span class="badge badge-success">{{ detail.get_condition_display }}</span>
+                                                {% elif detail.condition == 'bstock' %}
+                                                    <span class="badge badge-warning">{{ detail.get_condition_display }}</span>
+                                                {% elif detail.condition == 'demo_unit' %}
+                                                    <span class="badge badge-info">{{ detail.get_condition_display }}</span>
+                                                {% else %}
+                                                    <span class="badge badge-primary">{{ detail.get_condition_display }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-3">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label">Stock Distribution by Location</label>
+                                            <div class="form-control-wrap">
+                                                {% if detail.locations.exists %}
+                                                    <div class="card card-bordered">
+                                                        <div class="card-inner">
+                                                            {% for location in detail.locations.all %}
+                                                                {% if location.quantity > 0 %}
+                                                                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                                                                        <div>
+                                                                            <h6 class="mb-0">{{ location.store.name }}</h6>
+                                                                            {% if location.aisle %}
+                                                                                <small class="text-muted">Aisle: {{ location.aisle }}</small>
+                                                                            {% endif %}
+                                                                            {% if location.store.location %}
+                                                                                <small class="text-muted d-block">{{ location.store.location }}</small>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                        <div class="text-right">
+                                                                            <span class="badge badge-primary badge-lg">{{ location.quantity }} units</span>
+                                                                            {% if location.is_low_stock %}
+                                                                                <br><small class="text-danger">Low Stock</small>
+                                                                            {% endif %}
+                                                                        </div>
+                                                                    </div>
+                                                                {% endif %}
+                                                            {% endfor %}
+                                                            <div class="d-flex justify-content-between align-items-center mt-3 pt-2">
+                                                                <strong>Total Stock:</strong>
+                                                                <span class="badge badge-success badge-lg">{{ detail.total_across_locations }} units</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                {% else %}
+                                                    <div class="form-control text-muted">No stock assigned to any location</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group">
+                                            <label class="form-label">Reorder Level</label>
+                                            <div class="form-control-wrap">
+                                                <div class="form-control">{{ detail.re_order }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transaction History -->
+                        <div class="card mb-4">
+                            <div class="card-inner">
+                                <h5 class="card-title">Transaction History</h5>
+                                <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                                    <thead>
+                                        <tr class="nk-tb-item nk-tb-head">
+                                            <th class="nk-tb-col"><span>DATE & TIME</span></th>
+                                            <th class="nk-tb-col"><span>TRANSACTION TYPE</span></th>
+                                            <th class="nk-tb-col"><span>QUANTITY CHANGE</span></th>
+                                            <th class="nk-tb-col"><span>BALANCE AFTER</span></th>
+                                            <th class="nk-tb-col"><span>USER</span></th>
+                                            <th class="nk-tb-col"><span>NOTES</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for history in stock_history %}
+                                        <tr class="nk-tb-item">
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">{{ history.timestamp|date:"M d, Y H:i" }}</span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                {% if history.receive_quantity > 0 %}
+                                                    <span class="badge badge-success">RECEIVED</span>
+                                                {% elif history.issue_quantity > 0 %}
+                                                    <span class="badge badge-danger">ISSUED</span>
+                                                {% else %}
+                                                    <span class="badge badge-info">UPDATED</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                {% if history.receive_quantity > 0 %}
+                                                    <span class="text-success"><strong>+{{ history.receive_quantity }}</strong></span>
+                                                {% elif history.issue_quantity > 0 %}
+                                                    <span class="text-danger"><strong>-{{ history.issue_quantity }}</strong></span>
+                                                {% else %}
+                                                    <span class="text-muted">0</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead"><strong>{{ history.quantity }}</strong></span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">
+                                                    {% if history.received_by %}{{ history.received_by }}
+                                                    {% elif history.issued_by %}{{ history.issued_by }}
+                                                    {% elif history.created_by %}{{ history.created_by }}
+                                                    {% else %}System{% endif %}
+                                                </span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">{{ history.note|default:"—" }}</span>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr class="nk-tb-item">
+                                            <td colspan="6" class="nk-tb-col text-center">
+                                                <div class="p-4">
+                                                    <em class="icon ni ni-inbox" style="font-size: 48px; opacity: 0.3;"></em>
+                                                    <h6 class="mt-2">No transaction history available</h6>
+                                                    <p class="text-soft">This item has no recorded transactions yet.</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Active Commitments -->
+                        {% if commitments %}
+                        <div class="card">
+                            <div class="card-inner">
+                                <h5 class="card-title">Stock Commitments</h5>
+                                <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                                    <thead>
+                                        <tr class="nk-tb-item nk-tb-head">
+                                            <th class="nk-tb-col"><span>COMMITTED DATE</span></th>
+                                            <th class="nk-tb-col"><span>CUSTOMER</span></th>
+                                            <th class="nk-tb-col"><span>ORDER NUMBER</span></th>
+                                            <th class="nk-tb-col"><span>QTY COMMITTED</span></th>
+                                            <th class="nk-tb-col"><span>DEPOSIT PAID</span></th>
+                                            <th class="nk-tb-col"><span>NOTES</span></th>
+                                            <th class="nk-tb-col"><span>STATUS</span></th>
+                                            <th class="nk-tb-col nk-tb-col-tools"><span>ACTIONS</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for commitment in commitments %}
+                                        <tr class="nk-tb-item">
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">{{ commitment.committed_at|date:"M d, Y" }}</span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead">{{ commitment.customer_name }}</span>
+                                                {% if commitment.customer_phone %}
+                                                    <br><small class="text-muted">{{ commitment.customer_phone }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">{{ commitment.customer_order_number }}</span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead text-warning"><strong>{{ commitment.quantity }}</strong></span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-amount text-success"><strong>${{ commitment.deposit_amount }}</strong></span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub" style="word-wrap: break-word; white-space: normal; max-width: 250px; display: inline-block;">
+                                                    {{ commitment.notes|default:"No notes" }}
+                                                </span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                {% if commitment.is_fulfilled %}
+                                                    <span class="badge badge-success">Fulfilled</span>
+                                                    <br><small class="text-muted">{{ commitment.fulfilled_at|date:"M d, Y" }}</small>
+                                                {% else %}
+                                                    <span class="badge badge-warning">Active</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col nk-tb-col-tools">
+                                                {% if not commitment.is_fulfilled %}
+                                                <div class="dropdown">
+                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                        <em class="icon ni ni-more-h"></em>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <ul class="link-list-opt no-bdr">
+                                                            <li>
+                                                                <a href="{% url 'fulfill_commitment' commitment.id %}" 
+                                                                   onclick="return confirm('Mark this commitment as fulfilled? This will issue {{ commitment.quantity }} items from stock.')">
+                                                                    <em class="icon ni ni-check-circle"></em>
+                                                                    <span>Fulfill Order</span>
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a href="{% url 'cancel_commitment' commitment.id %}" 
+                                                                   onclick="return confirm('Cancel this commitment? The deposit will need to be manually refunded.')">
+                                                                    <em class="icon ni ni-cross-circle"></em>
+                                                                    <span>Cancel Order</span>
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <span class="text-muted">—</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Stock Reservations -->
+                        {% if detail.reservations.all %}
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="card-title-group mb-3">
+                                    <div class="card-title">
+                                        <h5 class="card-title">Stock Reservations</h5>
+                                    </div>
+                                    <div class="card-tools">
+                                        <a href="{% url 'reservation_list' %}?stock={{ detail.pk }}" class="btn btn-outline-primary btn-sm">View All</a>
+                                    </div>
+                                </div>
+                                <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                                    <thead>
+                                        <tr class="nk-tb-item nk-tb-head">
+                                            <th class="nk-tb-col"><span>RESERVED DATE</span></th>
+                                            <th class="nk-tb-col"><span>CUSTOMER</span></th>
+                                            <th class="nk-tb-col"><span>TYPE</span></th>
+                                            <th class="nk-tb-col"><span>QUANTITY</span></th>
+                                            <th class="nk-tb-col"><span>EXPIRES</span></th>
+                                            <th class="nk-tb-col"><span>STATUS</span></th>
+                                            <th class="nk-tb-col"><span>REASON</span></th>
+                                            <th class="nk-tb-col nk-tb-col-tools"><span>ACTIONS</span></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for reservation in detail.reservations.all|slice:":10" %}
+                                        <tr class="nk-tb-item">
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub">{{ reservation.reserved_at|date:"M d, Y" }}</span>
+                                                <br><small class="text-muted">by {{ reservation.reserved_by.username }}</small>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead">{{ reservation.customer_name|default:"No Customer" }}</span>
+                                                {% if reservation.customer_phone %}
+                                                    <br><small class="text-muted">{{ reservation.customer_phone }}</small>
+                                                {% endif %}
+                                                {% if reservation.reference_number %}
+                                                    <br><small class="text-muted">Ref: {{ reservation.reference_number }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="badge badge-sm badge-dot has-bg badge-info">{{ reservation.get_reservation_type_display }}</span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-lead text-info"><strong>{{ reservation.quantity }}</strong></span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub {% if reservation.days_until_expiry <= 1 and reservation.status == 'active' %}text-danger{% endif %}">
+                                                    {{ reservation.expires_at|date:"M d, Y H:i" }}
+                                                </span>
+                                                {% if reservation.status == 'active' %}
+                                                    <br><small class="{% if reservation.days_until_expiry <= 1 %}text-danger{% else %}text-muted{% endif %}">
+                                                        {{ reservation.days_until_expiry }} day{{ reservation.days_until_expiry|pluralize }} left
+                                                    </small>
+                                                {% endif %}
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="badge badge-sm badge-dot has-bg badge-{% if reservation.status == 'active' %}success{% elif reservation.status == 'expired' %}warning{% elif reservation.status == 'fulfilled' %}info{% else %}secondary{% endif %} d-sm-inline-flex">
+                                                    {{ reservation.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td class="nk-tb-col">
+                                                <span class="tb-sub" style="word-wrap: break-word; white-space: normal; max-width: 200px; display: inline-block;">
+                                                    {{ reservation.reason|truncatechars:50 }}
+                                                </span>
+                                            </td>
+                                            <td class="nk-tb-col nk-tb-col-tools">
+                                                {% if reservation.status == 'active' %}
+                                                <div class="dropdown">
+                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                        <em class="icon ni ni-more-h"></em>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <ul class="link-list-opt no-bdr">
+                                                            <li>
+                                                                <a href="{% url 'reservation_detail' reservation.pk %}">
+                                                                    <em class="icon ni ni-eye"></em>
+                                                                    <span>View Details</span>
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a href="{% url 'update_reservation' reservation.pk %}">
+                                                                    <em class="icon ni ni-edit"></em>
+                                                                    <span>Update</span>
+                                                                </a>
+                                                            </li>
+                                                            {% if user_permissions.can_commit_stock %}
+                                                            <li>
+                                                                <a href="{% url 'fulfill_reservation' reservation.pk %}">
+                                                                    <em class="icon ni ni-check-circle"></em>
+                                                                    <span>Fulfill</span>
+                                                                </a>
+                                                            </li>
+                                                            {% endif %}
+                                                            <li>
+                                                                <a href="{% url 'cancel_reservation' reservation.pk %}" 
+                                                                   onclick="return confirm('Cancel this reservation?')">
+                                                                    <em class="icon ni ni-cross-circle"></em>
+                                                                    <span>Cancel</span>
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                                {% else %}
+                                                <a href="{% url 'reservation_detail' reservation.pk %}" class="btn btn-icon btn-trigger">
+                                                    <em class="icon ni ni-eye"></em>
+                                                </a>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
