@@ -1,0 +1,142 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <div class="nk-block-head-sub">
+                                <a class="back-to" href="{% url 'audit_list' %}">
+                                    <em class="icon ni ni-arrow-left"></em><span>Back to Audits</span>
+                                </a>
+                            </div>
+                            <h3 class="nk-block-title page-title">Create Stock Audit</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Set up a new stock audit to verify inventory accuracy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <form method="post" class="form-validate">
+                                {% csrf_token %}
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.audit_reference.id_for_label }}">Audit Reference</label>
+                                            {{ form.audit_reference }}
+                                            {% if form.audit_reference.help_text %}
+                                            <div class="form-note">{{ form.audit_reference.help_text }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.audit_type.id_for_label }}">Audit Type</label>
+                                            {{ form.audit_type }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.title.id_for_label }}">Audit Title</label>
+                                            {{ form.title }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.description.id_for_label }}">Description</label>
+                                            {{ form.description }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.planned_start_date.id_for_label }}">Planned Start Date</label>
+                                            {{ form.planned_start_date }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label" for="{{ form.planned_end_date.id_for_label }}">Planned End Date</label>
+                                            {{ form.planned_end_date }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-4 mt-4">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Audit Locations</label>
+                                            <div class="form-note-group">
+                                                <div class="form-note">Select which locations to include in this audit (leave empty for all locations)</div>
+                                            </div>
+                                            <div class="custom-control-group">
+                                                {% for choice in form.audit_locations %}
+                                                <div class="custom-control custom-checkbox">
+                                                    {{ choice.tag }}
+                                                    <label class="custom-control-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label class="form-label">Audit Categories</label>
+                                            <div class="form-note-group">
+                                                <div class="form-note">Select which categories to include in this audit (leave empty for all categories)</div>
+                                            </div>
+                                            <div class="custom-control-group">
+                                                {% for choice in form.audit_categories %}
+                                                <div class="custom-control custom-checkbox">
+                                                    {{ choice.tag }}
+                                                    <label class="custom-control-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row g-4 mt-4">
+                                    <div class="col-md-12">
+                                        <div class="form-group">
+                                            <label class="form-label">Assigned Auditors</label>
+                                            <div class="form-note-group">
+                                                <div class="form-note">Select users who will be responsible for conducting this audit</div>
+                                            </div>
+                                            <div class="custom-control-group">
+                                                {% for choice in form.assigned_auditors %}
+                                                <div class="custom-control custom-checkbox">
+                                                    {{ choice.tag }}
+                                                    <label class="custom-control-label" for="{{ choice.id_for_label }}">{{ choice.choice_label }}</label>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="form-group mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <em class="icon ni ni-plus"></em><span>Create Audit</span>
+                                    </button>
+                                    <a href="{% url 'audit_list' %}" class="btn btn-outline-light">Cancel</a>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Order {{ purchase_order.reference_number }}</title>
+</head>
+<body style="margin:0; padding:0; font-family:'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif;">
+    <td align="center" valign="top" style="font-family:'Open Sans','Helvetica Neue',Helvetica,Arial,sans-serif; padding:30px; background-color:#f3f6fb;">
+        <!-- Container -->
+        <table width="700" style="border-collapse:collapse; background:#ffffff; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.05);" border="0" cellspacing="0" cellpadding="0">
+            <tbody>
+                <!-- Header -->
+                <tr>
+                    <td style="padding:20px; background:#0089d1; border-top-left-radius:12px; border-top-right-radius:12px; text-align:center;">
+                        {% if purchase_order.creating_store.logo_url %}
+                            <a href="{% if purchase_order.creating_store.website_url %}{{ purchase_order.creating_store.website_url }}{% else %}#{% endif %}" style="text-decoration:none; display:inline-block;">
+                                <img src="{{ purchase_order.creating_store.logo_url }}" alt="{{ purchase_order.creating_store.name }} Logo" width="200" style="border:none; display:block; margin:auto;">
+                            </a>
+                        {% else %}
+                            <h2 style="color: white; margin: 0; font-size: 24px;">{{ purchase_order.creating_store.name|default:"Purchase Order" }}</h2>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <!-- Order title -->
+                <tr>
+                    <td style="padding:30px 40px; text-align:center; background:#ffffff;">
+                        <h1 style="font-size:28px; font-weight:700; color:#333; margin:0;">Purchase Order <span style="color:#0089d1;">#{{ purchase_order.reference_number }}</span></h1>
+                        <p style="font-size:15px; color:#666; margin:10px 0 0;">Issued on <strong>{{ purchase_order.created_at|date:"j M Y" }}</strong></p>
+                    </td>
+                </tr>
+
+                <!-- Important note -->
+                <tr>
+                    <td style="padding:25px 40px; background:#fdf5f5; border-top:1px solid #eee; border-bottom:1px solid #eee;">
+                        <h2 style="font-size:20px; font-weight:600; color:#d9534f; margin:0 0 10px;">Action Required</h2>
+                        <p style="font-size:15px; color:#444; margin:0 0 10px;">Please reply to confirm:</p>
+                        <ul style="font-size:14px; color:#555; margin:0; padding-left:18px; line-height:1.6;">
+                            <li>That you received this PO</li>
+                            <li>If any items are out of stock & ETA</li>
+                            <li>If accounts are outstanding (so balance can be cleared)</li>
+                        </ul>
+                    </td>
+                </tr>
+
+                <!-- Order details -->
+                <tr>
+                    <td style="padding:30px 40px; background:#ffffff;">
+                        <h3 style="font-size:18px; font-weight:600; margin:0 0 15px; color:#333;">Order Details</h3>
+                        <table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse; font-size:14px; color:#333;">
+                            <tbody>
+                                <tr>
+                                    <td style="padding:10px 0;"><strong>Supplier:</strong> {{ purchase_order.manufacturer.name }}</td>
+                                    {% if purchase_order.manufacturer.abn %}
+                                    <td style="padding:10px 0;"><strong>ABN:</strong> {{ purchase_order.manufacturer.abn }}</td>
+                                    {% else %}
+                                    <td style="padding:10px 0;"></td>
+                                    {% endif %}
+                                </tr>
+                                <tr>
+                                    <td style="padding:10px 0;"><strong>Buyer:</strong> {{ purchase_order.creating_store.name|default:purchase_order.store.name }}</td>
+                                    {% if purchase_order.creating_store.abn %}
+                                    <td style="padding:10px 0;"><strong>ABN:</strong> {{ purchase_order.creating_store.abn }}</td>
+                                    {% elif purchase_order.store.abn %}
+                                    <td style="padding:10px 0;"><strong>ABN:</strong> {{ purchase_order.store.abn }}</td>
+                                    {% else %}
+                                    <td style="padding:10px 0;"></td>
+                                    {% endif %}
+                                </tr>
+                            </tbody>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Items -->
+                <tr>
+                    <td style="padding:30px 40px; background:#f9fafc;">
+                        <h3 style="font-size:18px; font-weight:600; margin:0 0 15px; color:#333;">Items Ordered</h3>
+                        <table width="100%" cellspacing="0" cellpadding="12" style="border-collapse:collapse; font-size:14px; color:#333;">
+                            <thead>
+                                <tr style="background:#0089d1; color:#ffffff;">
+                                    <th style="padding:12px; font-weight:600; text-align:left;">Item</th>
+                                    <th style="padding:12px; font-weight:600; text-align:center;">Quantity</th>
+                                    <th style="padding:12px; font-weight:600; text-align:right;">Price (Ex GST)</th>
+                                    <th style="padding:12px; font-weight:600; text-align:center;">Discount %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in items %}
+                                <tr style="background:#fff; {% if not forloop.first %}border-top:1px solid #eee;{% else %}border-radius:8px;{% endif %}">
+                                    <td style="padding:12px; font-weight:600;">{{ item.product }}</td>
+                                    <td style="text-align:center;">{{ item.quantity }}</td>
+                                    <td style="text-align:right;">${{ item.price_exc|floatformat:2 }}</td>
+                                    <td style="text-align:center;">{{ item.discount_percent|floatformat:1 }}%</td>
+                                </tr>
+                                {% empty %}
+                                <tr style="background:#fff; border-radius:8px;">
+                                    <td colspan="4" style="padding:12px; text-align:center; color:#666;">No items in this order</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" style="text-align:right; padding:12px; font-weight:600;">Subtotal</td>
+                                    <td style="text-align:right; padding:12px;">${{ purchase_order.subtotal_exc|add:purchase_order.total_discount_amount|floatformat:2 }}</td>
+                                </tr>
+                                {% if purchase_order.total_discount_amount > 0 %}
+                                <tr>
+                                    <td colspan="3" style="text-align:right; padding:12px; color:#dc3545;">Total Discount</td>
+                                    <td style="text-align:right; padding:12px; color:#dc3545;">-${{ purchase_order.total_discount_amount|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" style="text-align:right; padding:12px;">After Discount</td>
+                                    <td style="text-align:right; padding:12px;">${{ purchase_order.subtotal_exc|floatformat:2 }}</td>
+                                </tr>
+                                {% endif %}
+                                <tr>
+                                    <td colspan="3" style="text-align:right; padding:12px;">GST (10%)</td>
+                                    <td style="text-align:right; padding:12px;">${{ purchase_order.gst_amount|floatformat:2 }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" style="text-align:right; padding:16px; font-size:16px; font-weight:700; border-top:2px solid #0089d1;">Grand Total</td>
+                                    <td style="text-align:right; padding:16px; font-size:16px; font-weight:700; color:#0089d1; border-top:2px solid #0089d1;">${{ purchase_order.grand_total|floatformat:2 }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </td>
+                </tr>
+
+                <!-- Delivery -->
+                <tr>
+                    <td style="padding:30px 40px; background:#ffffff;">
+                        <h3 style="font-size:18px; font-weight:600; margin:0 0 15px; color:#333;">Delivery Details</h3>
+                        {% if purchase_order.store %}
+                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Address:</strong> {{ purchase_order.store.address|default:purchase_order.store.location }}</p>
+                        {% endif %}
+                        {% if purchase_order.delivery_person %}
+                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Attention:</strong> {{ purchase_order.delivery_person.name }}</p>
+                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Phone:</strong> {{ purchase_order.delivery_person.phone_number }}</p>
+                        {% endif %}
+                        {% if purchase_order.note_for_manufacturer %}
+                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Instructions:</strong> {{ purchase_order.note_for_manufacturer }}</p>
+                        {% else %}
+                        <p style="margin:5px 0; font-size:14px; color:#444;"><strong>Instructions:</strong> —</p>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <!-- Call to action -->
+                <tr>
+                    <td align="center" style="padding:40px; background:#f9fafc;">
+                        {% if purchase_order.creating_store.order_email or purchase_order.store.order_email %}
+                        <a href="mailto:{{ purchase_order.creating_store.order_email|default:purchase_order.store.order_email }}" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
+                        {% elif purchase_order.creating_store.email or purchase_order.store.email %}
+                        <a href="mailto:{{ purchase_order.creating_store.email|default:purchase_order.store.email }}" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
+                        {% else %}
+                        <a href="mailto:orders@company.com" style="background:#0089d1; color:#ffffff; padding:14px 28px; font-size:16px; font-weight:600; border-radius:6px; text-decoration:none; display:inline-block;">Confirm Order</a>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                    <td align="center" style="padding:25px 20px; font-size:13px; color:#777; background:#ffffff; border-bottom-left-radius:12px; border-bottom-right-radius:12px;">
+                        <p style="margin:0 0 10px; font-size:18px; font-weight:600; color:#333;">Need Help?</p>
+                        {% if purchase_order.creating_store.website_url or purchase_order.store.website_url %}
+                        <p style="margin:0 0 10px;">Visit our <a href="{{ purchase_order.creating_store.website_url|default:purchase_order.store.website_url }}/faqs" style="color:#0089d1; text-decoration:none;">FAQs</a> or <a href="{{ purchase_order.creating_store.website_url|default:purchase_order.store.website_url }}/contact-us" style="color:#0089d1; text-decoration:none;">Contact Us</a>.</p>
+                        {% endif %}
+                        {% if purchase_order.delivery_person %}
+                        <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin:15px 0; border-left:4px solid #0089d1;">
+                            <p style="margin:0 0 5px; font-size:16px; font-weight:600; color:#333;">Delivery Contact</p>
+                            <p style="margin:0; font-size:14px; color:#555;"><strong>{{ purchase_order.delivery_person.name }}</strong></p>
+                            <p style="margin:0; font-size:14px; color:#555;">Phone: {{ purchase_order.delivery_person.phone_number }}</p>
+                        </div>
+                        {% endif %}
+                        {% if purchase_order.creating_store.address or purchase_order.store.address %}
+                        <p style="margin:0 0 15px;">{{ purchase_order.creating_store.address|default:purchase_order.store.address }}</p>
+                        {% endif %}
+                        <p>
+                            {% if purchase_order.creating_store.instagram_url or purchase_order.store.instagram_url %}
+                            <a href="{{ purchase_order.creating_store.instagram_url|default:purchase_order.store.instagram_url }}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Instagram_icon.png/64px-Instagram_icon.png" alt="Instagram" width="24" style="margin:0 5px; border:none;"></a>
+                            {% endif %}
+                            {% if purchase_order.creating_store.facebook_url or purchase_order.store.facebook_url %}
+                            <a href="{{ purchase_order.creating_store.facebook_url|default:purchase_order.store.facebook_url }}"><img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/51/Facebook_f_logo_%282019%29.svg/64px-Facebook_f_logo_%282019%29.svg.png" alt="Facebook" width="24" style="margin:0 5px; border:none;"></a>
+                            {% endif %}
+                        </p>
+                        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;">
+                        <p style="font-size:11px; color:#999; margin:0;">© {{ purchase_order.creating_store.name|default:purchase_order.store.name }} since {{ purchase_order.created_at|date:"Y" }}. All Rights Reserved.</p>
+                    </td>
+                </tr>
+
+            </tbody>
+        </table>
+    </td>
+</body>
+</html>

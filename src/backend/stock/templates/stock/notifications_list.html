@@ -1,0 +1,320 @@
+{% load static %}
+{% load notification_tags %}
+{% include 'stock/headers.html' %}
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Notifications</h3>
+                            <p class="nk-block-des text-soft">
+                                <span>Total: {{ total_count }} notifications</span>
+                                {% if unread_count > 0 %}
+                                    <span class="badge badge-danger ml-2">{{ unread_count }} unread</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="nk-block-head-content">
+                            {% if unread_count > 0 %}
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <form method="post" style="display: inline;">
+                                    {% csrf_token %}
+                                    <button type="submit" name="mark_all_read" class="btn btn-outline-light btn-sm">
+                                        <em class="icon ni ni-check-circle"></em>
+                                        <span>Mark All as Read</span>
+                                    </button>
+                                </form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="nk-block">
+                    <div class="card card-bordered">
+                        <div class="card-inner">
+                            {% if notifications %}
+                                <div class="notifications-container">
+                                    {% for notification in notifications %}
+                                    <div class="notification-item-page {% if not notification.is_read %}unread{% endif %}" 
+                                         data-notification-id="{{ notification.id }}" 
+                                         data-action-url="{{ notification.get_action_url }}">
+                                        <div class="notification-content-wrapper">
+                                            <div class="notification-icon-wrapper">
+                                                <div class="notification-icon priority-{{ notification.priority }}">
+                                                    <em class="icon {{ notification.notification_type|get_notification_icon }}"></em>
+                                                </div>
+                                            </div>
+                                            <div class="notification-details">
+                                                <div class="notification-header">
+                                                    <h6 class="notification-title">{{ notification.title }}</h6>
+                                                    <span class="notification-time">{{ notification.created_at|timesince }} ago</span>
+                                                </div>
+                                                <p class="notification-message">{{ notification.message }}</p>
+                                                <div class="notification-meta">
+                                                    <span class="badge badge-{{ notification.priority }}">{{ notification.get_priority_display }}</span>
+                                                    <span class="notification-type">{{ notification.get_notification_type_display }}</span>
+                                                    {% if notification.is_read %}
+                                                        <span class="text-muted">
+                                                            <em class="icon ni ni-check-circle"></em> Read
+                                                        </span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+
+                                <!-- Pagination -->
+                                {% if notifications.has_other_pages %}
+                                <div class="card-footer">
+                                    <nav aria-label="Notifications pagination">
+                                        <ul class="pagination justify-content-center">
+                                            {% if notifications.has_previous %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page=1">&laquo; First</a>
+                                                </li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ notifications.previous_page_number }}">Previous</a>
+                                                </li>
+                                            {% endif %}
+
+                                            <li class="page-item active">
+                                                <span class="page-link">
+                                                    Page {{ notifications.number }} of {{ notifications.paginator.num_pages }}
+                                                </span>
+                                            </li>
+
+                                            {% if notifications.has_next %}
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ notifications.next_page_number }}">Next</a>
+                                                </li>
+                                                <li class="page-item">
+                                                    <a class="page-link" href="?page={{ notifications.paginator.num_pages }}">Last &raquo;</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </nav>
+                                </div>
+                                {% endif %}
+                            {% else %}
+                                <div class="text-center py-5">
+                                    <em class="icon ni ni-bell-off" style="font-size: 3rem; opacity: 0.3;"></em>
+                                    <h5 class="mt-3">No notifications yet</h5>
+                                    <p class="text-muted">You'll see notifications here when activities happen in the system.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.notification-item-page {
+    border-bottom: 1px solid #374659;
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.dark-mode .notification-item-page:hover {
+    background-color: #1e2d3f !important;
+}
+
+.dark-mode .notification-item-page:last-child {
+    border-bottom: none;
+}
+
+.notification-item-page.unread {
+    background-color: rgba(152, 163, 255, 0.1);
+    border-left: 4px solid #98a3ff;
+}
+
+.notification-content-wrapper {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.notification-icon-wrapper {
+    flex-shrink: 0;
+}
+
+.notification-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+}
+
+.notification-icon.priority-low {
+    background-color: #1e3a52;
+    color: #64b5f6;
+}
+
+.notification-icon.priority-medium {
+    background-color: #2e2310;
+    color: #ffb74d;
+}
+
+.notification-icon.priority-high {
+    background-color: #3e1419;
+    color: #f48fb1;
+}
+
+.notification-icon.priority-urgent {
+    background-color: #2e1434;
+    color: #ce93d8;
+}
+
+.notification-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.notification-header {
+    display: flex;
+    justify-content: between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #c4cefe;
+    margin: 0;
+    flex: 1;
+    font-size: 1rem;
+}
+
+.notification-time {
+    color: #8699b2;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    margin-left: 1rem;
+}
+
+.notification-message {
+    color: #8699b2;
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+}
+
+.notification-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.notification-type {
+    color: #8699b2;
+    font-size: 0.875rem;
+}
+
+.badge-low {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge-medium {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.badge-high {
+    background-color: #ffebee;
+    color: #d32f2f;
+}
+
+.badge-urgent {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.dark-mode .badge-low {
+    background-color: #1e3a52;
+    color: #64b5f6;
+}
+
+.dark-mode .badge-medium {
+    background-color: #2e2310;
+    color: #ffb74d;
+}
+
+.dark-mode .badge-high {
+    background-color: #3e1419;
+    color: #f48fb1;
+}
+
+.dark-mode .badge-urgent {
+    background-color: #2e1434;
+    color: #ce93d8;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click handlers for notification items
+    document.querySelectorAll('.notification-item-page').forEach(item => {
+        item.addEventListener('click', function() {
+            const notificationId = this.dataset.notificationId;
+            const actionUrl = this.dataset.actionUrl;
+            
+            // Mark as read
+            markNotificationRead(notificationId);
+            
+            // Navigate to action URL if available
+            if (actionUrl && actionUrl !== 'null' && actionUrl !== '#' && actionUrl !== 'None') {
+                window.location.href = actionUrl;
+            }
+        });
+    });
+    
+    function markNotificationRead(notificationId) {
+        const formData = new FormData();
+        formData.append('notification_id', notificationId);
+        formData.append('csrfmiddlewaretoken', getCsrfToken());
+        
+        fetch('/api/notifications/mark-read/', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove unread styling
+                const item = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                if (item) {
+                    item.classList.remove('unread');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error marking notification as read:', error);
+        });
+    }
+    
+    function getCsrfToken() {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            const [name, value] = cookie.trim().split('=');
+            if (name === 'csrftoken') {
+                return value;
+            }
+        }
+        return '';
+    }
+});
+</script>
+
+{% include 'stock/footers.html' %}

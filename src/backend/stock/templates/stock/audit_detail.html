@@ -1,0 +1,258 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <div class="nk-block-head-sub">
+                                <a class="back-to" href="{% url 'audit_list' %}">
+                                    <em class="icon ni ni-arrow-left"></em><span>Back to Audits</span>
+                                </a>
+                            </div>
+                            <h3 class="nk-block-title page-title">{{ audit.audit_reference }}</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>{{ audit.title }}</p>
+                            </div>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="#" class="btn btn-icon btn-trigger toggle-expand mr-n1" data-target="pageMenu"><em class="icon ni ni-more-v"></em></a>
+                                <div class="toggle-expand-content" data-content="pageMenu">
+                                    <ul class="nk-block-tools g-3">
+                                        {% if audit.status == 'planned' and user_permissions.can_manage_access_control %}
+                                        <li class="nk-block-tools-opt">
+                                            <a href="{% url 'start_audit' audit.pk %}" class="btn btn-success">
+                                                <em class="icon ni ni-play"></em><span>Start Audit</span>
+                                            </a>
+                                        </li>
+                                        {% elif audit.status == 'in_progress' %}
+                                        <li class="nk-block-tools-opt">
+                                            <a href="{% url 'count_items' audit.pk %}" class="btn btn-warning">
+                                                <em class="icon ni ni-edit"></em><span>Count Items</span>
+                                            </a>
+                                        </li>
+                                        {% if user_permissions.can_manage_access_control %}
+                                        <li class="nk-block-tools-opt">
+                                            <a href="{% url 'complete_audit' audit.pk %}" class="btn btn-info">
+                                                <em class="icon ni ni-check"></em><span>Complete Audit</span>
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                        {% elif audit.status == 'completed' and user_permissions.can_manage_access_control %}
+                                        <li class="nk-block-tools-opt">
+                                            <a href="{% url 'approve_audit' audit.pk %}" class="btn btn-primary">
+                                                <em class="icon ni ni-check-thick"></em><span>Approve & Apply</span>
+                                            </a>
+                                        </li>
+                                        {% endif %}
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Summary -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            <div class="row g-4">
+                                <div class="col-md-3">
+                                    <div class="data-item">
+                                        <div class="data-col">
+                                            <span class="data-label">Status</span>
+                                            <span class="data-value">
+                                                <span class="badge badge-dim badge-{% if audit.status == 'planned' %}secondary{% elif audit.status == 'in_progress' %}warning{% elif audit.status == 'completed' %}info{% elif audit.status == 'approved' %}success{% else %}dark{% endif %}">
+                                                    {{ audit.get_status_display }}
+                                                </span>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="data-item">
+                                        <div class="data-col">
+                                            <span class="data-label">Progress</span>
+                                            <span class="data-value">{{ audit.completion_percentage }}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="data-item">
+                                        <div class="data-col">
+                                            <span class="data-label">Items Counted</span>
+                                            <span class="data-value">{{ audit.total_items_counted }}/{{ audit.total_items_planned }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="data-item">
+                                        <div class="data-col">
+                                            <span class="data-label">Variances</span>
+                                            <span class="data-value {% if audit.items_with_variances > 0 %}text-danger{% endif %}">{{ audit.items_with_variances }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Audit Information -->
+                <div class="nk-block">
+                    <div class="row g-gs">
+                        <div class="col-lg-8">
+                            <!-- Audit Items -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Audit Items</h5>
+                                    </div>
+                                    {% if audit_items %}
+                                    <div class="nk-tb-list nk-tb-ulist">
+                                        <div class="nk-tb-item nk-tb-head">
+                                            <div class="nk-tb-col"><span class="sub-text">Item</span></div>
+                                            <div class="nk-tb-col tb-col-md"><span class="sub-text">System Qty</span></div>
+                                            <div class="nk-tb-col tb-col-md"><span class="sub-text">Physical Count</span></div>
+                                            <div class="nk-tb-col tb-col-md"><span class="sub-text">Variance</span></div>
+                                            <div class="nk-tb-col tb-col-md"><span class="sub-text">Counted By</span></div>
+                                            <div class="nk-tb-col nk-tb-col-tools">Actions</div>
+                                        </div>
+                                        {% for item in audit_items %}
+                                        <div class="nk-tb-item">
+                                            <div class="nk-tb-col">
+                                                <div class="user-card">
+                                                    <div class="user-info">
+                                                        <span class="tb-lead">{{ item.stock.item_name }}</span>
+                                                        <span class="tb-sub">{{ item.stock.category.group|default:"No Category" }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="nk-tb-col tb-col-md">
+                                                <span class="tb-amount">{{ item.system_quantity }}</span>
+                                            </div>
+                                            <div class="nk-tb-col tb-col-md">
+                                                {% if item.physical_count is not None %}
+                                                <span class="tb-amount">{{ item.physical_count }}</span>
+                                                {% else %}
+                                                <span class="tb-amount text-soft">Not counted</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="nk-tb-col tb-col-md">
+                                                {% if item.variance_quantity != 0 %}
+                                                <span class="tb-amount {% if item.variance_quantity > 0 %}text-success{% else %}text-danger{% endif %}">
+                                                    {% if item.variance_quantity > 0 %}+{% endif %}{{ item.variance_quantity }}
+                                                </span>
+                                                {% else %}
+                                                <span class="tb-amount text-muted">0</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="nk-tb-col tb-col-md">
+                                                {% if item.counted_by %}
+                                                <span class="tb-status">{{ item.counted_by.username }}</span>
+                                                <span class="tb-sub">{{ item.count_date|date:"M d, H:i" }}</span>
+                                                {% else %}
+                                                <span class="tb-status text-soft">Uncounted</span>
+                                                {% endif %}
+                                            </div>
+                                            <div class="nk-tb-col nk-tb-col-tools">
+                                                {% if audit.status == 'in_progress' %}
+                                                <ul class="nk-tb-actions gx-1">
+                                                    <li>
+                                                        <a href="{% url 'count_single_item' audit.pk item.pk %}" class="btn btn-trigger btn-icon" data-toggle="tooltip" title="Count This Item">
+                                                            <em class="icon ni ni-edit"></em>
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="text-center py-4">
+                                        <div class="user-avatar lg bg-light">
+                                            <em class="icon ni ni-package"></em>
+                                        </div>
+                                        <h5 class="mt-3">No Items to Audit</h5>
+                                        <p class="text-soft">This audit has no items assigned for counting.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-lg-4">
+                            <!-- Audit Details -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Audit Details</h5>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Audit Type</span>
+                                            <span class="caption-text">{{ audit.get_audit_type_display }}</span>
+                                        </div>
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Created By</span>
+                                            <span class="caption-text">{{ audit.created_by.get_full_name|default:audit.created_by.username }}</span>
+                                        </div>
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Created Date</span>
+                                            <span class="caption-text">{{ audit.created_at|date:"M d, Y H:i" }}</span>
+                                        </div>
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Planned Start</span>
+                                            <span class="caption-text">{{ audit.planned_start_date|date:"M d, Y" }}</span>
+                                        </div>
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Planned End</span>
+                                            <span class="caption-text">{{ audit.planned_end_date|date:"M d, Y" }}</span>
+                                        </div>
+                                        {% if audit.actual_start_date %}
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Actual Start</span>
+                                            <span class="caption-text">{{ audit.actual_start_date|date:"M d, Y H:i" }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if audit.actual_end_date %}
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Actual End</span>
+                                            <span class="caption-text">{{ audit.actual_end_date|date:"M d, Y H:i" }}</span>
+                                        </div>
+                                        {% endif %}
+                                        {% if audit.approved_by %}
+                                        <div class="col-sm-6 col-lg-12">
+                                            <span class="sub-text">Approved By</span>
+                                            <span class="caption-text">{{ audit.approved_by.get_full_name|default:audit.approved_by.username }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if audit.description %}
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="card-head">
+                                        <h5 class="card-title">Description</h5>
+                                    </div>
+                                    <p>{{ audit.description }}</p>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

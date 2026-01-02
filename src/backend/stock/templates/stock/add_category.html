@@ -1,0 +1,48 @@
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block-head nk-block-head-sm">
+                        <div class="nk-block-between">
+                            <div class="nk-block-head-content">
+                                <h3 class="nk-block-title page-title">{{ title }}</h3>
+                                <div class="nk-block-des text-soft">
+                                    <p>Add a new product category to organize your inventory.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="nk-block nk-block-lg">
+                        <div class="row g-gs">
+                            <div class="col-lg-12">
+                                <div class="card h-100">
+                                    <div class="card-inner">
+                                        <form method="POST" action="">
+                                            {% csrf_token %}
+                                            {{ form|crispy }}
+                                        </form>
+                                        
+                                        <div class="mt-3">
+                                            <a href="{% url 'manage_categories' %}" class="btn btn-secondary">
+                                                <em class="icon ni ni-arrow-left"></em> Back to Categories
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

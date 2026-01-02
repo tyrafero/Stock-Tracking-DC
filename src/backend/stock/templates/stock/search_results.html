@@ -1,0 +1,162 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{title}}</h4>
+                                {% if query %}
+                                <p class="nk-block-des">Search results for: "<strong>{{query}}</strong>"</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if results %}
+                        <table class="datatable-init nowrap nk-tb-list is-separate" data-auto-responsive="false">
+                            <thead>
+                                <tr class="nk-tb-item nk-tb-head">
+                                    <th class="nk-tb-col tb-col-sm"><span>COUNT</span></th>
+                                    <th class="nk-tb-col"><span>STOCK NAME</span></th>
+                                    <th class="nk-tb-col"><span>CATEGORY</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>LOCATION</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>REORDER LEVEL</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>QUANTITY</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>TIME STAMP</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
+                                    <th class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1 my-n1">
+                                            <li class="mr-n1">
+                                                <div class="dropdown">
+                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown"><em class="icon ni ni-more-h"></em></a>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in results %}
+                                <tr class="nk-tb-item">
+                                    <td class="nk-tb-col">
+                                        <span class="tb-sub">{{forloop.counter}}</span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-sm">
+                                        <span class="tb-product">
+                                            {% if item.image_url %}
+                                                <img src="{{ item.image_url }}" alt="{{ item.item_name }}" class="thumb" onerror="this.style.display='none'">
+                                            {% else %}
+                                                <div class="thumb thumb-placeholder">
+                                                    <em class="icon ni ni-img" style="font-size: 20px; color: #ccc;"></em>
+                                                </div>
+                                            {% endif %}
+                                            {% if item.quantity <= item.re_order %}
+                                            <span style="background: red" class="title"><a href="{% url 'stock_detail' item.id %}">{{ item.item_name }}</a></span>
+                                            {% else %}
+                                            <span class="title"><a href="{% url 'stock_detail' item.id %}">{{ item.item_name }}</a></span>
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                    <td class="nk-tb-col">
+                                        <span class="tb-lead"><a href="{% url 'update_stock' item.id %}">{{item.category}}</a></span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        {% if item.condition == 'new' %}
+                                            <span class="badge badge-success">{{ item.get_condition_display }}</span>
+                                        {% elif item.condition == 'bstock' %}
+                                            <span class="badge badge-warning">{{ item.get_condition_display }}</span>
+                                        {% elif item.condition == 'demo_unit' %}
+                                            <span class="badge badge-info">{{ item.get_condition_display }}</span>
+                                        {% else %}
+                                            <span class="badge badge-primary">{{ item.get_condition_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <div class="tb-sub">
+                                            {% if item.locations.exists %}
+                                                {% for location in item.locations.all %}
+                                                    {% if location.quantity > 0 %}
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span>
+                                                                <strong>{{ location.store.name }}</strong>
+                                                                {% if location.aisle %}
+                                                                    <small class="text-muted">({{ location.aisle }})</small>
+                                                                {% endif %}
+                                                            </span>
+                                                            <span class="badge badge-dim badge-primary">{{ location.quantity }}</span>
+                                                        </div>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="nk-tb-col">
+                                        <span class="tb-sub"><a href="{% url 're_order' item.id %}">{{item.re_order}}</a></span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <span class="tb-sub"><strong>{{item.total_across_locations}}</strong></span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <span class="tb-sub">{{item.last_updated}}</span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <span class="tb-sub">{{item.timestamp}}</span>
+                                    </td>
+                                    <td class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1 my-n1">
+                                            <li class="mr-n1">
+                                                <div class="dropdown">
+                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown"><em class="icon ni ni-more-h"></em></a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <ul class="link-list-opt no-bdr">
+                                                            <li><a href="{% url 'update_stock' item.id %}"><em class="icon ni ni-edit"></em><span>Edit Product</span></a></li>
+                                                            <li><a href="{% url 'stock_detail' item.id %}"><em class="icon ni ni-eye"></em><span>View Product</span></a></li>
+                                                            <li><a href="{% url 're_order' item.id %}"><em class="icon ni ni-activity-round"></em><span>Reorder Level</span></a></li>
+                                                            <li><a id="{{forloop.counter}}" href="javascript:void(0)"><em class="icon ni ni-trash"></em><span>Remove Product</span></a></li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="nk-block">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="nk-block-head-content text-center">
+                                        <h5 class="nk-block-title">No Results Found</h5>
+                                        {% if query %}
+                                        <p class="nk-block-des">No items found matching "{{query}}". Try a different search term.</p>
+                                        {% else %}
+                                        <p class="nk-block-des">No items in the system yet.</p>
+                                        {% endif %}
+                                        <div class="pt-3">
+                                            <a href="/view_stock" class="btn btn-primary">View All Stock</a>
+                                            <a href="/add_stock" class="btn btn-outline-primary">Add New Stock</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

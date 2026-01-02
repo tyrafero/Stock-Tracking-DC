@@ -1,0 +1,62 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+<div class="nk-content">
+<div class="container-fluid">
+<div class="nk-content-inner">
+<div class="nk-content-body">
+<div class="components-preview wide-md mx-auto">
+<div class="nk-block nk-block-lg">
+<div class="nk-block-head">
+<div class="nk-block-head-content">
+<h4 class="nk-block-title">{{ title }}</h4>
+<div class="nk-block-des">
+<p>{% if manufacturer %}Update{% else %}Add{% endif %} manufacturer information below.</p>
+</div>
+</div>
+</div>
+<div class="card">
+<div class="card-inner">
+<form method="post">
+ {% csrf_token %}
+ 
+ <!-- Render form fields without submit button -->
+ {% for field in form %}
+     {{ field|as_crispy_field }}
+ {% endfor %}
+ 
+<!-- Custom submit button -->
+<div class="form-group mt-3">
+<div class="text-center">
+<button type="submit" class="btn btn-primary btn-lg">
+ Save Manufacturer
+</button>
+<div class="mt-2">
+<a href="{% url 'manage_manufacturers' %}" class="text-muted">
+<small>← Back to List</small>
+</a>
+</div>
+</div>
+</div>
+</form>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+{% include 'stock/footers.html' %}
+<script src="{% static 'js/sweetalert2.all.min.js' %}"></script>
+{% for message in messages %}
+<script>
+Swal.fire({
+position: 'center',
+icon: '{% if "success" in message.tags %}success{% elif "error" in message.tags %}error{% else %}info{% endif %}',
+title: '{{ message }}',
+showConfirmButton: true,
+timer: 15000
+ });
+</script>
+{% endfor %}

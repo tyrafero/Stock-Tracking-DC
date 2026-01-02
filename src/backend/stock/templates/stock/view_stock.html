@@ -1,0 +1,407 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+
+
+
+
+{% include 'stock/headers.html' %}
+
+
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                     <div class="nk-block nk-block-lg">
+                                        <div class="nk-block-head">
+                                            <div class="nk-block-head-content">
+                                                <h4 class="nk-block-title">{{title}}</h4>
+                                            </div>
+                                        </div>
+
+                                        <!-- DataTable Search Suggestions Container -->
+                                        <style>
+                                            .dataTables_wrapper .dataTables_filter {
+                                                position: relative;
+                                            }
+
+                                            /* Force bigger search input */
+                                            .dataTables_filter input[type="text"],
+                                            .dataTables_filter input[type="search"] {
+                                                font-size: 18px !important;
+                                                padding: 14px 24px !important;
+                                                min-width: 450px !important;
+                                                height: 50px !important;
+                                                line-height: 22px !important;
+                                            }
+
+                                            .dataTables_filter label {
+                                                font-size: 18px !important;
+                                                display: flex !important;
+                                                align-items: center !important;
+                                                gap: 10px !important;
+                                            }
+
+                                            .dataTables_filter {
+                                                margin-bottom: 20px !important;
+                                            }
+
+                                            #datatable-search-suggestions {
+                                                position: absolute;
+                                                top: 100%;
+                                                right: 0;
+                                                left: auto;
+                                                min-width: 400px;
+                                                background: white;
+                                                border: 1px solid #e3e7f1;
+                                                border-radius: 8px;
+                                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                                                z-index: 1000;
+                                                max-height: 400px;
+                                                overflow-y: auto;
+                                                display: none;
+                                            }
+                                            #datatable-search-suggestions.show {
+                                                display: block;
+                                            }
+                                        </style>
+
+                                        <table class="datatable-init nk-tb-list is-separate" data-auto-responsive="false" style="text-align: left;">
+                                            <thead>
+                                                <tr class="nk-tb-item nk-tb-head">
+                                                    <th class="nk-tb-col tb-col-sm"><span>COUNT</span></th>
+                                                    <th class="nk-tb-col"><span>STOCK NAME</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>CONDITION</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>LOCATION</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>TOTAL STOCK</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>COMMITTED</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>AVAILABLE</span></th>
+                                                    <th class="nk-tb-col tb-col-md"><span>LAST UPDATED</span></th>
+                                                    <th class="nk-tb-col nk-tb-col-tools">
+                                                        <ul class="nk-tb-actions gx-1 my-n1">
+                                                            <li class="mr-n1">
+                                                                <div class="dropdown">
+                                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown"><em class="icon ni ni-more-h"></em></a>
+                                                                </div>
+                                                            </li>
+                                                        </ul>
+                                                    </th>
+                                                </tr><!-- .nk-tb-item -->
+                                            </thead>
+                                            <tbody>
+
+
+
+                                               {% for every in everything %}
+                                                <tr class="nk-tb-item">
+                                                    <td class="nk-tb-col">
+                                                        <span class="tb-sub">{{forloop.counter}}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-sm">
+                                                        <span class="tb-product">
+                                                            {% if every.image_url %}
+                                                                <img src="{{ every.image_url }}" alt="{{ every.item_name }}" class="thumb" onerror="this.style.display='none'">
+                                                            {% else %}
+                                                                <div class="thumb thumb-placeholder">
+                                                                    <em class="icon ni ni-img" style="font-size: 20px; color: #ccc;"></em>
+                                                                </div>
+                                                            {% endif %}
+                                                            {% if every.quantity <= every.re_order %}
+                                                            <span class="title" style="background: red; word-wrap: break-word; white-space: normal;"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>
+                                                            {% else %}
+                                                            <span class="title" style="word-wrap: break-word; white-space: normal;"><a href="{% url 'stock_detail' every.id %}">{{ every.item_name }}</a></span>
+                                                            {% endif %}
+                                                        </span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        {% if every.condition == 'new' %}
+                                                            <span class="badge badge-success">{{ every.get_condition_display }}</span>
+                                                        {% elif every.condition == 'bstock' %}
+                                                            <span class="badge badge-warning">{{ every.get_condition_display }}</span>
+                                                        {% elif every.condition == 'demo_unit' %}
+                                                            <span class="badge badge-info">{{ every.get_condition_display }}</span>
+                                                        {% else %}
+                                                            <span class="badge badge-primary">{{ every.get_condition_display }}</span>
+                                                        {% endif %}
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <div class="tb-sub">
+                                                            {% if every.locations.exists %}
+                                                                {% for location in every.locations.all %}
+                                                                    {% if location.quantity > 0 %}
+                                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                            <span>
+                                                                                <strong>{{ location.store.name }}</strong>
+                                                                                {% if location.aisle %}
+                                                                                    <small class="text-muted">({{ location.aisle }})</small>
+                                                                                {% endif %}
+                                                                            </span>
+                                                                            <span class="badge badge-dim badge-primary">{{ location.quantity }}</span>
+                                                                        </div>
+                                                                    {% endif %}
+                                                                {% empty %}
+                                                                    <span class="text-muted">No active locations</span>
+                                                                {% endfor %}
+                                                                {% comment %}Fallback for when locations exist but none have quantity > 0{% endcomment %}
+                                                                {% if not every.locations.all|length > 0 or every.total_across_locations == 0 %}
+                                                                    <span class="text-muted">All locations empty</span>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                <span class="text-muted">Not assigned</span>
+                                                            {% endif %}
+                                                        </div>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub"><strong>{{ every.total_across_locations }}</strong></span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub text-warning">{{ every.committed_stock }}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub {% if every.is_low_stock %}text-danger{% else %}text-success{% endif %}">{{ every.available_for_sale }}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col tb-col-md">
+                                                        <span class="tb-sub">{{every.last_updated}}</span>
+                                                    </td>
+                                                    <td class="nk-tb-col nk-tb-col-tools">
+                                                        <ul class="nk-tb-actions gx-1 my-n1">
+                                                            <li class="mr-n1">
+                                                                <div class="dropdown">
+                                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown"><em class="icon ni ni-more-h"></em></a>
+                                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                                        <ul class="link-list-opt no-bdr">
+                                                                            {% if user_permissions.can_edit_stock %}
+                                                                            <li><a href="{% url 'update_stock' every.id %}"><em class="icon ni ni-edit"></em><span>Edit Product</span></a></li>
+                                                                            {% endif %}
+                                                                            <li><a href="{% url 'stock_detail' every.id %}"><em class="icon ni ni-eye"></em><span>View Product</span></a></li>
+                                                                            {% if user_permissions.can_commit_stock %}
+                                                                            <li><a href="{% url 'commit_stock' every.id %}"><em class="icon ni ni-lock"></em><span>Commit Stock</span></a></li>
+                                                                            {% endif %}
+                                                                            {% if user_permissions.can_transfer_stock %}
+                                                                            <li><a href="{% url 'transfer_stock' every.id %}"><em class="icon ni ni-swap"></em><span>Transfer Stock</span></a></li>
+                                                                            {% endif %}
+                                                                            {% if user_permissions.can_edit_stock %}
+                                                                            <li><a href="{% url 're_order' every.id %}"><em class="icon ni ni-activity-round"></em><span>Reorder Level</span></a></li>
+                                                                            <li><a id="{{forloop.counter}}"  href="javascript:void(0)"><em class="icon ni ni-trash"></em><span>Remove Product</span></a></li>
+                                                                            {% endif %}
+                                                                        </ul>
+                                                                    </div>
+                                                                </div>
+                                                            </li>
+                                                        </ul>
+                                                    </td>
+                                                </tr><!-- .nk-tb-item -->
+                                             {% endfor %}
+
+
+
+
+
+
+                                            </tbody>
+                                        </table><!-- .nk-tb-list -->
+
+                                        <!-- Pagination Controls -->
+                                        {% if everything.has_other_pages %}
+                                        <div class="nk-block-head nk-block-head-sm">
+                                            <div class="nk-block-between">
+                                                <div class="nk-block-head-content">
+                                                    <p class="text-soft">Showing {{ everything.start_index }}-{{ everything.end_index }} of {{ total_items }} items</p>
+                                                </div>
+                                                <div class="nk-block-head-content">
+                                                    <ul class="pagination justify-content-center justify-content-md-start">
+                                                        {% if everything.has_previous %}
+                                                            <li class="page-item">
+                                                                <a class="page-link" href="?page=1">&laquo; First</a>
+                                                            </li>
+                                                            <li class="page-item">
+                                                                <a class="page-link" href="?page={{ everything.previous_page_number }}">Previous</a>
+                                                            </li>
+                                                        {% endif %}
+
+                                                        {% for page_num in page_range %}
+                                                            {% if page_num == everything.number %}
+                                                                <li class="page-item active">
+                                                                    <span class="page-link">{{ page_num }}</span>
+                                                                </li>
+                                                            {% elif page_num == '…' %}
+                                                                <li class="page-item disabled">
+                                                                    <span class="page-link">{{ page_num }}</span>
+                                                                </li>
+                                                            {% else %}
+                                                                <li class="page-item">
+                                                                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                                                                </li>
+                                                            {% endif %}
+                                                        {% endfor %}
+
+                                                        {% if everything.has_next %}
+                                                            <li class="page-item">
+                                                                <a class="page-link" href="?page={{ everything.next_page_number }}">Next</a>
+                                                            </li>
+                                                            <li class="page-item">
+                                                                <a class="page-link" href="?page={{ everything.paginator.num_pages }}">Last &raquo;</a>
+                                                            </li>
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        <!-- End Pagination Controls -->
+
+                                    </div> <!-- nk-block -->
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add live search functionality to DataTable search
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait for DataTable to initialize
+    setTimeout(function() {
+        const datatableSearchInput = $('.dataTables_filter input');
+        const filterContainer = $('.dataTables_filter');
+
+        if (datatableSearchInput.length && filterContainer.length) {
+            // Add suggestions container
+            filterContainer.css('position', 'relative');
+            filterContainer.append('<div id="datatable-search-suggestions" class="search-suggestions"></div>');
+
+            const suggestionsContainer = $('#datatable-search-suggestions');
+            let searchTimeout;
+            let selectedIndex = -1;
+
+            // Disable DataTable's default search to prevent filtering current results
+            datatableSearchInput.off('keyup.DT input.DT');
+
+            // Handle input changes for live search
+            datatableSearchInput.on('input', function(e) {
+                const query = e.target.value.trim();
+                clearTimeout(searchTimeout);
+
+                if (query.length < 2) {
+                    hideSuggestions();
+                    return;
+                }
+
+                // Debounce the search requests
+                searchTimeout = setTimeout(function() {
+                    performLiveSearch(query);
+                }, 300);
+            });
+
+            // Handle keyboard navigation
+            datatableSearchInput.on('keydown', function(e) {
+                const suggestions = suggestionsContainer.find('.suggestion-item');
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, suggestions.length - 1);
+                    updateHighlight(suggestions);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateHighlight(suggestions);
+                } else if (e.key === 'Enter') {
+                    if (selectedIndex >= 0 && suggestions[selectedIndex]) {
+                        // A suggestion is selected - navigate to it
+                        e.preventDefault();
+                        e.stopPropagation();
+                        $(suggestions[selectedIndex]).click();
+                    } else {
+                        // No suggestion selected - go to search results page
+                        const query = datatableSearchInput.val().trim();
+                        if (query.length > 0) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            window.location.href = `/search/?q=${encodeURIComponent(query)}`;
+                        }
+                    }
+                } else if (e.key === 'Escape') {
+                    hideSuggestions();
+                }
+            });
+
+            // Hide suggestions when clicking outside
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.dataTables_filter').length) {
+                    hideSuggestions();
+                }
+            });
+
+            function performLiveSearch(query) {
+                $.ajax({
+                    url: `/api/live-search/?q=${encodeURIComponent(query)}`,
+                    method: 'GET',
+                    success: function(data) {
+                        displaySuggestions(data.suggestions);
+                    },
+                    error: function(error) {
+                        console.error('Search error:', error);
+                        hideSuggestions();
+                    }
+                });
+            }
+
+            function displaySuggestions(suggestions) {
+                selectedIndex = -1;
+
+                if (suggestions.length === 0) {
+                    suggestionsContainer.html('<div class="no-suggestions">No items found</div>');
+                } else {
+                    const html = suggestions.map(item => `
+                        <div class="suggestion-item" data-id="${item.id}" onclick="window.location.href='/stock_detail/${item.id}/'">
+                            ${item.image_url ?
+                                `<img src="${item.image_url}" alt="${item.item_name}" class="suggestion-image">` :
+                                '<div class="suggestion-image"></div>'
+                            }
+                            <div class="suggestion-content">
+                                <div class="suggestion-title ${item.low_stock ? 'low-stock' : ''}">${item.item_name}</div>
+                                <div class="suggestion-meta">
+                                    ${item.category}
+                                    ${item.condition === 'new' ?
+                                        `<span class="badge badge-success" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                        item.condition === 'bstock' ?
+                                        `<span class="badge badge-warning" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                        item.condition === 'demo_unit' ?
+                                        `<span class="badge badge-info" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>` :
+                                        `<span class="badge badge-primary" style="font-size: 10px; margin-left: 8px;">${item.condition_display}</span>`
+                                    }
+                                    <br><small style="color: #8094ae;">Total: ${item.quantity} units</small>
+                                </div>
+                            </div>
+                            <span class="suggestion-quantity ${item.low_stock ? 'low-stock' : ''}">Qty: ${item.quantity}</span>
+                        </div>
+                    `).join('');
+                    suggestionsContainer.html(html);
+                }
+
+                showSuggestions();
+            }
+
+            function updateHighlight(suggestions) {
+                suggestions.each(function(index) {
+                    $(this).toggleClass('highlighted', index === selectedIndex);
+                });
+            }
+
+            function showSuggestions() {
+                suggestionsContainer.addClass('show');
+            }
+
+            function hideSuggestions() {
+                suggestionsContainer.removeClass('show');
+                selectedIndex = -1;
+            }
+        }
+    }, 1000); // Wait 1 second for DataTable to fully initialize
+});
+</script>
+
+{% include 'stock/footers.html' %}

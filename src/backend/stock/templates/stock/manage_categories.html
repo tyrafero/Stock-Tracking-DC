@@ -1,0 +1,108 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{ title }}</h4>
+                                <div class="nk-block-des">
+                                    <p>Manage your product categories here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="text-end mb-3">
+                                    <a href="{% url 'add_category' %}" class="btn btn-primary">
+                                        <em class="icon ni ni-plus"></em> Add Category
+                                    </a>
+                                </div>
+                                
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Category Name</th>
+                                            <th>Stock Items</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for category in categories %}
+                                        <tr>
+                                            <td><strong>{{ category.group }}</strong></td>
+                                            <td>
+                                                <span class="badge badge-outline-info">
+                                                    {{ category.stock_set.count }} items
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <a href="{% url 'edit_category' category.pk %}" 
+                                                       class="btn btn-sm btn-outline-primary">
+                                                        <em class="icon ni ni-edit"></em> Edit
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                                            onclick="deleteCategory({{ category.pk }}, '{{ category.group }}')">
+                                                        <em class="icon ni ni-trash"></em> Delete
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted">
+                                                <em class="icon ni ni-inbox" style="font-size: 2em;"></em>
+                                                <p>No categories found. <a href="{% url 'add_category' %}">Add your first category</a>.</p>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the category "<span id="categoryName"></span>"?</p>
+                <p class="text-danger">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteCategoryForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function deleteCategory(categoryId, categoryName) {
+    document.getElementById('categoryName').textContent = categoryName;
+    document.getElementById('deleteCategoryForm').action = "{% url 'delete_category' 0 %}".replace('0', categoryId);
+    var modal = new bootstrap.Modal(document.getElementById('deleteCategoryModal'));
+    modal.show();
+}
+</script>
+
+{% include 'stock/footers.html' %}

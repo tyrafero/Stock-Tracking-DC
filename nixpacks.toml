@@ -1,0 +1,18 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+
+[phases.install]
+cmds = [
+    "python3 -m pip install --upgrade pip setuptools wheel",
+    "python3 -m pip install -r src/backend/requirements.txt",
+    "cd src/frontend && npm ci"
+]
+
+[phases.build]
+cmds = [
+    "cd src/frontend && DOCKER_BUILD=true npm run build",
+    "cd src/backend && python3 manage.py collectstatic --noinput"
+]
+
+[start]
+cmd = "cd src/backend && python3 manage.py migrate && gunicorn stockmgtr.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120"

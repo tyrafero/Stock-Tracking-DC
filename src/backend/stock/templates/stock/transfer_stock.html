@@ -1,0 +1,152 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+{% block content %}
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Transfer Stock</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Transfer stock between different store locations</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="alert alert-info">
+                                    <h6><strong>{{ stock.item_name }}</strong></h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">Current Locations:</small><br>
+                                            {% for location in stock.locations.all %}
+                                                {% if location.quantity > 0 %}
+                                                    <div class="mb-1">
+                                                        <strong>{{ location.store.name }}</strong>: {{ location.quantity }} units
+                                                        {% if location.aisle %}
+                                                            <small class="text-muted">({{ location.aisle }})</small>
+                                                        {% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            {% empty %}
+                                                <span class="text-warning">Not assigned to any location</span>
+                                            {% endfor %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">Total Stock:</small><br>
+                                            <strong class="text-success">{{ stock.total_across_locations }}</strong>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">Condition:</small><br>
+                                            {% if stock.condition == 'new' %}
+                                                <span class="badge badge-success">{{ stock.get_condition_display }}</span>
+                                            {% elif stock.condition == 'bstock' %}
+                                                <span class="badge badge-warning">{{ stock.get_condition_display }}</span>
+                                            {% elif stock.condition == 'demo_unit' %}
+                                                <span class="badge badge-info">{{ stock.get_condition_display }}</span>
+                                            {% else %}
+                                                <span class="badge badge-primary">{{ stock.get_condition_display }}</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            <small class="text-muted">Category:</small><br>
+                                            <strong>{{ stock.category|default:"No Category" }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <form method="post">
+                                    {% csrf_token %}
+                                    {% crispy form %}
+                                </form>
+
+                                <script>
+                                document.addEventListener('DOMContentLoaded', function() {
+                                    const transferTypeSelect = document.getElementById('id_transfer_type');
+                                    const customerFields = document.getElementById('customer_fields');
+                                    
+                                    function toggleCustomerFields() {
+                                        if (transferTypeSelect.value === 'customer_collection') {
+                                            customerFields.style.display = 'block';
+                                        } else {
+                                            customerFields.style.display = 'none';
+                                        }
+                                    }
+                                    
+                                    if (transferTypeSelect && customerFields) {
+                                        transferTypeSelect.addEventListener('change', toggleCustomerFields);
+                                        toggleCustomerFields(); // Initialize on page load
+                                    }
+                                });
+                                </script>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-inner">
+                                <h6 class="card-title">Recent Transfers</h6>
+                                {% if stock.transfers.all %}
+                                    {% for transfer in stock.transfers.all|slice:":5" %}
+                                        <div class="mb-3 p-3 border rounded">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <strong>{{ transfer.from_location }} → {{ transfer.to_location }}</strong><br>
+                                                    <small class="text-muted">Qty: {{ transfer.quantity }}</small><br>
+                                                    <small class="text-muted">{{ transfer.transfer_reason }}</small>
+                                                </div>
+                                                <div>
+                                                    {% if transfer.status == 'pending' %}
+                                                        <span class="badge badge-warning">Pending</span>
+                                                    {% elif transfer.status == 'in_transit' %}
+                                                        <span class="badge badge-info">In Transit</span>
+                                                    {% elif transfer.status == 'completed' %}
+                                                        <span class="badge badge-success">Completed</span>
+                                                    {% else %}
+                                                        <span class="badge badge-danger">Cancelled</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">{{ transfer.created_at|date:"M d, Y" }}</small>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">No previous transfers</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="card-inner">
+                                <h6 class="card-title">Quick Actions</h6>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'stock_detail' stock.pk %}" class="btn btn-outline-primary">
+                                        <em class="icon ni ni-eye"></em> View Stock Details
+                                    </a>
+                                    <a href="{% url 'transfer_list' %}" class="btn btn-outline-info">
+                                        <em class="icon ni ni-swap"></em> View All Transfers
+                                    </a>
+                                    <a href="{% url 'view_stock' %}" class="btn btn-outline-gray">
+                                        <em class="icon ni ni-arrow-left"></em> Back to Stock List
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% include 'stock/footers.html' %}

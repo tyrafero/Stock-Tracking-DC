@@ -1,0 +1,137 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+{% block content %}
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">Commit Stock</h3>
+                            <div class="nk-block-des text-soft">
+                                <p>Reserve stock for customer with deposit</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-lg-8">
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="alert alert-info">
+                                    <h6><strong>{{ stock.item_name }}</strong></h6>
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Total Stock:</small><br>
+                                            <strong>{{ stock.total_stock }}</strong>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Committed:</small><br>
+                                            <strong class="text-warning">{{ stock.committed_stock }}</strong>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <small class="text-muted">Available for Sale:</small><br>
+                                            <strong class="text-success">{{ stock.available_for_sale }}</strong>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">Condition:</small>
+                                        {% if stock.condition == 'new' %}
+                                            <span class="badge badge-success">{{ stock.get_condition_display }}</span>
+                                        {% elif stock.condition == 'bstock' %}
+                                            <span class="badge badge-warning">{{ stock.get_condition_display }}</span>
+                                        {% elif stock.condition == 'demo_unit' %}
+                                            <span class="badge badge-info">{{ stock.get_condition_display }}</span>
+                                        {% else %}
+                                            <span class="badge badge-primary">{{ stock.get_condition_display }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <form method="post">
+                                    {% csrf_token %}
+                                    {% crispy form %}
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-4">
+                        <div class="card">
+                            <div class="card-inner">
+                                <h6 class="card-title">Current Commitments</h6>
+                                {% if stock.commitments.all %}
+                                    {% for commitment in stock.commitments.all %}
+                                        <div class="mb-3 p-3 border rounded">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div>
+                                                    <strong>{{ commitment.customer_name }}</strong><br>
+                                                    <small class="text-muted">Order: {{ commitment.customer_order_number }}</small><br>
+                                                    <small class="text-muted">Qty: {{ commitment.quantity }}</small><br>
+                                                    <small class="text-success">Deposit: ${{ commitment.deposit_amount }}</small>
+                                                </div>
+                                                <div>
+                                                    {% if commitment.is_fulfilled %}
+                                                        <span class="badge badge-success">Fulfilled</span>
+                                                    {% else %}
+                                                        <span class="badge badge-warning">Active</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <small class="text-muted d-block mt-2">{{ commitment.committed_at|date:"M d, Y" }}</small>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="text-muted">No commitments yet</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="card mt-3">
+                            <div class="card-inner">
+                                <h6 class="card-title">Quick Actions</h6>
+                                <div class="d-grid gap-2">
+                                    <a href="{% url 'stock_detail' stock.pk %}" class="btn btn-outline-primary">
+                                        <em class="icon ni ni-eye"></em> View Stock Details
+                                    </a>
+                                    <a href="{% url 'view_stock' %}" class="btn btn-outline-gray">
+                                        <em class="icon ni ni-arrow-left"></em> Back to Stock List
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quantityInput = document.querySelector('input[name="quantity"]');
+    const availableQuantity = {{ available_quantity }};
+    
+    if (quantityInput) {
+        quantityInput.addEventListener('input', function() {
+            const value = parseInt(this.value) || 0;
+            if (value > availableQuantity) {
+                this.setCustomValidity(`Cannot commit more than ${availableQuantity} items available for sale`);
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+        
+        // Set max attribute
+        quantityInput.setAttribute('max', availableQuantity);
+    }
+});
+</script>
+
+{% endblock %}
+
+{% include 'stock/footers.html' %}

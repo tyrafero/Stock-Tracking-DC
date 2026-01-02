@@ -1,0 +1,261 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+{% block content %}
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="nk-block-head nk-block-head-sm">
+                    <div class="nk-block-between">
+                        <div class="nk-block-head-content">
+                            <h3 class="nk-block-title page-title">{{ title }}</h3>
+                        </div>
+                        <div class="nk-block-head-content">
+                            <div class="toggle-wrap nk-block-tools-toggle">
+                                <a href="{% url 'create_purchase_order' %}" class="btn btn-primary">
+                                    <em class="icon ni ni-plus"></em>
+                                    <span>Create Purchase Order</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enhanced Search Form -->
+                {% load crispy_forms_tags %}
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner">
+                            {% crispy form %}
+                        </div>
+                    </div>
+                </div>
+                
+
+                <!-- Results Summary -->
+                {% if total_pos %}
+                <div class="nk-block">
+                    <div class="alert alert-info">
+                        <em class="icon ni ni-info"></em>
+                        <strong>{{ total_pos }}</strong> Purchase Order{{ total_pos|pluralize }} found
+                        {% if request.GET %}
+                            with current filters
+                            <a href="{% url 'purchase_order_list' %}" class="btn btn-sm btn-outline-primary ml-2">Clear All Filters</a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% elif request.GET %}
+                <div class="nk-block">
+                    <div class="alert alert-warning">
+                        <em class="icon ni ni-alert-circle"></em>
+                        No Purchase Orders found matching your search criteria.
+                        <a href="{% url 'purchase_order_list' %}" class="btn btn-sm btn-outline-primary ml-2">Clear All Filters</a>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Purchase Orders Table -->
+                <div class="nk-block">
+                    <div class="card">
+                        <div class="card-inner-group">
+                            <div class="card-inner p-0">
+                                <div class="nk-tb-list nk-tb-ulist">
+                                    <div class="nk-tb-item nk-tb-head">
+                                        <div class="nk-tb-col"><span class="sub-text">Reference #</span></div>
+                                        <div class="nk-tb-col tb-col-mb"><span class="sub-text">Manufacturer</span></div>
+                                        <div class="nk-tb-col tb-col-md"><span class="sub-text">Overall Status</span></div>
+                                        <div class="nk-tb-col tb-col-md"><span class="sub-text">Receiving</span></div>
+                                        <div class="nk-tb-col tb-col-md"><span class="sub-text">Payment</span></div>
+                                        <div class="nk-tb-col tb-col-lg"><span class="sub-text">Created Date</span></div>
+                                        <div class="nk-tb-col nk-tb-col-tools" style="width: auto;">
+                                            <span class="sub-text">
+                                                {% if can_view_prices %}Total Amount / {% endif %}Actions
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {% for purchase_order in purchase_orders %}
+                                    <div class="nk-tb-item">
+                                        <div class="nk-tb-col">
+                                            <div class="user-card">
+                                                <div class="user-info">
+                                                    <span class="tb-lead">{{ purchase_order.reference_number }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="nk-tb-col tb-col-mb">
+                                            <span class="tb-amount">{{ purchase_order.manufacturer.company_name }}</span>
+                                            {% if purchase_order.store %}
+                                            <span class="tb-sub">🏪 {{ purchase_order.store.name }}</span>
+                                            {% else %}
+                                            <span class="tb-sub text-warning">⚠️ No delivery location</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="nk-tb-col tb-col-md">
+                                            {% with overall_status=purchase_order.get_overall_status_display %}
+                                            <span class="badge badge-sm badge-{{ overall_status.1 }}">
+                                                {% if overall_status.0 == 'completed' %}✅ Completed
+                                                {% elif overall_status.0 == 'received_pending_payment' %}💰 Awaiting Payment
+                                                {% elif overall_status.0 == 'received_pending_invoice' %}💳 Awaiting Payment
+                                                {% elif overall_status.0 == 'paid_pending_receipt' %}📦 Awaiting Items
+                                                {% elif overall_status.0 == 'partially_complete' %}⏳ In Progress
+                                                {% elif overall_status.0 == 'partially_received' %}📥 Partial Receipt
+                                                {% elif overall_status.0 == 'pending' %}⏸️ Pending
+                                                {% else %}{{ overall_status.0|title }}
+                                                {% endif %}
+                                            </span>
+                                            {% endwith %}
+                                        </div>
+                                        <div class="nk-tb-col tb-col-md">
+                                            <span class="badge badge-sm 
+                                                {% if purchase_order.overall_receiving_status == 'not_received' %}badge-secondary
+                                                {% elif purchase_order.overall_receiving_status == 'partially_received' %}badge-warning
+                                                {% elif purchase_order.overall_receiving_status == 'fully_received' %}badge-success
+                                                {% endif %}">
+                                                {% if purchase_order.overall_receiving_status == 'not_received' %}Not Received
+                                                {% elif purchase_order.overall_receiving_status == 'partially_received' %}Partially Received  
+                                                {% elif purchase_order.overall_receiving_status == 'fully_received' %}Fully Received
+                                                {% else %}{{ purchase_order.overall_receiving_status|title }}{% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="nk-tb-col tb-col-md">
+                                            {% with payment_status=purchase_order.get_payment_status %}
+                                            <span class="badge badge-sm 
+                                                {% if payment_status == 'no_invoices' %}badge-secondary
+                                                {% elif payment_status == 'pending' %}badge-warning
+                                                {% elif payment_status == 'partially_paid' %}badge-info
+                                                {% elif payment_status == 'fully_paid' %}badge-success
+                                                {% elif payment_status == 'overdue' %}badge-danger
+                                                {% else %}badge-secondary
+                                                {% endif %}">
+                                                {% if payment_status == 'no_invoices' %}💳 No Payments
+                                                {% elif payment_status == 'pending' %}⏳ Pending Payment
+                                                {% elif payment_status == 'partially_paid' %}💰 Partially Paid
+                                                {% elif payment_status == 'fully_paid' %}✅ Fully Paid
+                                                {% elif payment_status == 'overdue' %}🚨 Overdue
+                                                {% else %}{{ payment_status|title }}
+                                                {% endif %}
+                                            </span>
+                                            {% endwith %}
+                                        </div>
+                                        <div class="nk-tb-col tb-col-lg">
+                                            <span class="tb-date">{{ purchase_order.created_at|date:"M d, Y" }}</span>
+                                        </div>
+                                        <div class="nk-tb-col nk-tb-col-tools" style="width: auto;">
+                                            <div class="d-flex flex-column flex-sm-row align-items-center justify-content-between">
+                                                {% if can_view_prices %}
+                                                <div class="tb-amount mb-2 mb-sm-0">
+                                                    <strong>${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                                                </div>
+                                                {% endif %}
+                                                <ul class="nk-tb-actions gx-1">
+                                                    <li>
+                                                        <div class="drodown">
+                                                            <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                                <em class="icon ni ni-more-h"></em>
+                                                            </a>
+                                                            <div class="dropdown-menu dropdown-menu-right">
+                                                                <ul class="link-list-opt no-bdr">
+                                                                    <li>
+                                                                        <a href="{% url 'purchase_order_detail' pk=purchase_order.pk %}">
+                                                                            <em class="icon ni ni-eye"></em>
+                                                                            <span>View Details</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% if purchase_order.status in 'draft,submitted' %}
+                                                                    <li>
+                                                                        <a href="{% url 'update_purchase_order' pk=purchase_order.pk %}">
+                                                                            <em class="icon ni ni-edit"></em>
+                                                                            <span>Edit</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% if purchase_order.status == 'draft' %}
+                                                                    <li>
+                                                                        <a href="{% url 'submit_purchase_order' pk=purchase_order.pk %}" 
+                                                                           onclick="return confirm('Are you sure you want to submit this purchase order?')">
+                                                                            <em class="icon ni ni-send"></em>
+                                                                            <span>Submit</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% if purchase_order.status in 'submitted,sent' %}
+                                                                    <li>
+                                                                        <a href="{% url 'send_purchase_order_email' pk=purchase_order.pk %}"
+                                                                           onclick="return confirm('Send this purchase order to manufacturer?')">
+                                                                            <em class="icon ni ni-emails"></em>
+                                                                            <span>Send Email</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% if purchase_order.status == 'completed' and not purchase_order.invoices.exists %}
+                                                                    <li class="divider"></li>
+                                                                    <li>
+                                                                        <a href="{% url 'create_invoice' purchase_order.pk %}" class="text-success">
+                                                                            <em class="icon ni ni-wallet"></em>
+                                                                            <span>Record Payment</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% if purchase_order.invoices.exists %}
+                                                                    <li class="divider"></li>
+                                                                    {% for invoice in purchase_order.invoices.all %}
+                                                                    <li>
+                                                                        <a href="{% url 'invoice_detail' invoice.pk %}">
+                                                                            <em class="icon ni ni-check-circle"></em>
+                                                                            <span>Payment #{{ invoice.invoice_number }}</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endfor %}
+                                                                    {% if purchase_order.get_total_outstanding_amount > 0 %}
+                                                                    <li>
+                                                                        <a href="{% url 'create_invoice' purchase_order.pk %}" class="text-success">
+                                                                            <em class="icon ni ni-plus"></em>
+                                                                            <span>Add Payment</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    {% endif %}
+                                                                    {% endif %}
+                                                                    <li class="divider"></li>
+                                                                    <li>
+                                                                        <a href="{% url 'purchase_order_history' pk=purchase_order.pk %}">
+                                                                            <em class="icon ni ni-activity"></em>
+                                                                            <span>View History</span>
+                                                                        </a>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% empty %}
+                                    <div class="nk-tb-item">
+                                        <div class="nk-tb-col text-center" colspan="6">
+                                            <div class="text-center p-4">
+                                                <em class="icon ni ni-inbox" style="font-size: 48px; opacity: 0.3;"></em>
+                                                <h6 class="mt-2">No purchase orders found</h6>
+                                                <p class="text-soft">Create your first purchase order to get started.</p>
+                                                <a href="{% url 'create_purchase_order' %}" class="btn btn-primary">
+                                                    <em class="icon ni ni-plus"></em>
+                                                    <span>Create Purchase Order</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% include 'stock/footers.html' %}

@@ -1,0 +1,513 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<style>
+.invoice-header {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.po-summary-card {
+    border-left: 4px solid #059669;
+    background: #f0fdf4;
+}
+
+.form-section {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.amount-display {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.file-upload-area {
+    border: 2px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.3s ease;
+}
+
+.file-upload-area:hover {
+    border-color: #059669;
+    background-color: #f0fdf4;
+}
+
+.file-upload-area.dragover {
+    border-color: #047857;
+    background-color: #ecfdf5;
+}
+</style>
+
+<div class="nk-content">
+<div class="container-fluid">
+<div class="nk-content-inner">
+<div class="nk-content-body">
+<div class="components-preview wide-lg mx-auto">
+
+<!-- Invoice Creation Header -->
+<div class="invoice-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h3 class="mb-2">💳 Record Payment</h3>
+            <p class="mb-1 opacity-75">{{ purchase_order.reference_number }} - {{ purchase_order.manufacturer.company_name }}</p>
+            <p class="mb-0 opacity-75">
+                {% if purchase_order.invoices.exists %}
+                    Add payment to existing invoice for this purchase order
+                {% else %}
+                    Record payment and create invoice for this purchase order
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4">
+            <div class="text-end">
+                <div class="amount-display text-white">
+                    PO Value: ${{ purchase_order.grand_total|floatformat:2 }}
+                </div>
+                <small class="opacity-75">
+                    {% if purchase_order.invoices.count > 0 %}
+                        Payment #{{ purchase_order.invoices.count|add:1 }}
+                    {% else %}
+                        First Payment
+                    {% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Form -->
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-inner">
+                <h5 class="card-title">Payment Details</h5>
+                
+                <form method="post" enctype="multipart/form-data" id="invoice-form">
+                    {% csrf_token %}
+                    
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Basic Payment Information -->
+                    <div class="form-section">
+                        <h6 class="mb-3">📋 Payment Information</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label for="id_invoice_number" class="form-label">Payment Reference</label>
+                                {{ form.invoice_number }}
+                                {% if form.invoice_number.errors %}
+                                    <div class="text-danger">{{ form.invoice_number.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Enter payment reference (e.g., check number, transfer ID)</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_invoice_date" class="form-label">Invoice Date</label>
+                                {{ form.invoice_date }}
+                                {% if form.invoice_date.errors %}
+                                    <div class="text-danger">{{ form.invoice_date.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Date on the invoice</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="id_due_date" class="form-label">Due Date</label>
+                                {{ form.due_date }}
+                                {% if form.due_date.errors %}
+                                    <div class="text-danger">{{ form.due_date.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Payment due date</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Amount -->
+                    <div class="form-section">
+                        <h6 class="mb-3">💰 Payment Amount</h6>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <label for="id_invoice_amount_exc" class="form-label">Payment Amount (Excluding GST)</label>
+                                {{ form.invoice_amount_exc }}
+                                {% if form.invoice_amount_exc.errors %}
+                                    <div class="text-danger">{{ form.invoice_amount_exc.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Enter the amount paid excluding GST. GST and total will be calculated automatically.</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Auto-calculated fields (hidden but shown for reference) -->
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">GST Amount (10%)</label>
+                                <div class="form-control-plaintext text-info font-weight-bold" id="gst-display">$0.00</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label text-muted">Total Amount (Inc. GST)</label>
+                                <div class="form-control-plaintext text-success font-weight-bold" id="total-display">$0.00</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden fields for form submission -->
+                        <div style="display: none;">
+                            {{ form.gst_amount }}
+                            {{ form.invoice_total }}
+                        </div>
+                        
+                        <!-- Payment helper -->
+                        <div class="alert alert-info mt-3">
+                            <i class="icon ni ni-info"></i>
+                            <strong>Quick Fill:</strong> 
+                            <button type="button" class="btn btn-sm btn-outline-primary ml-2" id="use-po-total">
+                                Pay Full PO Amount (${{ purchase_order.grand_total|floatformat:2 }})
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ml-2" id="pay-remaining">
+                                Pay Remaining Balance
+                            </button>
+                        </div>
+                        
+                        <div class="payment-summary mt-3 p-3 bg-light rounded">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <small class="text-muted d-block">PO Total</small>
+                                    <strong>${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Already Paid</small>
+                                    <strong class="text-success">${{ purchase_order.get_total_paid_amount|floatformat:2 }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Remaining</small>
+                                    <strong class="text-warning">${{ purchase_order.get_total_outstanding_amount|floatformat:2 }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- File Upload -->
+                    <div class="form-section">
+                        <h6 class="mb-3">📎 Payment Receipt/Proof (Optional)</h6>
+                        <div class="file-upload-area" id="file-upload-area">
+                            {{ form.invoice_file }}
+                            <div class="upload-content">
+                                <i class="icon ni ni-upload" style="font-size: 2rem; color: #6b7280;"></i>
+                                <p class="mt-2 mb-1"><strong>Click to upload</strong> or drag and drop</p>
+                                <p class="text-muted small">Receipt, bank statement, or payment proof - PDF, JPG, PNG files up to 10MB</p>
+                            </div>
+                        </div>
+                        <small class="form-text text-muted">Upload proof of payment (optional but recommended)</small>
+                    </div>
+                    
+                    <!-- Notes -->
+                    <div class="form-section">
+                        <h6 class="mb-3">📝 Additional Notes</h6>
+                        {{ form.notes.label_tag }}
+                        {{ form.notes }}
+                        <small class="form-text text-muted">{{ form.notes.help_text }}</small>
+                    </div>
+                    
+                    <!-- Submit Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="icon ni ni-check-circle"></i>
+                                Record Payment
+                            </button>
+                            <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-outline-gray ml-2">
+                                <i class="icon ni ni-arrow-left"></i>
+                                Cancel
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        
+        <!-- PO Summary -->
+        <div class="card po-summary-card">
+            <div class="card-inner">
+                <h6 class="card-title">Purchase Order Summary</h6>
+                <div class="po-details">
+                    <p><strong>PO:</strong> {{ purchase_order.reference_number }}</p>
+                    <p><strong>Manufacturer:</strong> {{ purchase_order.manufacturer.company_name }}</p>
+                    <p><strong>Status:</strong> {{ purchase_order.get_status_display }}</p>
+                    <p><strong>Created:</strong> {{ purchase_order.created_at|date:"M d, Y" }}</p>
+                    
+                    <hr>
+                    
+                    <div class="po-amounts">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Subtotal (Exc GST):</span>
+                            <span>${{ purchase_order.subtotal_exc|floatformat:2 }}</span>
+                        </div>
+                        {% if purchase_order.total_discount_amount > 0 %}
+                        <div class="d-flex justify-content-between mb-1 text-danger">
+                            <span>Discount:</span>
+                            <span>-${{ purchase_order.total_discount_amount|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>After Discount:</span>
+                            <span>${{ purchase_order.subtotal_after_discount|floatformat:2 }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>GST (10%):</span>
+                            <span>${{ purchase_order.gst_amount|floatformat:2 }}</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <strong>Total:</strong>
+                            <strong class="text-success">${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Existing Invoices (if any) -->
+        {% if purchase_order.invoices.exists %}
+        <div class="card mt-3">
+            <div class="card-inner">
+                <h6 class="card-title">💳 Existing Invoices</h6>
+                <div class="alert alert-info">
+                    <i class="icon ni ni-info"></i>
+                    <strong>Note:</strong> Since invoices already exist for this PO, your payment will be applied to the oldest unpaid invoice.
+                </div>
+                {% for invoice in purchase_order.invoices.all %}
+                <div class="existing-invoice mb-2 p-2 border rounded 
+                    {% if invoice.outstanding_amount > 0 %}border-warning{% else %}border-success{% endif %}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <strong>{{ invoice.invoice_number }}</strong>
+                            <br>
+                            <small class="text-muted">{{ invoice.invoice_date|date:"M d, Y" }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge 
+                            {% if invoice.status == 'fully_paid' %}badge-success
+                            {% elif invoice.status == 'partially_paid' %}badge-warning  
+                            {% elif invoice.status == 'overdue' %}badge-danger
+                            {% else %}badge-secondary{% endif %}">
+                            {{ invoice.get_status_display }}
+                            </span>
+                            <br>
+                            <small class="text-muted">
+                                Total: ${{ invoice.invoice_total|floatformat:2 }}<br>
+                                Paid: ${{ invoice.total_paid|floatformat:2 }}<br>
+                                <strong class="{% if invoice.outstanding_amount > 0 %}text-warning{% else %}text-success{% endif %}">
+                                    Due: ${{ invoice.outstanding_amount|floatformat:2 }}
+                                </strong>
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Help Text -->
+        <div class="card mt-3">
+            <div class="card-inner">
+                <h6 class="card-title">💡 Tips</h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">• Enter the exact invoice number from the manufacturer</li>
+                    <li class="mb-2">• Upload a clear scan/photo of the invoice</li>
+                    <li class="mb-2">• Verify amounts match the manufacturer's invoice</li>
+                    <li class="mb-2">• Use the "Use PO Amounts" button as a starting point</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script src="{% static 'js/sweetalert2.all.min.js' %}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('invoice-form');
+    const fileUploadArea = document.getElementById('file-upload-area');
+    const fileInput = form.querySelector('input[type="file"]');
+    const usePOTotalBtn = document.getElementById('use-po-total');
+    const payRemainingBtn = document.getElementById('pay-remaining');
+    
+    // PO amounts from template
+    const poAmounts = {
+        total: {{ purchase_order.grand_total|default:0 }},
+        paid: {{ purchase_order.get_total_paid_amount|default:0 }},
+        remaining: {{ purchase_order.get_total_outstanding_amount|default:0 }}
+    };
+    
+    // Pay full PO total button
+    usePOTotalBtn.addEventListener('click', function() {
+        const excAmount = poAmounts.total / 1.1; // Remove GST to get exclusive amount
+        
+        document.getElementById('id_invoice_amount_exc').value = excAmount.toFixed(2);
+        calculateGST(); // This will update all other fields
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Amount Set',
+            text: `Payment amount set to full PO total: $${poAmounts.total.toFixed(2)}`,
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+    
+    // Pay remaining balance button
+    payRemainingBtn.addEventListener('click', function() {
+        const excAmount = poAmounts.remaining / 1.1; // Remove GST to get exclusive amount
+        
+        document.getElementById('id_invoice_amount_exc').value = excAmount.toFixed(2);
+        calculateGST(); // This will update all other fields
+        
+        Swal.fire({
+            icon: 'success',
+            title: 'Amount Set',
+            text: `Payment amount set to remaining balance: $${poAmounts.remaining.toFixed(2)}`,
+            timer: 2000,
+            showConfirmButton: false
+        });
+    });
+    
+    // File upload drag and drop
+    fileUploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+    
+    fileUploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+    });
+    
+    fileUploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            updateFileDisplay();
+        }
+    });
+    
+    fileInput.addEventListener('change', updateFileDisplay);
+    
+    // GST calculation functionality
+    function calculateGST() {
+        const excAmount = parseFloat(document.getElementById('id_invoice_amount_exc').value) || 0;
+        const gstAmount = excAmount * 0.10;
+        const totalAmount = excAmount + gstAmount;
+        
+        // Update hidden form fields
+        document.getElementById('id_gst_amount').value = gstAmount.toFixed(2);
+        document.getElementById('id_invoice_total').value = totalAmount.toFixed(2);
+        
+        // Update display fields
+        document.getElementById('gst-display').textContent = `$${gstAmount.toFixed(2)}`;
+        document.getElementById('total-display').textContent = `$${totalAmount.toFixed(2)}`;
+    }
+    
+    // Add event listener for GST calculation
+    document.getElementById('id_invoice_amount_exc').addEventListener('input', calculateGST);
+    
+    // Calculate initially if there's a pre-filled value
+    document.addEventListener('DOMContentLoaded', function() {
+        calculateGST();
+    });
+    
+    function updateFileDisplay() {
+        const file = fileInput.files[0];
+        if (file) {
+            fileUploadArea.innerHTML = `
+                <div class="file-selected">
+                    <i class="icon ni ni-check-circle text-success" style="font-size: 2rem;"></i>
+                    <p class="mt-2 mb-1"><strong>${file.name}</strong></p>
+                    <p class="text-muted small">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="clearFile()">
+                        Remove
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        const paymentRef = document.getElementById('id_invoice_number').value;
+        const paymentDate = document.getElementById('id_invoice_date').value;
+        const dueDate = document.getElementById('id_due_date').value;
+        const excAmount = document.getElementById('id_invoice_amount_exc').value;
+        
+        // Ensure GST calculation is done before submission
+        calculateGST();
+        
+        if (!paymentRef || !paymentDate || !dueDate || !excAmount || parseFloat(excAmount) <= 0) {
+            e.preventDefault();
+            Swal.fire({
+                icon: 'error',
+                title: 'Missing Information',
+                text: 'Please fill in payment reference, dates, and a valid payment amount'
+            });
+            return;
+        }
+        
+        // Confirmation dialog
+        const totalAmount = document.getElementById('id_invoice_total').value;
+        const confirmMsg = `Record payment of $${totalAmount} (Ref: ${paymentRef})?`;
+        if (!confirm(confirmMsg)) {
+            e.preventDefault();
+        }
+    });
+});
+
+// Clear file function (global scope)
+function clearFile() {
+    const fileInput = document.querySelector('input[type="file"]');
+    const fileUploadArea = document.getElementById('file-upload-area');
+    
+    fileInput.value = '';
+    fileUploadArea.innerHTML = `
+        <div class="upload-content">
+            <i class="icon ni ni-upload" style="font-size: 2rem; color: #6b7280;"></i>
+            <p class="mt-2 mb-1"><strong>Click to upload</strong> or drag and drop</p>
+            <p class="text-muted small">PDF, JPG, PNG files up to 10MB</p>
+        </div>
+    `;
+}
+</script>
+
+{% for message in messages %}
+<script>
+Swal.fire({
+    position: 'center',
+    icon: '{{ message.tags }}' === 'error' ? 'error' : 'success',
+    title: '{{ message }}',
+    showConfirmButton: true,
+    timer: 5000
+});
+</script>
+{% endfor %}

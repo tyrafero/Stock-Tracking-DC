@@ -1,0 +1,108 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{ title }}</h4>
+                                <div class="nk-block-des">
+                                    <p>Manage your stores and delivery locations here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="text-end mb-3">
+                                    <a href="{% url 'add_store' %}" class="btn btn-primary">
+                                        <em class="icon ni ni-plus"></em> Add Store
+                                    </a>
+                                </div>
+                                
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Store Name</th>
+                                            <th>Location</th>
+                                            <th>Address</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for store in stores %}
+                                        <tr>
+                                            <td><strong>{{ store.name }}</strong></td>
+                                            <td>{{ store.location }}</td>
+                                            <td>
+                                                {% if store.address %}
+                                                    {{ store.address|truncatewords:8 }}
+                                                {% else %}
+                                                    <span class="text-muted">No address provided</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span class="badge badge-{% if store.is_active %}success{% else %}danger{% endif %}">
+                                                    {{ store.is_active|yesno:"Active,Inactive" }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'edit_store' store.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+                                                <form method="post" action="{% url 'delete_store' store.pk %}" style="display:inline;">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this store?')">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">
+                                                <div class="py-4">
+                                                    <em class="icon ni ni-building" style="font-size: 3rem; color: #9ca3af;"></em>
+                                                    <div class="mt-2">
+                                                        <strong>No stores found</strong>
+                                                    </div>
+                                                    <div class="text-muted">
+                                                        <small>Add your first store to get started</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                                
+                                {% if stores %}
+                                <div class="mt-4">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="text-muted">
+                                                <small>Total: {{ stores|length }} store{{ stores|length|pluralize }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 text-end">
+                                            <div class="text-muted">
+                                                <small>
+                                                    Active: {{ stores|length|add:0 }} | 
+                                                    Inactive: 0
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

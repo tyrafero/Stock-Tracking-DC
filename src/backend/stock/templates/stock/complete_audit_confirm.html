@@ -1,0 +1,132 @@
+{% include 'stock/headers.html' %}
+{% load static %}
+{% load crispy_forms_tags %}
+
+<div class="container-fluid">
+    <div class="nk-content-inner">
+        <div class="nk-content-body">
+            <div class="nk-block-head nk-block-head-sm">
+                <div class="nk-block-between">
+                    <div class="nk-block-head-content">
+                        <a href="{% url 'audit_detail' audit.pk %}" class="link link-primary">
+                            <em class="icon ni ni-arrow-left"></em><span>Back to Audit Details</span>
+                        </a>
+                        <h3 class="nk-block-title page-title">Complete Audit: {{ audit.audit_reference }}</h3>
+                        <div class="nk-block-des text-soft">
+                            <p>{{ audit.title }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if has_variances %}
+            <div class="nk-block">
+                <div class="card">
+                    <div class="card-inner">
+                        <h5 class="card-title">Stock Variances Detected</h5>
+                        <p class="text-soft">This audit found {{ variance_items.count }} item(s) with variances. You can choose to apply stock adjustments automatically or review them manually later.</p>
+                        
+                        <div class="table-responsive">
+                            <table class="table table-bordered">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>System Qty</th>
+                                        <th>Physical Count</th>
+                                        <th>Variance</th>
+                                        <th>Variance %</th>
+                                        <th>Reason</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in variance_items %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ item.stock.item_name }}</strong>
+                                            {% if item.stock.category %}
+                                                <br><small class="text-muted">{{ item.stock.category.group }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ item.system_quantity }}</td>
+                                        <td>{{ item.physical_count }}</td>
+                                        <td>
+                                            <span class="{% if item.variance_quantity > 0 %}text-success{% elif item.variance_quantity < 0 %}text-danger{% endif %}">
+                                                {{ item.variance_quantity|stringformat:"+d" }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="{% if item.variance_quantity > 0 %}text-success{% elif item.variance_quantity < 0 %}text-danger{% endif %}">
+                                                {{ item.variance_percentage|floatformat:1 }}%
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {{ item.get_variance_reason_display|default:"Not specified" }}
+                                            {% if item.variance_notes %}
+                                                <br><small class="text-muted">{{ item.variance_notes }}</small>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="nk-block">
+                <div class="card">
+                    <div class="card-inner">
+                        <h5 class="card-title">Complete Audit Options</h5>
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            
+                            {% if has_variances %}
+                            <div class="form-group">
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" id="manual_review" name="auto_adjust" value="false" class="custom-control-input" checked>
+                                    <label class="custom-control-label" for="manual_review">
+                                        <strong>Complete audit and review adjustments manually</strong>
+                                        <span class="form-note">Variances will be flagged for manual review and approval</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <div class="custom-control custom-radio">
+                                    <input type="radio" id="auto_adjust" name="auto_adjust" value="true" class="custom-control-input">
+                                    <label class="custom-control-label" for="auto_adjust">
+                                        <strong>Complete audit and apply stock adjustments automatically</strong>
+                                        <span class="form-note text-warning">
+                                            <em class="icon ni ni-alert-circle"></em>
+                                            This will immediately update stock quantities to match physical counts
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="alert alert-success">
+                                <em class="icon ni ni-check-circle"></em>
+                                <strong>No variances detected!</strong> All physical counts match system quantities.
+                            </div>
+                            <input type="hidden" name="auto_adjust" value="false">
+                            {% endif %}
+                            
+                            <div class="form-group mt-4">
+                                <button type="submit" class="btn btn-success">
+                                    <em class="icon ni ni-check-thick"></em>
+                                    <span>Complete Audit</span>
+                                </button>
+                                <a href="{% url 'audit_detail' audit.pk %}" class="btn btn-outline-light">Cancel</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

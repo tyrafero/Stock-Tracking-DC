@@ -1,0 +1,356 @@
+{% load static %}
+{% load crispy_forms_tags %}
+
+{% include 'stock/headers.html' %}
+
+<style>
+/* General spacing & typography */
+.card-inner { padding: 1.5rem; }
+.card-title { margin-bottom: 1rem; font-weight: 600; }
+
+/* History Header */
+.history-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+/* Timeline Styles */
+.timeline {
+    position: relative;
+    padding-left: 3rem;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 1rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e3e7f1;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+    background: white;
+    border: 1px solid #e3e7f1;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -2.5rem;
+    top: 1.5rem;
+    width: 12px;
+    height: 12px;
+    background: white;
+    border: 3px solid #667eea;
+    border-radius: 50%;
+}
+
+.timeline-item.status-submitted::before { border-color: #f59e0b; }
+.timeline-item.status-sent::before { border-color: #2563eb; }
+.timeline-item.status-confirmed::before { border-color: #10b981; }
+.timeline-item.status-completed::before { border-color: #047857; }
+.timeline-item.status-cancelled::before { border-color: #dc2626; }
+
+.timeline-date {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-description {
+    color: #4b5563;
+    margin-bottom: 0;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+/* Status colors */
+.status-draft { background-color: #f3f4f6; color: #374151; }
+.status-submitted { background-color: #fef3c7; color: #d97706; }
+.status-sent { background-color: #dbeafe; color: #2563eb; }
+.status-confirmed { background-color: #d1fae5; color: #059669; }
+.status-completed { background-color: #d1fae5; color: #047857; }
+.status-cancelled { background-color: #fee2e2; color: #dc2626; }
+
+.empty-history {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #6b7280;
+}
+
+.empty-history .icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.breadcrumb {
+    background: transparent;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #6b7280;
+}
+
+.breadcrumb-item a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: #6b7280;
+}
+</style>
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+
+                    <!-- Breadcrumb -->
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'purchase_order_list' %}">Purchase Orders</a></li>
+                            <li class="breadcrumb-item"><a href="{% url 'purchase_order_detail' purchase_order.pk %}">{{ purchase_order.reference_number }}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">History</li>
+                        </ol>
+                    </nav>
+
+                    <!-- History Header -->
+                    <div class="history-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h3 class="mb-1">📋 {{ purchase_order.reference_number }}</h3>
+                                <p class="mb-0 opacity-75">Purchase Order History & Timeline</p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <span class="status-badge status-{{ purchase_order.status }}">
+                                    {{ purchase_order.get_status_display|upper }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <!-- History Timeline -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <h5 class="card-title">🕒 Change History</h5>
+                                    
+                                    {% if history %}
+                                    <div class="timeline">
+                                        {% for record in history %}
+                                        <div class="timeline-item status-{{ record.action|default:'draft' }}">
+                                            <div class="timeline-date">
+                                                <em class="icon ni ni-calendar"></em>
+                                                {{ record.created_at|date:"M d, Y g:i A" }}
+                                            </div>
+                                            <div class="timeline-title">
+                                                {% if record.action == 'created' %}
+                                                    <em class="icon ni ni-plus-circle text-success"></em>
+                                                    Purchase Order Created
+                                                {% elif record.action == 'updated' %}
+                                                    <em class="icon ni ni-edit text-warning"></em>
+                                                    Purchase Order Updated
+                                                {% elif record.action == 'submitted' %}
+                                                    <em class="icon ni ni-check-circle text-info"></em>
+                                                    Purchase Order Submitted
+                                                {% elif record.action == 'sent' %}
+                                                    <em class="icon ni ni-mail text-primary"></em>
+                                                    Sent to Manufacturer
+                                                {% elif record.action == 'confirmed' %}
+                                                    <em class="icon ni ni-check text-success"></em>
+                                                    Order Confirmed
+                                                {% elif record.action == 'completed' %}
+                                                    <em class="icon ni ni-check-circle-fill text-success"></em>
+                                                    Order Completed
+                                                {% elif record.action == 'cancelled' %}
+                                                    <em class="icon ni ni-cross-circle text-danger"></em>
+                                                    Order Cancelled
+                                                {% endif %}
+                                                <span class="status-badge status-{{ record.action }}">
+                                                    {{ record.get_action_display }}
+                                                </span>
+                                            </div>
+                                            <div class="timeline-description">
+                                                {% if record.created_by %}
+                                                    Action by: <strong>{{ record.created_by.get_full_name|default:record.created_by.username }}</strong>
+                                                {% endif %}
+                                                
+                                                {% if record.action == 'created' %}
+                                                    <br>Purchase order was initially created.
+                                                {% elif record.action == 'updated' %}
+                                                    <br>Purchase order details were modified.
+                                                {% elif record.action == 'submitted' %}
+                                                    <br>Purchase order was submitted for processing.
+                                                {% elif record.action == 'sent' %}
+                                                    <br>Purchase order was sent to the manufacturer.
+                                                {% elif record.action == 'confirmed' %}
+                                                    <br>Purchase order was confirmed by the manufacturer.
+                                                {% elif record.action == 'completed' %}
+                                                    <br>All items have been received and the order is complete.
+                                                {% elif record.action == 'cancelled' %}
+                                                    <br>Purchase order was cancelled.
+                                                {% endif %}
+                                                
+                                                {% if record.notes %}
+                                                    <br><small class="text-muted"><strong>Notes:</strong> {{ record.notes|truncatechars:150 }}</small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <div class="empty-history">
+                                        <div class="icon">
+                                            <em class="ni ni-clock-fill"></em>
+                                        </div>
+                                        <h6>No History Available</h6>
+                                        <p>No historical changes have been recorded for this purchase order yet.</p>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <!-- Quick Info -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <h6 class="card-title">📊 Quick Information</h6>
+                                    <div class="row g-3">
+                                        <div class="col-6">
+                                            <div class="form-group">
+                                                <label class="form-label">Current Status</label>
+                                                <span class="status-badge status-{{ purchase_order.status }} d-block text-center">
+                                                    {{ purchase_order.get_status_display }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-group">
+                                                <label class="form-label">Total Items</label>
+                                                <div class="text-center">
+                                                    <strong>{{ purchase_order.items.count }}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="form-group">
+                                                <label class="form-label">Grand Total</label>
+                                                <div class="text-center">
+                                                    <strong class="text-success">${{ purchase_order.grand_total|floatformat:2 }}</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-group">
+                                                <label class="form-label">Created</label>
+                                                <small class="d-block">{{ purchase_order.created_at|date:"M d, Y" }}</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="form-group">
+                                                <label class="form-label">Updated</label>
+                                                <small class="d-block">{{ purchase_order.updated_at|date:"M d, Y" }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="card">
+                                <div class="card-inner">
+                                    <h6 class="card-title">Actions</h6>
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'purchase_order_detail' purchase_order.pk %}" class="btn btn-primary">
+                                            <em class="icon ni ni-eye"></em> View Purchase Order
+                                        </a>
+                                        
+                                        {% if purchase_order.status in 'sent,confirmed,completed' %}
+                                        <a href="{% url 'purchase_order_receiving_history' purchase_order.pk %}" class="btn btn-outline-success">
+                                            <em class="icon ni ni-check-circle"></em> Receiving History
+                                        </a>
+                                        {% endif %}
+                                        
+                                        {% if purchase_order.status == 'draft' %}
+                                        <a href="{% url 'update_purchase_order' purchase_order.pk %}" class="btn btn-outline-primary">
+                                            <em class="icon ni ni-edit"></em> Edit Purchase Order
+                                        </a>
+                                        {% endif %}
+                                        
+                                        <a href="{% url 'purchase_order_list' %}" class="btn btn-outline-gray">
+                                            <em class="icon ni ni-arrow-left"></em> Back to List
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
+
+<script>
+// Add some animation to timeline items
+document.addEventListener('DOMContentLoaded', function() {
+    const timelineItems = document.querySelectorAll('.timeline-item');
+    
+    // Animate timeline items on scroll
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+    
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.style.opacity = '1';
+                entry.target.style.transform = 'translateY(0)';
+            }
+        });
+    }, observerOptions);
+    
+    timelineItems.forEach((item, index) => {
+        // Set initial state
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
+        item.style.transition = `opacity 0.6s ease ${index * 0.1}s, transform 0.6s ease ${index * 0.1}s`;
+        
+        observer.observe(item);
+    });
+});
+</script>

@@ -1,0 +1,223 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content ">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{ title }}</h4>
+                                <div class="nk-block-des">
+                                    <p>Manage stock transfers between locations</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filter Options -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <form method="get" class="d-flex">
+                                    <select name="status" class="form-control me-2">
+                                        <option value="">All Status</option>
+                                        {% for status_code, status_name in status_choices %}
+                                            <option value="{{ status_code }}" {% if current_status == status_code %}selected{% endif %}>
+                                                {{ status_name }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-primary">Filter</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        {% if transfers %}
+                        <table class="table table-striped nk-tb-list is-separate" data-auto-responsive="false">
+                            <thead>
+                                <tr class="nk-tb-item nk-tb-head">
+                                    <th class="nk-tb-col"><span>ITEM</span></th>
+                                    <th class="nk-tb-col"><span>TYPE</span></th>
+                                    <th class="nk-tb-col"><span>FROM</span></th>
+                                    <th class="nk-tb-col"><span>TO</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>QUANTITY</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>CUSTOMER</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>STATUS</span></th>
+                                    <th class="nk-tb-col tb-col-md"><span>CREATED</span></th>
+                                    <th class="nk-tb-col nk-tb-col-tools"><span>ACTIONS</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transfer in transfers %}
+                                <tr class="nk-tb-item">
+                                    <td class="nk-tb-col">
+                                        <div class="tb-product">
+                                            {% if transfer.stock.image_url %}
+                                                <img src="{{ transfer.stock.image_url }}" alt="{{ transfer.stock.item_name }}" class="thumb" onerror="this.style.display='none'">
+                                            {% else %}
+                                                <div class="thumb thumb-placeholder">
+                                                    <em class="icon ni ni-img" style="font-size: 20px; color: #ccc;"></em>
+                                                </div>
+                                            {% endif %}
+                                            <span class="title">
+                                                <a href="{% url 'stock_detail' transfer.stock.id %}">{{ transfer.stock.item_name }}</a>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td class="nk-tb-col">
+                                        {% if transfer.transfer_type == 'restock' %}
+                                            <span class="badge badge-info">Restock</span>
+                                        {% elif transfer.transfer_type == 'customer_collection' %}
+                                            <span class="badge badge-warning">Customer Collection</span>
+                                        {% else %}
+                                            <span class="badge badge-primary">General</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="nk-tb-col">
+                                        <div class="tb-sub">
+                                            <strong>{{ transfer.from_location.name }}</strong>
+                                            {% if transfer.from_aisle %}
+                                                <br><small class="text-muted">{{ transfer.from_aisle }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="nk-tb-col">
+                                        <div class="tb-sub">
+                                            <strong>{{ transfer.to_location.name }}</strong>
+                                            {% if transfer.to_aisle %}
+                                                <br><small class="text-muted">{{ transfer.to_aisle }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <span class="tb-sub">{{ transfer.quantity }}</span>
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        {% if transfer.customer_name %}
+                                            <div class="tb-sub">
+                                                <strong>{{ transfer.customer_name }}</strong>
+                                                {% if transfer.customer_phone %}
+                                                    <br><small class="text-muted">{{ transfer.customer_phone }}</small>
+                                                {% endif %}
+                                            </div>
+                                        {% else %}
+                                            <span class="tb-sub text-muted">—</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        {% if transfer.status == 'pending' %}
+                                            <span class="badge badge-warning">Pending</span>
+                                        {% elif transfer.status == 'in_transit' %}
+                                            <span class="badge badge-info">In Transit</span>
+                                        {% elif transfer.status == 'completed' %}
+                                            <span class="badge badge-success">Completed</span>
+                                        {% elif transfer.status == 'awaiting_collection' %}
+                                            <span class="badge badge-secondary">Awaiting Collection</span>
+                                        {% elif transfer.status == 'collected' %}
+                                            <span class="badge badge-success">Customer Collected</span>
+                                        {% else %}
+                                            <span class="badge badge-danger">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="nk-tb-col tb-col-md">
+                                        <span class="tb-sub">{{ transfer.created_at|date:"M d, Y" }}</span>
+                                        <br><small class="text-muted">by {{ transfer.created_by.username }}</small>
+                                    </td>
+                                    <td class="nk-tb-col nk-tb-col-tools">
+                                        <ul class="nk-tb-actions gx-1 my-n1">
+                                            <li class="mr-n1">
+                                                <div class="dropdown">
+                                                    <a href="#" class="dropdown-toggle btn btn-icon btn-trigger" data-toggle="dropdown">
+                                                        <em class="icon ni ni-more-h"></em>
+                                                    </a>
+                                                    <div class="dropdown-menu dropdown-menu-right">
+                                                        <ul class="link-list-opt no-bdr">
+                                                            {% if user_permissions.can_transfer_stock %}
+                                                                {% if transfer.status == 'pending' %}
+                                                                    <li>
+                                                                        <a href="{% url 'approve_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Approve this transfer?')">
+                                                                            <em class="icon ni ni-check-circle"></em>
+                                                                            <span>Approve Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    <li>
+                                                                        <a href="{% url 'cancel_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Cancel this transfer? Stock will be restored.')">
+                                                                            <em class="icon ni ni-cross-circle"></em>
+                                                                            <span>Cancel Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                {% elif transfer.status == 'in_transit' %}
+                                                                    <li>
+                                                                        <a href="{% url 'complete_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Complete this transfer? Item will be moved to destination.')">
+                                                                            <em class="icon ni ni-check-thick"></em>
+                                                                            <span>Complete Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    <li>
+                                                                        <a href="{% url 'cancel_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Cancel this transfer? Stock will be restored.')">
+                                                                            <em class="icon ni ni-cross-circle"></em>
+                                                                            <span>Cancel Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                {% elif transfer.status == 'awaiting_collection' %}
+                                                                    <li>
+                                                                        <a href="{% url 'mark_collected' transfer.id %}" 
+                                                                           onclick="return confirm('Mark as collected? This will reduce stock quantity.')">
+                                                                            <em class="icon ni ni-user-check"></em>
+                                                                            <span>Mark as Collected</span>
+                                                                        </a>
+                                                                    </li>
+                                                                    <li>
+                                                                        <a href="{% url 'cancel_transfer' transfer.id %}" 
+                                                                           onclick="return confirm('Cancel this transfer? Stock will be restored.')">
+                                                                            <em class="icon ni ni-cross-circle"></em>
+                                                                            <span>Cancel Transfer</span>
+                                                                        </a>
+                                                                    </li>
+                                                                {% endif %}
+                                                            {% endif %}
+                                                            <li>
+                                                                <a href="{% url 'stock_detail' transfer.stock.id %}">
+                                                                    <em class="icon ni ni-eye"></em>
+                                                                    <span>View Stock</span>
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="nk-block">
+                            <div class="card">
+                                <div class="card-inner">
+                                    <div class="nk-block-head-content text-center">
+                                        <h5 class="nk-block-title">No Transfers Found</h5>
+                                        <p class="nk-block-des">No stock transfers have been created yet.</p>
+                                        <div class="pt-3">
+                                            <a href="/view_stock" class="btn btn-primary">View Stock to Transfer</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

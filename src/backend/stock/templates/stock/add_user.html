@@ -1,0 +1,144 @@
+{% load static %}
+{% load crispy_forms_tags %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-lg mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        
+                        <div class="nk-block-head">
+                            <div class="nk-block-between">
+                                <div class="nk-block-head-content">
+                                    <h4 class="nk-block-title">{{ title }}</h4>
+                                    <p>Create or edit user accounts and assign roles</p>
+                                </div>
+                                <div class="nk-block-head-content">
+                                    <a href="{% url 'manage_users' %}" class="btn btn-outline-gray">
+                                        <i class="icon ni ni-arrow-left"></i> Back to Users
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <div class="card-inner">
+                                {% if form.helper %}
+                                    {% crispy form %}
+                                {% else %}
+                                <form method="post">
+                                    {% csrf_token %}
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.username.id_for_label }}" class="form-label">{{ form.username.label }}</label>
+                                            {{ form.username }}
+                                            {% if form.username.errors %}
+                                                <div class="text-danger">{{ form.username.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.role.id_for_label }}" class="form-label">{{ form.role.label }}</label>
+                                            {{ form.role }}
+                                            {% if form.role.errors %}
+                                                <div class="text-danger">{{ form.role.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.first_name.id_for_label }}" class="form-label">{{ form.first_name.label }}</label>
+                                            {{ form.first_name }}
+                                            {% if form.first_name.errors %}
+                                                <div class="text-danger">{{ form.first_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="{{ form.last_name.id_for_label }}" class="form-label">{{ form.last_name.label }}</label>
+                                            {{ form.last_name }}
+                                            {% if form.last_name.errors %}
+                                                <div class="text-danger">{{ form.last_name.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-8 mb-3">
+                                            <label for="{{ form.email.id_for_label }}" class="form-label">{{ form.email.label }}</label>
+                                            {{ form.email }}
+                                            {% if form.email.errors %}
+                                                <div class="text-danger">{{ form.email.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <div class="form-check">
+                                                {{ form.is_active }}
+                                                <label for="{{ form.is_active.id_for_label }}" class="form-check-label">{{ form.is_active.label }}</label>
+                                            </div>
+                                            {% if form.is_active.errors %}
+                                                <div class="text-danger">{{ form.is_active.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12 mb-3">
+                                            <label for="{{ form.password.id_for_label }}" class="form-label">{{ form.password.label }}</label>
+                                            {{ form.password }}
+                                            {% if form.password.help_text %}
+                                                <small class="form-text text-muted">{{ form.password.help_text }}</small>
+                                            {% endif %}
+                                            {% if form.password.errors %}
+                                                <div class="text-danger">{{ form.password.errors.0 }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary">Save User</button>
+                                        <a href="{% url 'manage_users' %}" class="btn btn-secondary ml-2">Cancel</a>
+                                    </div>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Role Permissions Info -->
+                        <div class="card mt-4">
+                            <div class="card-inner">
+                                <h5 class="card-title">Role Permissions Guide</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <h6><span class="badge badge-danger">Admin</span></h6>
+                                            <p class="small text-muted">Full access to all features including user management and access control.</p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6><span class="badge badge-primary">Owner</span></h6>
+                                            <p class="small text-muted">All features except user management. Can manage purchase orders, stock, and view financial data.</p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6><span class="badge badge-info">Logistics</span></h6>
+                                            <p class="small text-muted">Can create purchase orders, request stock transfers, and manage commitments. Cannot receive items or edit stock.</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <h6><span class="badge badge-warning">Warehouse</span></h6>
+                                            <p class="small text-muted">Can manage stock, transfers, and receive items. Cannot see financial data or create purchase orders.</p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <h6><span class="badge badge-secondary">Sales</span></h6>
+                                            <p class="small text-muted">Can manage customer commitments, transfers, and fulfill orders. Limited access to other features.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}

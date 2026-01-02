@@ -1,0 +1,70 @@
+{% load static %}
+{% include 'stock/headers.html' %}
+
+<div class="nk-content">
+    <div class="container-fluid">
+        <div class="nk-content-inner">
+            <div class="nk-content-body">
+                <div class="components-preview wide-md mx-auto">
+                    <div class="nk-block nk-block-lg">
+                        <div class="nk-block-head">
+                            <div class="nk-block-head-content">
+                                <h4 class="nk-block-title">{{ title }}</h4>
+                                <div class="nk-block-des">
+                                    <p>Manage your delivery persons here.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-inner">
+                                <div class="text-end mb-3">
+                                    <a href="{% url 'add_delivery_person' %}" class="btn btn-primary">
+                                        <em class="icon ni ni-plus"></em> Add Delivery Person
+                                    </a>
+                                </div>
+                                
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Phone Number</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for person in delivery_persons %}
+                                        <tr>
+                                            <td>{{ person.name }}</td>
+                                            <td>{{ person.phone_number }}</td>
+                                            <td>
+                                                <span class="badge badge-{% if person.is_active %}success{% else %}danger{% endif %}">
+                                                    {{ person.is_active|yesno:"Active,Inactive" }}
+                                                </span>
+                                            </td>
+                                            <td>
+    <a href="{% url 'edit_delivery_person' person.pk %}" class="btn btn-sm btn-outline-primary">Edit</a>
+    <form method="post" action="{% url 'delete_delivery_person' person.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure?')">Delete</button>
+    </form>
+</td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">No delivery persons found.</td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'stock/footers.html' %}
