@@ -48,11 +48,41 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
           page_size: 10,
         });
 
-        const stockOptions = response.results.map((stock) => ({
-          value: stock.item_name,
-          label: stock.item_name,
-          stock,
-        }));
+        // Group stocks by item_name to handle duplicates
+        const stockGroups = response.results.reduce((groups, stock) => {
+          const key = stock.item_name;
+          if (!groups[key]) {
+            groups[key] = [];
+          }
+          groups[key].push(stock);
+          return groups;
+        }, {} as Record<string, Stock[]>);
+
+        // Create options with unique values and descriptive labels
+        const stockOptions = Object.entries(stockGroups).flatMap(([itemName, stocks]) => {
+          if (stocks.length === 1) {
+            // Single stock item - use simple label
+            return [{
+              value: itemName,
+              label: itemName,
+              stock: stocks[0],
+            }];
+          } else {
+            // Multiple stocks with same name - add distinguishing info
+            return stocks.map((stock, index) => {
+              const locationInfo = stock.location_name ? ` (${stock.location_name})` : '';
+              const qtyInfo = stock.quantity ? ` - Qty: ${stock.quantity}` : '';
+              const uniqueValue = `${itemName}_${stock.id}`;
+
+              return {
+                value: uniqueValue,
+                label: `${itemName}${locationInfo}${qtyInfo}`,
+                stock,
+                originalName: itemName,
+              };
+            });
+          }
+        });
 
         setOptions(stockOptions);
       } catch (error: any) {
@@ -75,10 +105,13 @@ export const ProductAutocomplete: React.FC<ProductAutocompleteProps> = ({
   }, [debounced]);
 
   const handleSelect = (selectedValue: string) => {
-    onChange(selectedValue);
-
     // Find the stock item that was selected
     const selectedOption = options.find((opt) => opt.value === selectedValue);
+
+    // Use original item name for duplicate entries, otherwise use the selected value
+    const displayName = (selectedOption as any)?.originalName || selectedValue;
+    onChange(displayName);
+
     if (onSelect) {
       onSelect(selectedOption?.stock || null);
     }
